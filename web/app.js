@@ -1021,7 +1021,7 @@ function tariffMatchSummary(tariff) {
     const label = tariffMeasureLabels[type] || type;
     const values = rates?.length ? rates.map((rate) => `%${numberFormat.format(rate)}`).join(" / ") : "oran okunamadı";
     const ambiguous = (tariff.ambiguous_measure_types || []).includes(type);
-    return `<li><b>${escapeHtml(label)}:</b> ${escapeHtml(values)}${ambiguous ? " · alt GTİP’e göre değişiyor" : " · bütün alt satırlarda aynı"}</li>`;
+    return `<li><b>${escapeHtml(label)}:</b> ${escapeHtml(values)}${ambiguous ? " · oran veya kapsam alt GTİP’e göre değişiyor" : " · bütün alt satırlarda aynı"}</li>`;
   }).join("");
   return `<div class="result-caution"><strong>${escapeHtml(tariff.gtip.length)} haneli kodla ön ek araması:</strong> ${escapeHtml(tariff.matched_gtip_count || 0)} adet 12 haneli Türk GTİP satırı bulundu.${variants ? `<ul>${variants}</ul>` : ""}</div>`;
 }
