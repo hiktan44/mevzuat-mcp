@@ -138,15 +138,16 @@
           <div>
             <span class="eyebrow">Kanıt-temelli ithalat ön değerlendirmesi</span>
             <h1 id="customsTitle">Gümrükçe’ye Sor</h1>
-            <p>Ürününüzü anlatın veya fotoğrafını yükleyin. Sistem aday GTİP’leri, TAREKS/TSE ve diğer kontrolleri, belgeleri ve maliyet bileşenlerini güncel resmî kaynaklarla araştırır.</p>
+            <p>Fotoğraf önce görsel modelle ürün evsafına dönüştürülür. Siz alanları düzeltip onayladıktan sonra aday GTİP, TAREKS/TSE, belge ve maliyet araştırması güncel resmî kaynaklarda başlar.</p>
           </div>
           <div class="safety-seal"><b>ÖN</b><span>Bağlayıcı karar değildir</span></div>
         </header>
 
         <div class="customs-flow" aria-hidden="true">
-          <span class="active"><i>1</i>Ürünü tanımla</span><b></b>
-          <span><i>2</i>Resmî kaynak tara</span><b></b>
-          <span><i>3</i>Risk ve maliyet dosyası</span>
+          <span class="active"><i>1</i>Fotoğrafı analiz et</span><b></b>
+          <span><i>2</i>Evsafı doğrula</span><b></b>
+          <span><i>3</i>Resmî kaynak tara</span><b></b>
+          <span><i>4</i>Risk ve maliyet dosyası</span>
         </div>
 
         <form class="customs-form" id="customsForm">
@@ -160,7 +161,7 @@
                 <input id="productImage" type="file" accept="image/jpeg,image/png,image/webp">
                 <span class="upload-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 16V4m0 0L7 9m5-5 5 5"/><path d="M4 15v5h16v-5"/></svg></span>
                 <b id="uploadTitle">Ürün fotoğrafı ekle</b>
-                <small id="uploadHint">JPEG, PNG veya WebP · en fazla 8 MB</small>
+                <small id="uploadHint">Yüklenince görsel evsaf analizi otomatik başlar</small>
                 <img id="imagePreview" alt="Yüklenen ürün önizlemesi" hidden>
               </label>
               <div class="product-fields">
@@ -172,6 +173,27 @@
                 <label class="field"><span>Malzeme / bileşim</span><input id="composition" maxlength="500" placeholder="Örn. %95 pamuk, %5 elastan; paslanmaz çelik 304"></label>
               </div>
             </div>
+
+            <section class="attribute-review" id="attributeReview" hidden aria-labelledby="attributeReviewTitle">
+              <header>
+                <div><span class="eyebrow">Görsel evsaf analizi</span><h3 id="attributeReviewTitle">Fotoğraftan çıkarılan alanları doğrulayın</h3></div>
+                <span class="vision-state" id="visionState" data-state="idle">Bekliyor</span>
+              </header>
+              <p class="vision-message" id="visionMessage">Fotoğraf analiz edildiğinde sonuçlar bu satırlara gelir. GTİP ve mevzuat araması henüz başlamaz.</p>
+              <div class="attribute-grid">
+                <label class="field"><span>Ürün kategorisi</span><input id="productCategory" maxlength="200" placeholder="Örn. çocuk dış giyim"></label>
+                <label class="field"><span>Görünen marka / model</span><input id="brandModel" maxlength="300" placeholder="Yalnızca fotoğrafta okunuyorsa"></label>
+                <label class="field"><span>Ölçü / ebat / teknik değer</span><input id="dimensions" maxlength="300" placeholder="Görünen ölçü ve değerler"></label>
+                <label class="field"><span>Etikette okunan metin</span><input id="labelText" maxlength="1000" placeholder="Etiket, ambalaj veya ürün üzerindeki yazılar"></label>
+                <label class="field attribute-wide"><span>Kesin görülen özellikler</span><textarea id="visibleFeatures" maxlength="2000" placeholder="Her satıra bir görünür özellik"></textarea></label>
+                <label class="field attribute-wide uncertain-field"><span>Görüntüden kesinleşmeyen tahminler</span><textarea id="inferredFeatures" maxlength="1500" placeholder="Bunları teknik belge veya ürün etiketiyle doğrulayın"></textarea></label>
+                <label class="field attribute-wide"><span>Sınıflandırma için cevaplanması gereken sorular</span><textarea id="classificationQuestions" maxlength="1500" placeholder="Malzeme oranı, kullanım amacı, çalışma şekli…"></textarea></label>
+              </div>
+              <div class="attribute-actions">
+                <p id="visionProvider">Model bilgisi analizden sonra gösterilir.</p>
+                <button id="confirmAttributes" type="button"><span>Evsafları onayla ve araştırmaya hazırla</span></button>
+              </div>
+            </section>
 
             <details class="advanced-fields">
               <summary><span>Ürün ve sevkiyat ayrıntıları</span><small>TAREKS, kimyasal ve KKDF riskini netleştirir</small></summary>
@@ -199,13 +221,14 @@
               <p class="rate-warning">Bu üç oran yalnızca resmî kaynaktan veya müşavirinizden doğruladıysanız girilmelidir.</p>
             </details>
 
-            <div class="consent-line"><span aria-hidden="true">!</span><p>Fotoğraf aday sınıflandırmaya yardımcı olur; kesin GTİP sayılmaz. Atıfsız oranlar sonuçtan otomatik çıkarılır.</p></div>
-            <button class="analyse-button" id="analyseButton" type="submit"><span>Resmî kaynaklarla ön değerlendirme yap</span><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m5 12 14 0M14 6l6 6-6 6"/></svg></button>
+            <div class="consent-line"><span aria-hidden="true">!</span><p>Fotoğraf yalnızca evsaf çıkarır; kesin GTİP sayılmaz. Güvenlik sorulu Tarife Arama Motoru otomatik aşılmaz ve yalnızca manuel doğrulama bağlantısı olarak gösterilir.</p></div>
+            <button class="analyse-button" id="analyseButton" type="submit"><span>Onaylanan evsaflarla resmî araştırmayı başlat</span><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m5 12 14 0M14 6l6 6-6 6"/></svg></button>
           </div>
 
           <aside class="readiness-card" aria-labelledby="readinessTitle">
             <span class="eyebrow">Dosya hazırlığı</span><h2 id="readinessTitle">Sonuç güvenini artırın</h2>
             <ul id="readinessList">
+              <li data-check="vision"><i></i><span><b>Görsel evsaf onayı</b><small>Fotoğraf varsa zorunlu</small></span></li>
               <li data-check="description"><i></i><span><b>Teknik ürün tanımı</b><small>İşlev, malzeme, model</small></span></li>
               <li data-check="origin"><i></i><span><b>Menşe ülke</b><small>Vergi ve önlem için</small></span></li>
               <li data-check="gtip"><i></i><span><b>Aday GTİP</b><small>Varsa 12 hane</small></span></li>

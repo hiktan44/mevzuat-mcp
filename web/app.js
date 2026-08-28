@@ -11,6 +11,8 @@ const state = {
   currentTrigger: null,
   sourceData: null,
   customsImageData: null,
+  customsVisionStatus: "idle",
+  customsVisionResult: null,
 };
 
 const $ = (selector) => document.querySelector(selector);
@@ -569,6 +571,7 @@ function renderCustomsResult(data) {
 
 function updateReadiness() {
   const checks = {
+    vision: !state.customsImageData || state.customsVisionStatus === "confirmed",
     description: $("#productDescription").value.trim().length >= 12,
     origin: Boolean($("#originCountry").value.trim()),
     gtip: $("#candidateGtip").value.replace(/\D/g, "").length >= 4,
@@ -580,12 +583,91 @@ function updateReadiness() {
   });
 }
 
+const visionFieldSelectors = [
+  "#productDescription", "#composition", "#intendedUse", "#productCategory", "#brandModel",
+  "#dimensions", "#labelText", "#visibleFeatures", "#inferredFeatures", "#classificationQuestions",
+];
+
+function setVisionState(status, message, provider = "") {
+  state.customsVisionStatus = status;
+  const labels = {
+    idle: "Bekliyor", analysing: "Analiz ediliyor", review: "Kullanıcı kontrolü", confirmed: "Onaylandı", error: "Elle doldurun",
+  };
+  const panel = $("#attributeReview");
+  if (panel) panel.hidden = !state.customsImageData;
+  const badge = $("#visionState");
+  badge.dataset.state = status;
+  badge.textContent = labels[status] || status;
+  $("#visionMessage").textContent = message;
+  $("#visionProvider").textContent = provider || "Model bilgisi analizden sonra gösterilir.";
+  const confirm = $("#confirmAttributes");
+  confirm.disabled = status === "analysing";
+  confirm.querySelector("span").textContent = status === "confirmed"
+    ? "Evsaflar onaylandı · Değişiklikte tekrar onaylayın"
+    : "Evsafları onayla ve araştırmaya hazırla";
+  updateReadiness();
+}
+
+function joinLines(values) {
+  return Array.isArray(values) ? values.filter(Boolean).join("\n") : "";
+}
+
+function applyVisionAttributes(data) {
+  const description = data.product_description || [data.product_name, data.product_category].filter(Boolean).join(" — ");
+  $("#productDescription").value = description;
+  $("#composition").value = data.composition || "";
+  $("#intendedUse").value = data.intended_use || "";
+  $("#productCategory").value = data.product_category || "";
+  $("#brandModel").value = [data.visible_brand, data.visible_model].filter(Boolean).join(" / ");
+  $("#dimensions").value = data.dimensions || "";
+  $("#labelText").value = data.label_text || "";
+  $("#visibleFeatures").value = joinLines(data.visible_features);
+  $("#inferredFeatures").value = joinLines(data.inferred_features);
+  $("#classificationQuestions").value = joinLines(data.classification_questions);
+  updateReadiness();
+}
+
+async function analyseProductImage() {
+  if (!state.customsImageData) return;
+  setVisionState(
+    "analysing",
+    "Görsel yalnızca ürünün görünür evsaflarına çevriliyor. Bu aşamada GTİP, vergi veya TAREKS sorgusu yapılmaz.",
+  );
+  try {
+    const data = await fetchJson("/api/customs/describe-image", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ image_data_url: state.customsImageData }),
+    });
+    state.customsVisionResult = data;
+    applyVisionAttributes(data);
+    setVisionState(
+      "review",
+      `${data.warning} Alanları düzeltin; araştırma ancak onayınızdan sonra başlar.`,
+      `Görsel model: ${data.provider} · ${data.model} · güven: ${data.confidence}`,
+    );
+    $("#attributeReview").scrollIntoView({ behavior: "smooth", block: "center" });
+  } catch (error) {
+    state.customsVisionResult = null;
+    setVisionState(
+      "error",
+      `${error.message || "Görsel analizi tamamlanamadı."} Ürün evsaflarını elle doldurup yine de açıkça onaylayabilirsiniz.`,
+    );
+  }
+}
+
 async function setProductImage(file) {
   const allowed = ["image/jpeg", "image/png", "image/webp"];
   if (!file) {
     state.customsImageData = null;
+    state.customsVisionResult = null;
+    state.customsVisionStatus = "idle";
     $("#imagePreview").hidden = true;
     $("#uploadZone").classList.remove("has-image");
+    $("#attributeReview").hidden = true;
+    $("#uploadTitle").textContent = "Ürün fotoğrafı ekle";
+    $("#uploadHint").textContent = "Yüklenince görsel evsaf analizi otomatik başlar";
+    updateReadiness();
     return;
   }
   if (!allowed.includes(file.type) || file.size > 8 * 1024 * 1024) {
@@ -604,6 +686,7 @@ async function setProductImage(file) {
   $("#uploadZone").classList.add("has-image");
   $("#uploadTitle").textContent = file.name;
   $("#uploadHint").textContent = `${numberFormat.format(Math.ceil(file.size / 1024))} KB · sunucuda saklanmaz`;
+  await analyseProductImage();
 }
 
 function customsRequestBody() {
@@ -615,6 +698,13 @@ function customsRequestBody() {
     dispatch_country: $("#dispatchCountry").value.trim() || null,
     intended_use: $("#intendedUse").value.trim() || null,
     composition: $("#composition").value.trim() || null,
+    product_category: $("#productCategory").value.trim() || null,
+    brand_model: $("#brandModel").value.trim() || null,
+    dimensions: $("#dimensions").value.trim() || null,
+    label_text: $("#labelText").value.trim() || null,
+    visible_features: $("#visibleFeatures").value.trim() || null,
+    inferred_features: $("#inferredFeatures").value.trim() || null,
+    classification_questions: $("#classificationQuestions").value.trim() || null,
     condition: $("#productCondition").value,
     invoice_value: nullableNumber("#invoiceValue"),
     freight: nullableNumber("#freight"),
@@ -626,7 +716,6 @@ function customsRequestBody() {
     customs_duty_rate: nullableNumber("#customsDutyRate"),
     additional_duty_rate: nullableNumber("#additionalDutyRate"),
     vat_rate: nullableNumber("#vatRate"),
-    image_data_url: state.customsImageData,
   };
 }
 
@@ -636,9 +725,40 @@ const uploadZone = $("#uploadZone");
 ["dragleave", "drop"].forEach((name) => uploadZone.addEventListener(name, (event) => { event.preventDefault(); uploadZone.classList.remove("dragging"); }));
 uploadZone.addEventListener("drop", (event) => setProductImage(event.dataTransfer.files?.[0]).catch(() => showToast("Görsel okunamadı.")));
 $$('#customsForm input, #customsForm textarea, #customsForm select').forEach((input) => input.addEventListener("input", updateReadiness));
+visionFieldSelectors.forEach((selector) => $(selector)?.addEventListener("input", () => {
+  if (state.customsImageData && state.customsVisionStatus === "confirmed") {
+    setVisionState(
+      "review",
+      "Onaydan sonra evsaf değişti. Güncel alanları yeniden onaylamadan resmî araştırma başlatılamaz.",
+      state.customsVisionResult ? `Görsel model: ${state.customsVisionResult.provider} · ${state.customsVisionResult.model}` : "Elle düzenlenen evsaf",
+    );
+  }
+}));
+
+$("#confirmAttributes").addEventListener("click", () => {
+  if (state.customsVisionStatus === "analysing") return;
+  if ($("#productDescription").value.trim().length < 12) {
+    showToast("Onaylamadan önce teknik ürün tanımını tamamlayın.");
+    $("#productDescription").focus();
+    return;
+  }
+  setVisionState(
+    "confirmed",
+    "Evsaflar kullanıcı tarafından onaylandı. GTİP, e-vergi ve TAREKS araştırması artık başlatılabilir.",
+    state.customsVisionResult
+      ? `Görsel model: ${state.customsVisionResult.provider} · ${state.customsVisionResult.model} · kullanıcı onaylı`
+      : "Elle girilen evsaf · kullanıcı onaylı",
+  );
+  showToast("Ürün evsafları onaylandı.");
+});
 
 $("#customsForm").addEventListener("submit", async (event) => {
   event.preventDefault();
+  if (state.customsImageData && state.customsVisionStatus !== "confirmed") {
+    showToast("Önce fotoğraftan çıkarılan evsafları kontrol edip onaylayın.");
+    $("#attributeReview").scrollIntoView({ behavior: "smooth", block: "center" });
+    return;
+  }
   const button = $("#analyseButton");
   const result = $("#customsResult");
   const loading = $("#analysisLoading");
@@ -660,7 +780,7 @@ $("#customsForm").addEventListener("submit", async (event) => {
   } finally {
     loading.hidden = true;
     button.disabled = false;
-    button.querySelector("span").textContent = "Resmî kaynaklarla ön değerlendirme yap";
+    button.querySelector("span").textContent = "Onaylanan evsaflarla resmî araştırmayı başlat";
   }
 });
 

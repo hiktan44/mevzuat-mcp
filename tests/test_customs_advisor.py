@@ -1,7 +1,9 @@
 from __future__ import annotations
 
 import io
+import os
 import unittest
+from unittest.mock import patch
 
 from PIL import Image
 
@@ -10,10 +12,14 @@ from customs_advisor import (
     CustomsInquiry,
     CustomsModelResult,
     Finding,
+    OfficialSourceRegistry,
+    ProductAttributeAnalysis,
     TaxFinding,
     _deterministic_cost,
     _missing_information,
+    _parse_json_object,
     _sanitize_model_result,
+    _select_vision_provider,
     validate_image,
 )
 
@@ -77,6 +83,58 @@ class CustomsAdvisorSafetyTests(unittest.TestCase):
     def test_non_image_upload_is_rejected(self) -> None:
         with self.assertRaises(ValueError):
             validate_image(b"not-an-image", "image/png")
+
+    def test_vision_json_parser_accepts_fenced_object(self) -> None:
+        parsed = _parse_json_object('```json\n{"product_name":"Çocuk şortu"}\n```')
+        self.assertEqual(parsed["product_name"], "Çocuk şortu")
+
+    def test_auto_provider_prefers_zai_vision(self) -> None:
+        with patch.dict(
+            os.environ,
+            {
+                "CUSTOMS_VISION_PROVIDER": "auto",
+                "ZAI_API_KEY": "zai-test",
+                "GEMINI_API_KEY": "gemini-test",
+                "OPENAI_API_KEY": "openai-test",
+            },
+            clear=True,
+        ):
+            provider, model, key = _select_vision_provider()
+        self.assertEqual((provider, model, key), ("zai", "glm-4.6v", "zai-test"))
+
+    def test_vision_result_never_exposes_model_supplied_gtip(self) -> None:
+        result = ProductAttributeAnalysis.model_validate(
+            {
+                "provider": "zai",
+                "model": "glm-4.6v",
+                "product_name": "Şort",
+                "candidate_gtip": "610463000000",
+            }
+        )
+        self.assertNotIn("candidate_gtip", result.model_dump())
+        self.assertTrue(result.user_confirmation_required)
+
+
+class OfficialSourceRegistryTests(unittest.IsolatedAsyncioTestCase):
+    async def test_captcha_source_is_manual_only_and_not_fetched(self) -> None:
+        registry = OfficialSourceRegistry()
+        try:
+            result = await registry._fetch(
+                {
+                    "id": "tariff_search",
+                    "title": "Tarife Arama Motoru",
+                    "authority": "T.C. Ticaret Bakanlığı",
+                    "url": "https://uygulama.gtb.gov.tr/Tara/TarifeBasitArama",
+                    "access_mode": "manual_only",
+                    "note": "Güvenlik sorusu nedeniyle manuel doğrulanır.",
+                },
+                ["şort"],
+            )
+        finally:
+            await registry.close()
+        self.assertEqual(result.access_mode, "manual_only")
+        self.assertEqual(result.excerpt, "")
+        self.assertIn("manuel", result.fetch_warning)
 
 
 if __name__ == "__main__":

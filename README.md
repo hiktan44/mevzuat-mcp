@@ -72,9 +72,10 @@ Yeni araçlar:
 
 ## Gümrükçe’ye Sor
 
-Web arayüzündeki **Gümrükçe’ye Sor** sekmesi ürün açıklaması, aday GTİP ve isteğe bağlı ürün fotoğrafını birlikte değerlendirir. Sistem önce eksik sınıflandırma özelliklerini gösterir; ardından en fazla beş **aday** kodu, gerekli belgeleri, TAREKS/TSE ve diğer kontrol ihtimallerini, vergileri ve yalnızca kullanıcı tarafından doğrulanmış oranlarla hesaplanan tahmini maliyet kalemlerini resmî kaynak kimlikleriyle sunar.
+Web arayüzündeki **Gümrükçe’ye Sor** sekmesi iki ayrı güvenlik aşaması kullanır. Fotoğraf önce yalnızca ürün evsafına çevrilir; tanım, görünen marka/model, ölçü, etiket metni, görünen ve belirsiz özellikler düzenlenebilir satırlara gelir. Kullanıcı bu alanları açıkça onaylamadan GTİP, vergi veya TAREKS araştırması başlamaz. Ardından en fazla beş **aday** kod, gerekli belgeler, kontroller ve yalnızca kullanıcı tarafından doğrulanmış oranlarla maliyet kalemleri resmî kaynak kimlikleriyle sunulur.
 
 * Fotoğraf tek başına kesin veya bağlayıcı GTİP üretmez. Kesin sınıflandırma için teknik belge ve gerektiğinde Bağlayıcı Tarife Bilgisi gerekir.
+* Güvenlik sorusu/CAPTCHA kullanan Bakanlık Tarife Arama Motoru otomatik aşılmaz; sonuçlarda yalnızca manuel doğrulama bağlantısı olarak yer alır.
 * EBTI, CLASS, CN 2026 ve TARIC karşılaştırmalı sınıflandırma kanıtıdır; bunların kodları Türkiye GTİP12 veya Türkiye vergi oranı olarak doğrudan kullanılmaz.
 * EBTI metinleri ve resmî indirme verileri kaynak olarak kullanılabilir. Açık kullanım hakkı teyit edilmemiş EBTI ürün görselleri topluca kopyalanmaz ve model eğitimine alınmaz.
 * Her sonuç tarihli resmî kaynak zinciri, belirsizlikler ve zorunlu hukuki uyarıyla birlikte döner. Sistem yüzde yüz doğruluk veya bağlayıcı idari karar iddiasında bulunmaz.
@@ -85,6 +86,17 @@ Yapay zekâ yorumunu etkinleştirmek için Coolify uygulamasına şu ortam deği
 OPENAI_API_KEY=<sunucuda gizli değer>
 CUSTOMS_AI_MODEL=gpt-5.4
 CUSTOMS_AI_REASONING=high
+```
+
+Görsel evsaf çıkarımı için `auto` modu önce GLM Vision, ardından Nano Banana Pro, son olarak OpenAI görsel modelini dener. Yapılandırılmış metin çıkarımı için GLM Vision varsayılan ve önerilen sağlayıcıdır:
+
+```text
+CUSTOMS_VISION_PROVIDER=auto
+ZAI_API_KEY=<sunucuda gizli değer>
+ZAI_VISION_MODEL=glm-4.6v
+# İsteğe bağlı ikinci sağlayıcı:
+GEMINI_API_KEY=<sunucuda gizli değer>
+GEMINI_VISION_MODEL=gemini-3-pro-image
 ```
 
 `OPENAI_API_KEY` yoksa arayüz uydurma yanıt üretmez; yalnızca güncel resmî kanıt paketini ve eksik bilgi listesini gösteren `evidence_only` modunda çalışır. Yüklenen JPEG/PNG/WebP görseli yeniden kodlanarak metaverisi temizlenir, kalıcı olarak saklanmaz ve istek başına 8 MB / 25 megapiksel sınırı uygulanır.
@@ -99,7 +111,7 @@ Web araştırma arayüzü: `https://mevzuat-mcp.seymata.com/`
 
 Arayüzde Ticaret Bakanlığının yedi bilgi katmanı canlı kayıt sayılarıyla ayrı gösterilir; kaynak, belge türü, yıl ve mülga durumu filtrelenebilir. Seçilen kaydın resmî kaynak zinciri, tam metni ve kopyalanabilir atfı aynı ekranda açılır. **Genel mevzuat** görünümü Bedesten resmî servisine bağlı ayrı arama alanıdır.
 
-> Bu Coolify dağıtımı v1.2.0 sağlık, web arayüzü ve MCP araç taramasıyla doğrulanır.
+> Bu Coolify dağıtımı v1.3.0 sağlık, web arayüzü ve MCP araç taramasıyla doğrulanır.
 
 ChatGPT'de geliştirici modu açıkken **Ayarlar → Uygulamalar → Oluştur** ekranında bu adresi endpoint olarak verin, kimlik doğrulamayı **Yok** seçin ve **Araçları tara** ile 32 aracı yükleyin. Codex için:
 

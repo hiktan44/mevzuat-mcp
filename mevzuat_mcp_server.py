@@ -69,7 +69,7 @@ async def _server_lifespan(server):
 
 app = FastMCP(
     name="MevzuatGovTrMCP",
-    version="1.2.0",
+    version="1.3.0",
     lifespan=_server_lifespan,
     instructions="MCP server for Turkish legislation search and content retrieval. "
     "Three source families: mevzuat.gov.tr, bedesten.adalet.gov.tr, and a continuously refreshed official "

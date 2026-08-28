@@ -89,6 +89,18 @@ def _rate_limit_response(
 _DATA_URL_RE = re.compile(r"^data:(image/(?:jpeg|png|webp));base64,([A-Za-z0-9+/=\r\n]+)$")
 
 
+def _decode_image_data_url(value: Any) -> tuple[bytes, str]:
+    if not isinstance(value, str) or len(value) > 11_500_000:
+        raise ValueError("Görsel verisi çok büyük veya geçersiz.")
+    match = _DATA_URL_RE.fullmatch(value)
+    if not match:
+        raise ValueError("Görsel JPEG, PNG veya WebP olmalıdır.")
+    try:
+        return base64.b64decode(match.group(2), validate=True), match.group(1)
+    except (ValueError, TypeError) as exc:
+        raise ValueError("Görsel verisi çözümlenemedi.") from exc
+
+
 def _normalise_date(value: Any) -> str | None:
     if not value:
         return None
@@ -395,6 +407,45 @@ async def web_ticaret_document(request: Request):
     )
 
 
+@mcp.custom_route("/api/customs/describe-image", methods=["POST"])
+async def web_customs_describe_image(request: Request):
+    """Extract editable visual product attributes; do not run GTIP/TAREKS research."""
+    limited = _rate_limit_response(request, "customs-vision", limit=20, window_seconds=60)
+    if limited:
+        return limited
+    upload_limited = _rate_limit_response(request, "customs-upload", limit=30, window_seconds=3600)
+    if upload_limited:
+        return upload_limited
+    try:
+        content_length = int(request.headers.get("content-length", "0") or 0)
+    except ValueError:
+        content_length = 0
+    if content_length > 12 * 1024 * 1024:
+        return JSONResponse({"error": "İstek boyutu 12 MB sınırını aşıyor."}, status_code=413)
+    try:
+        body = await request.json()
+        if not isinstance(body, dict) or not body.get("image_data_url"):
+            return JSONResponse({"error": "Analiz edilecek ürün görselini yükleyin."}, status_code=422)
+        image_bytes, image_media_type = _decode_image_data_url(body["image_data_url"])
+        result = await customs_advisor_service.describe_image(image_bytes, image_media_type)
+    except RuntimeError as exc:
+        return JSONResponse({"error": str(exc)}, status_code=503)
+    except (ValidationError, ValueError) as exc:
+        message = (
+            exc.errors(include_url=False)[0].get("msg", "Görsel evsafları doğrulanamadı.")
+            if isinstance(exc, ValidationError)
+            else str(exc)
+        )
+        return JSONResponse({"error": message}, status_code=422)
+    except Exception:
+        logger.exception("Customs image description failed")
+        return JSONResponse(
+            {"error": "Görsel analiz modeli şu anda yanıt vermedi. Alanları elle doldurup onaylayabilirsiniz."},
+            status_code=502,
+        )
+    return JSONResponse(result.model_dump(mode="json"))
+
+
 @mcp.custom_route("/api/customs/precheck", methods=["POST"])
 async def web_customs_precheck(request: Request):
     """Run an evidence-first, non-binding customs pre-assessment."""
@@ -415,31 +466,21 @@ async def web_customs_precheck(request: Request):
     if not isinstance(body, dict):
         return JSONResponse({"error": "Analiz isteği bir nesne olmalıdır."}, status_code=422)
 
-    image_bytes = None
-    image_media_type = None
     image_data_url = body.pop("image_data_url", None)
     if image_data_url:
-        upload_limited = _rate_limit_response(request, "customs-upload", limit=30, window_seconds=3600)
-        if upload_limited:
-            return upload_limited
-        if not isinstance(image_data_url, str) or len(image_data_url) > 11_500_000:
-            return JSONResponse({"error": "Görsel verisi çok büyük veya geçersiz."}, status_code=413)
-        match = _DATA_URL_RE.fullmatch(image_data_url)
-        if not match:
-            return JSONResponse({"error": "Görsel JPEG, PNG veya WebP olmalıdır."}, status_code=422)
-        try:
-            image_media_type = match.group(1)
-            image_bytes = base64.b64decode(match.group(2), validate=True)
-        except (ValueError, TypeError):
-            return JSONResponse({"error": "Görsel verisi çözümlenemedi."}, status_code=422)
+        return JSONResponse(
+            {
+                "error": (
+                    "Fotoğraf doğrudan GTİP/TAREKS araştırmasına gönderilemez. Önce /api/customs/describe-image "
+                    "ile evsafları çıkarın, kullanıcıya düzelttirip onaylatın; sonra yalnızca onaylanan metin alanlarını gönderin."
+                )
+            },
+            status_code=422,
+        )
 
     try:
         inquiry = CustomsInquiry.model_validate(body)
-        result = await customs_advisor_service.analyse(
-            inquiry,
-            image_bytes=image_bytes,
-            image_media_type=image_media_type,
-        )
+        result = await customs_advisor_service.analyse(inquiry)
     except ValidationError as exc:
         message = exc.errors(include_url=False)[0].get("msg", "Alanları kontrol edin.")
         return JSONResponse({"error": f"İstek doğrulanamadı: {message}"}, status_code=422)
@@ -465,7 +506,7 @@ async def health_check(request):
     return JSONResponse({
         "status": "healthy",
         "service": "Mevzuat MCP Server",
-        "version": "1.2.0"
+        "version": "1.3.0"
     })
 
 class McpRateLimitMiddleware:

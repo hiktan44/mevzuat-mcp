@@ -35,7 +35,9 @@
       "id": "tariff_search",
       "title": "Tarife Arama Motoru",
       "authority": "T.C. Ticaret Bakanlığı",
-      "url": "https://uygulama.gtb.gov.tr/Tara/TarifeBasitArama"
+      "url": "https://uygulama.gtb.gov.tr/Tara/TarifeBasitArama",
+      "access_mode": "manual_only",
+      "note": "Bu resmî sayfa güvenlik sorusu/CAPTCHA içerdiği için otomatik sorgulanmaz; kullanıcı bağlantıyı tarayıcıda açıp manuel doğrular."
     },
     {
       "id": "customs_value",
