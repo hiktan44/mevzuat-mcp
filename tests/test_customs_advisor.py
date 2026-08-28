@@ -5,6 +5,7 @@ import os
 import unittest
 from unittest.mock import patch
 
+import httpx
 from PIL import Image
 
 from customs_advisor import (
@@ -19,6 +20,7 @@ from customs_advisor import (
     _missing_information,
     _openrouter_message_text,
     _openrouter_headers,
+    _openrouter_error_detail,
     _openrouter_models,
     _openrouter_payload,
     _parse_json_object,
@@ -154,6 +156,17 @@ class CustomsAdvisorSafetyTests(unittest.TestCase):
         self.assertEqual(headers["X-OpenRouter-Title"], "Gumrukce")
         for value in headers.values():
             value.encode("ascii")
+
+    def test_openrouter_error_detail_is_short_and_does_not_echo_request(self) -> None:
+        response = httpx.Response(
+            400,
+            request=httpx.Request("POST", "https://openrouter.ai/api/v1/chat/completions"),
+            json={"error": {"message": "Model bu istek biçimini desteklemiyor. " + ("x" * 400)}},
+        )
+        detail = _openrouter_error_detail(response)
+        self.assertLessEqual(len(detail), 240)
+        self.assertIn("Model bu istek biçimini desteklemiyor", detail)
+        self.assertNotIn("Authorization", detail)
 
     def test_strict_schema_requires_all_nested_properties(self) -> None:
         schema = _strict_json_schema(CustomsModelResult.model_json_schema())

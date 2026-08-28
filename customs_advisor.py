@@ -505,6 +505,22 @@ def _openrouter_headers(api_key: str) -> dict[str, str]:
     return headers
 
 
+def _openrouter_error_detail(response: httpx.Response) -> str:
+    """Extract a short provider error without echoing request data or headers."""
+    detail = ""
+    try:
+        body = response.json()
+        error = body.get("error", {}) if isinstance(body, dict) else {}
+        if isinstance(error, dict):
+            detail = str(error.get("message") or error.get("code") or "")
+        elif error:
+            detail = str(error)
+    except (ValueError, TypeError):
+        detail = ""
+    detail = re.sub(r"\s+", " ", detail).strip()
+    return detail[:240] or "sağlayıcı ayrıntı vermedi"
+
+
 async def _openrouter_chat(
     *,
     api_key: str,
@@ -515,24 +531,42 @@ async def _openrouter_chat(
     max_tokens: int,
 ) -> tuple[str, str]:
     """Call OpenRouter with ordered model fallbacks and privacy-safe routing."""
-    payload = _openrouter_payload(
+    base_payload = _openrouter_payload(
         models=models,
         messages=messages,
         response_schema=response_schema,
         schema_name=schema_name,
         max_tokens=max_tokens,
     )
+    failures: list[str] = []
     async with httpx.AsyncClient(timeout=120) as client:
-        response = await client.post(
-            "https://openrouter.ai/api/v1/chat/completions",
-            headers=_openrouter_headers(api_key),
-            json=payload,
-        )
-        response.raise_for_status()
-        body = response.json()
-    content = _openrouter_message_text(body["choices"][0]["message"]["content"])
-    resolved_model = str(body.get("model") or models[0])
-    return content, resolved_model
+        for model in models:
+            payload = dict(base_payload)
+            payload.pop("models", None)
+            payload["model"] = model
+            try:
+                response = await client.post(
+                    "https://openrouter.ai/api/v1/chat/completions",
+                    headers=_openrouter_headers(api_key),
+                    json=payload,
+                )
+            except httpx.RequestError as exc:
+                failures.append(f"{model}: bağlantı hatası ({type(exc).__name__})")
+                continue
+            if not response.is_success:
+                failures.append(
+                    f"{model}: HTTP {response.status_code} · {_openrouter_error_detail(response)}"
+                )
+                continue
+            try:
+                body = response.json()
+                content = _openrouter_message_text(body["choices"][0]["message"]["content"])
+            except (KeyError, IndexError, TypeError, ValueError) as exc:
+                failures.append(f"{model}: geçersiz yanıt ({type(exc).__name__})")
+                continue
+            return content, str(body.get("model") or model)
+    summary = " | ".join(failures)
+    raise RuntimeError(f"OpenRouter model zinciri yanıt vermedi. {summary}"[:1200])
 
 
 _VISION_PROMPT = """
