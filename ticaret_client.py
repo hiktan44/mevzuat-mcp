@@ -15,7 +15,11 @@ import json
 import logging
 import os
 import re
+import shutil
+# Only fixed, allowlisted text extractors are invoked and shell mode is never enabled.
+import subprocess  # nosec B404
 import sys
+import tempfile
 import time
 import unicodedata
 import zipfile
@@ -131,6 +135,39 @@ def _file_type(url: str, content_type: str | None = None) -> str:
     return "link"
 
 
+def _sniff_document_extension(data: bytes, content_type: str = "") -> str:
+    """Resolve missing or misleading document metadata without trusting filenames alone."""
+    media_type = content_type.lower().split(";", 1)[0].strip()
+    by_media_type = {
+        "application/pdf": ".pdf",
+        "application/msword": ".doc",
+        "application/vnd.ms-excel": ".xls",
+        "application/vnd.ms-powerpoint": ".ppt",
+        "application/rtf": ".rtf",
+        "text/rtf": ".rtf",
+        "application/vnd.openxmlformats-officedocument.wordprocessingml.document": ".docx",
+        "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet": ".xlsx",
+        "application/vnd.openxmlformats-officedocument.presentationml.presentation": ".pptx",
+        "application/zip": ".zip",
+    }
+    if media_type in by_media_type:
+        return by_media_type[media_type]
+    sample = data[:4096].lstrip()
+    if data.startswith(b"%PDF-"):
+        return ".pdf"
+    if data.startswith(b"PK\x03\x04"):
+        return ".zip"
+    if data.startswith(bytes.fromhex("D0CF11E0A1B11AE1")):
+        # OLE compound documents need their HTTP metadata to distinguish
+        # Word, Excel and PowerPoint. Unknown OLE files are handled safely.
+        return by_media_type.get(media_type, ".ole")
+    if sample.startswith((b"<!DOCTYPE html", b"<!doctype html", b"<html", b"<HTML")):
+        return ".html"
+    if sample.startswith(b"{\\rtf"):
+        return ".rtf"
+    return ""
+
+
 def _is_official_content_host(hostname: str | None) -> bool:
     host = (hostname or "").lower().rstrip(".")
     return any(host == allowed or host.endswith(f".{allowed}") for allowed in _OFFICIAL_CONTENT_HOSTS)
@@ -208,7 +245,8 @@ class TicaretApiClient:
                 last_error = exc
                 if attempt < 1:
                     await asyncio.sleep(0.35 * (2 ** attempt))
-        assert last_error is not None
+        if last_error is None:  # Defensive guard; the retry loop always assigns an error before reaching this branch.
+            raise RuntimeError("Resmî kaynak isteği beklenmeyen biçimde tamamlanamadı.")
         raise last_error
 
     @staticmethod
@@ -974,6 +1012,57 @@ class TicaretApiClient:
             row.replace_with("\n" + " | ".join(value for value in cells if value) + "\n")
         return re.sub(r"\n{3,}", "\n\n", content.get_text("\n", strip=True)).strip()
 
+    @staticmethod
+    def _convert_legacy_office(data: bytes, extension: str) -> str | None:
+        """Extract text from pre-OOXML Office files using sandboxed CLI readers.
+
+        MarkItDown intentionally does not support legacy ``.doc``/``.ppt`` files.
+        Debian's small, read-only converters cover the official Ministry archive
+        without requiring a full office suite in the production image.
+        """
+        command_name = {
+            ".doc": "antiword",
+            ".ppt": "catppt",
+            ".xls": "xls2csv",
+        }.get(extension)
+        if not command_name:
+            return None
+        executable = shutil.which(command_name)
+        if not executable:
+            return None
+        temp_path: Path | None = None
+        try:
+            with tempfile.NamedTemporaryFile(suffix=extension, delete=False) as handle:
+                handle.write(data)
+                temp_path = Path(handle.name)
+            command = [executable]
+            if command_name == "antiword":
+                command.extend(["-m", "UTF-8.txt"])
+            command.append(str(temp_path))
+            # ``command_name`` comes from the fixed extension map above.
+            completed = subprocess.run(  # nosec B603
+                command,
+                capture_output=True,
+                check=False,
+                timeout=30,
+            )
+            if completed.returncode != 0:
+                logger.warning(
+                    "Legacy %s conversion failed with %s: %s",
+                    extension,
+                    command_name,
+                    completed.stderr.decode("utf-8", errors="replace")[:500],
+                )
+                return None
+            text = completed.stdout.decode("utf-8", errors="replace").replace("\x00", "")
+            return re.sub(r"\n{3,}", "\n\n", text).strip() or None
+        except (OSError, subprocess.SubprocessError) as exc:
+            logger.warning("Legacy %s conversion failed: %s", extension, exc)
+            return None
+        finally:
+            if temp_path:
+                temp_path.unlink(missing_ok=True)
+
     def _convert_binary(self, data: bytes, extension: str, url: str) -> tuple[str, list[str]]:
         warnings: list[str] = []
         if extension == ".zip":
@@ -995,15 +1084,22 @@ class TicaretApiClient:
                         break
                     member_data = archive.read(item)
                     try:
-                        result = self._converter.convert_stream(
-                            io.BytesIO(member_data), file_extension=member_ext, url=f"{url}#{quote(item.filename)}"
+                        text, member_warnings = self._convert_binary(
+                            member_data,
+                            member_ext,
+                            f"{url}#{quote(item.filename)}",
                         )
-                        text = (result.text_content or "").strip()
+                        warnings.extend(f"{item.filename}: {warning}" for warning in member_warnings)
                         if text:
                             parts.append(f"\n# {item.filename}\n{text}")
                     except Exception as exc:
                         warnings.append(f"Arşiv üyesi dönüştürülemedi: {item.filename} ({type(exc).__name__})")
             return "\n\n".join(parts), warnings
+
+        if extension in {".doc", ".xls", ".ppt"}:
+            legacy_text = self._convert_legacy_office(data, extension)
+            if legacy_text:
+                return legacy_text, warnings
 
         try:
             result = self._converter.convert_stream(io.BytesIO(data), file_extension=extension or None, url=url)
@@ -1038,12 +1134,13 @@ class TicaretApiClient:
             raise
         extension = Path(unquote(urlsplit(resolved_url).path)).suffix.lower()
         lowered_type = content_type.lower()
-        if not extension:
-            extension = {
-                "application/pdf": ".pdf",
-                "application/vnd.openxmlformats-officedocument.wordprocessingml.document": ".docx",
-                "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet": ".xlsx",
-            }.get(lowered_type.split(";", 1)[0].strip(), "")
+        sniffed_extension = _sniff_document_extension(data, content_type)
+        if not extension or extension not in _DOCUMENT_EXTENSIONS:
+            extension = sniffed_extension or extension
+        elif sniffed_extension == ".html":
+            # Some official download endpoints return an HTML notice while
+            # retaining the requested file suffix.
+            extension = ".html"
         if "html" in lowered_type or extension in {".htm", ".html"}:
             text = self._html_to_text(data)
             warnings: list[str] = []

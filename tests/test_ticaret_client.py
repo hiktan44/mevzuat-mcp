@@ -1,9 +1,11 @@
 from __future__ import annotations
 
 import asyncio
+import subprocess
 import unittest
+from unittest.mock import patch
 
-from ticaret_client import TicaretApiClient
+from ticaret_client import TicaretApiClient, _sniff_document_extension
 from ticaret_models import TicaretDocument, TicaretSource
 
 
@@ -113,6 +115,35 @@ class TicaretClientParsingTests(unittest.TestCase):
             ),
             "https://www.mevzuat.gov.tr/MevzuatMetin/1.5.4458.pdf",
         )
+
+    def test_legacy_office_type_is_detected_from_content_type(self) -> None:
+        ole_header = bytes.fromhex("D0CF11E0A1B11AE1") + b"legacy-office"
+        self.assertEqual(_sniff_document_extension(ole_header, "application/msword"), ".doc")
+        self.assertEqual(_sniff_document_extension(ole_header, "application/vnd.ms-excel"), ".xls")
+
+    def test_html_notice_overrides_misleading_download_suffix(self) -> None:
+        self.assertEqual(
+            _sniff_document_extension(b"<!DOCTYPE html><html><body>notice</body></html>", "application/octet-stream"),
+            ".html",
+        )
+
+    def test_legacy_word_uses_bounded_external_text_extractor(self) -> None:
+        completed = subprocess.CompletedProcess(
+            args=["antiword"], returncode=0, stdout="Gümrük belgesi\n\n\nMadde 1".encode(), stderr=b""
+        )
+        with patch("ticaret_client.shutil.which", return_value="/usr/bin/antiword"), patch(
+            "ticaret_client.subprocess.run", return_value=completed
+        ) as run:
+            text = self.client._convert_legacy_office(b"legacy", ".doc")
+        self.assertEqual(text, "Gümrük belgesi\n\nMadde 1")
+        self.assertEqual(run.call_args.kwargs["timeout"], 30)
+        self.assertFalse(run.call_args.kwargs["check"])
+
+    def test_binary_converter_prefers_legacy_reader(self) -> None:
+        with patch.object(self.client, "_convert_legacy_office", return_value="Okunabilir eski belge metni"):
+            text, warnings = self.client._convert_binary(b"legacy", ".doc", "https://ticaret.gov.tr/test.doc")
+        self.assertEqual(text, "Okunabilir eski belge metni")
+        self.assertEqual(warnings, [])
 
     def test_document_title_takes_precedence_over_parent_section(self) -> None:
         self.assertEqual(

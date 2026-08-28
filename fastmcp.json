@@ -9,7 +9,7 @@
       "httpx",
       "beautifulsoup4",
       "lxml",
-      "markitdown[pdf]",
+      "markitdown[pdf,xls]",
       "playwright==1.55.0",
       "mistralai",
       "python-dotenv",
