@@ -75,7 +75,7 @@ Yeni araçlar:
 
 Uzak MCP adresi: `https://mevzuat-mcp.seymata.com/mcp`
 
-> Bu adres, v1.1.0 Fly dağıtımı tamamlandıktan ve sağlık/MCP taraması doğrulandıktan sonra aşağıdaki bağlantılar için kullanılmalıdır.
+> Bu Coolify dağıtımı v1.1.0 sağlık ve MCP araç taramasıyla doğrulanmıştır.
 
 ChatGPT'de geliştirici modu açıkken **Ayarlar → Uygulamalar → Oluştur** ekranında bu adresi endpoint olarak verin, kimlik doğrulamayı **Yok** seçin ve **Araçları tara** ile 31 aracı yükleyin. Codex için:
 
