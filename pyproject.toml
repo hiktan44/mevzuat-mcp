@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "mevzuat-mcp"
-version = "1.1.0"
+version = "1.2.0"
 description = "Remote MCP for Turkish legislation and live Ministry of Trade laws, supports, data, reports and overseas contacts"
 readme = "README.md"
 requires-python = ">=3.11"
@@ -24,7 +24,7 @@ classifiers = [
     "Topic :: Text Processing :: Markup :: Markdown",
 ]
 dependencies = [
-    "fastmcp>=2.12.0",
+    "fastmcp>=3.4.7,<4",
     "pydantic>=2.0.0",
     "httpx>=0.24.0",
     "beautifulsoup4>=4.12.0",
@@ -37,6 +37,7 @@ dependencies = [
     "uvicorn>=0.23.0",
     "numpy>=1.24.0",
     "openai>=1.0.0",
+    "Pillow>=10.4.0",
 ]
 
 [project.urls]
@@ -48,8 +49,8 @@ dependencies = [
 mevzuat-mcp = "mevzuat_mcp_server:main"
 
 [tool.setuptools]
-py-modules = ["mevzuat_mcp_server", "mevzuat_client", "mevzuat_models", "article_search", "bedesten_client", "bedesten_models", "ticaret_client", "ticaret_models"]
+py-modules = ["mevzuat_mcp_server", "mevzuat_client", "mevzuat_models", "article_search", "bedesten_client", "bedesten_models", "ticaret_client", "ticaret_models", "customs_advisor"]
 packages = ["semantic_search"]
 
 [tool.setuptools.data-files]
-"." = ["ticaret_sources.json"]
+"." = ["ticaret_sources.json", "customs_sources.json"]

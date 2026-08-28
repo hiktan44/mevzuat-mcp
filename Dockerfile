@@ -12,22 +12,26 @@ RUN apt-get update && apt-get install -y \
     gnupg \
     && rm -rf /var/lib/apt/lists/*
 
-# Copy Python files and requirements
-COPY pyproject.toml setup.py README.md ./
+# Copy Python files and the reviewed dependency lock
+COPY pyproject.toml uv.lock setup.py README.md ./
 COPY *.py ./
 COPY ticaret_sources.json ./
-COPY requirements.txt ./
+COPY customs_sources.json ./
 COPY semantic_search/ ./semantic_search/
 COPY web/ ./web/
 
-# Install Python dependencies
-RUN pip install --no-cache-dir -r requirements.txt
+# Install the exact audited dependency set into the project virtual environment
+RUN pip install --no-cache-dir uv && uv sync --frozen --no-dev
+ENV PATH="/app/.venv/bin:$PATH"
+ENV PLAYWRIGHT_BROWSERS_PATH=/ms-playwright
 
 # Install Playwright browsers (Chromium only for smaller image)
 RUN playwright install --with-deps chromium
 
-# Install the package in development mode
-RUN pip install -e .
+# Run the public web service without root privileges
+RUN useradd --create-home --shell /usr/sbin/nologin appuser \
+    && chown -R appuser:appuser /app /ms-playwright
+USER appuser
 
 # Expose port
 EXPOSE 8000

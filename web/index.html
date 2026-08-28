@@ -3,11 +3,13 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <meta name="description" content="Ticaret Bakanlığı mevzuatı, devlet destekleri, raporları, verileri ve yurt dışı teşkilatı için canlı araştırma arayüzü.">
-  <title>Ticaret Bilgi Masası — Mevzuat ve resmî kaynak araştırması</title>
+  <meta name="description" content="Ticaret Bakanlığı mevzuatı, devlet destekleri, dış ticaret raporları ve resmî veri kaynaklarında araştırma.">
+  <meta name="theme-color" content="#ffffff">
+  <title>Ticaret Bilgi Masası</title>
+  <script>if(location.protocol==='file:')location.replace('https://mevzuat-mcp.seymata.com/')</script>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&amp;family=IBM+Plex+Sans+Condensed:wght@500;600;700&amp;family=Source+Sans+3:wght@400;500;600;700&amp;display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&amp;family=IBM+Plex+Sans+Condensed:wght@500;600;700&amp;family=Manrope:wght@400;500;600;700&amp;display=swap" rel="stylesheet">
   <link rel="stylesheet" href="/assets/app.css">
   <script src="/assets/app.js" defer></script>
 </head>
@@ -16,102 +18,233 @@
 
   <header class="topbar">
     <a class="brand" href="/" aria-label="Ticaret Bilgi Masası ana sayfa">
-      <span class="brand-emblem" aria-hidden="true"><b>TB</b><i></i></span>
-      <span class="brand-copy"><strong>Ticaret Bilgi Masası</strong><small>Resmî kaynak araştırma sistemi</small></span>
+      <span class="brand-mark" aria-hidden="true"><i></i><b></b></span>
+      <span><strong>Ticaret Bilgi Masası</strong><small>Resmî kaynak araştırması</small></span>
     </a>
-    <div class="scope-switch" role="group" aria-label="Araştırma kapsamı">
-      <button type="button" class="active" data-scope="ticaret">Ticaret Bakanlığı</button>
+
+    <div class="scope-tabs" role="group" aria-label="Araştırma kapsamı">
+      <button type="button" class="customs-tab" data-scope="customs">Gümrükçe’ye Sor</button>
+      <button type="button" class="active" data-scope="ticaret">Kaynak araştır</button>
       <button type="button" data-scope="general">Genel mevzuat</button>
     </div>
-    <div class="topbar-actions">
-      <span class="live-state" id="liveState"><i aria-hidden="true"></i><span>Bağlantı kuruluyor</span></span>
-      <button class="mcp-copy" id="copyMcp" type="button" title="MCP adresini kopyala"><span>MCP</span><code>/mcp</code></button>
-      <button class="icon-button" id="themeToggle" type="button" aria-label="Renk temasını değiştir">◐</button>
+
+    <div class="topbar-tools">
+      <span class="live-state" id="liveState"><i aria-hidden="true"></i><span>Bağlanıyor</span></span>
+      <button class="mcp-button" id="copyMcp" type="button" title="MCP adresini kopyala"><span>MCP</span><code>/mcp</code></button>
+      <button class="icon-button" id="themeToggle" type="button" aria-label="Renk temasını değiştir">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3a9 9 0 1 0 0 18V3Z"/><circle cx="12" cy="12" r="9"/></svg>
+      </button>
     </div>
   </header>
 
-  <div class="workspace">
-    <nav class="source-rail" aria-labelledby="sourceRailTitle">
-      <div class="rail-heading"><p class="kicker">Kapsam defteri</p><h2 id="sourceRailTitle">Bilgi katmanları</h2></div>
-      <div class="layer-list" id="layerList">
-        <button type="button" class="layer active" data-kind=""><span class="layer-index">00</span><span><b>Tüm kaynaklar</b><small id="allCount">Katalog hazırlanıyor</small></span></button>
-        <button type="button" class="layer" data-kind="mevzuat"><span class="layer-index">01</span><span><b>Mevzuat</b><small>Gümrük, ithalat, ihracat</small></span></button>
-        <button type="button" class="layer" data-kind="destek"><span class="layer-index">02</span><span><b>Devlet destekleri</b><small>Karar, genelge, uygulama</small></span></button>
-        <button type="button" class="layer" data-kind="veri"><span class="layer-index">03</span><span><b>Veri ve istatistik</b><small>Resmî veri kaynakları</small></span></button>
-        <button type="button" class="layer" data-kind="rapor"><span class="layer-index">04</span><span><b>Raporlar</b><small>Müşavirlik ve pazar notları</small></span></button>
-        <button type="button" class="layer" data-kind="ulke_bilgisi"><span class="layer-index">05</span><span><b>Ülke bilgileri</b><small>Yurt dışı teşkilatı</small></span></button>
-        <button type="button" class="layer" data-kind="iletisim"><span class="layer-index">06</span><span><b>İletişim</b><small>Müşavir ve ataşeler</small></span></button>
-        <button type="button" class="layer" data-kind="yayin"><span class="layer-index">07</span><span><b>Yayınlar</b><small>Bakanlık rehberleri</small></span></button>
+  <div class="app-shell">
+    <aside class="source-sidebar" aria-labelledby="sourcesTitle">
+      <h2 id="sourcesTitle">Kaynaklar</h2>
+      <div class="source-list" id="layerList">
+        <button class="source-link active" type="button" data-kind="">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m12 3 8 4-8 4-8-4 8-4Z"/><path d="m4 12 8 4 8-4M4 17l8 4 8-4"/></svg>
+          <span><b>Tüm kaynaklar</b><small id="allCount">Hazırlanıyor</small></span>
+        </button>
+        <button class="source-link" type="button" data-kind="mevzuat">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 3h9l3 3v15H6z"/><path d="M15 3v4h4M9 11h6M9 15h6"/></svg>
+          <span><b>Mevzuat</b><small>Gümrük, ithalat, ihracat</small></span>
+        </button>
+        <button class="source-link" type="button" data-kind="destek">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 10h16v10H4zM2 7h20v3H2zM12 7v13M8 7c-2 0-3-1-3-2s1-2 2.5-2C10 3 12 7 12 7s2-4 4.5-4C18 3 19 4 19 5s-1 2-3 2"/></svg>
+          <span><b>Devlet destekleri</b><small>Karar ve uygulama esasları</small></span>
+        </button>
+        <button class="source-link" type="button" data-kind="veri">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 20V10M10 20V4M16 20v-7M22 20H2"/></svg>
+          <span><b>Veri ve istatistik</b><small>Resmî veri kaynakları</small></span>
+        </button>
+        <button class="source-link" type="button" data-kind="rapor">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 3h9l3 3v15H6z"/><path d="M15 3v4h4M9 12h6M9 16h4"/></svg>
+          <span><b>Raporlar</b><small>Ülke ve pazar raporları</small></span>
+        </button>
+        <button class="source-link" type="button" data-kind="ulke_bilgisi">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3c3 3 3 15 0 18M12 3c-3 3-3 15 0 18"/></svg>
+          <span><b>Ülke bilgileri</b><small>Yurt dışı teşkilatı</small></span>
+        </button>
+        <button class="source-link" type="button" data-kind="iletisim">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="8" cy="8" r="3"/><circle cx="17" cy="9" r="2.5"/><path d="M2 20c0-4 2-6 6-6s6 2 6 6M14 15c4-.5 7 1.5 7 5"/></svg>
+          <span><b>Müşavirlikler</b><small>Adres ve iletişim</small></span>
+        </button>
+        <button class="source-link" type="button" data-kind="yayin">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 5c3-1 6 0 8 2v14c-2-2-5-3-8-2V5ZM20 5c-3-1-6 0-8 2v14c2-2 5-3 8-2V5Z"/></svg>
+          <span><b>Yayınlar</b><small>Bakanlık rehberleri</small></span>
+        </button>
       </div>
-      <section class="coverage-ledger" aria-labelledby="coverageTitle">
-        <div class="ledger-title"><h3 id="coverageTitle">Canlı kapsam</h3><span id="syncBadge">—</span></div>
+
+      <section class="coverage" aria-labelledby="coverageTitle">
+        <div><h3 id="coverageTitle">Canlı kapsam</h3><span id="syncBadge">—</span></div>
         <dl>
-          <div><dt>Resmî kaynak</dt><dd id="sourceCount">—</dd></div>
-          <div><dt>Taranan sayfa</dt><dd id="pageCount">—</dd></div>
-          <div><dt>Katalog kaydı</dt><dd id="documentCount">—</dd></div>
+          <div><dt>Kaynak</dt><dd id="sourceCount">—</dd></div>
+          <div><dt>Sayfa</dt><dd id="pageCount">—</dd></div>
+          <div><dt>Kayıt</dt><dd id="documentCount">—</dd></div>
           <div><dt>Yenileme</dt><dd id="refreshCadence">—</dd></div>
         </dl>
-        <p id="lastSynced">Son eşitleme bilgisi bekleniyor.</p>
-      </section>
-    </nav>
-
-    <main class="research-desk">
-      <section class="desk-intro" aria-labelledby="pageTitle">
-        <p class="kicker" id="deskKicker">Ticaret Bakanlığı açık kaynakları</p>
-        <div><h1 id="pageTitle">Sorudan resmî kaynağa.</h1><p id="deskDescription">Mevzuat, devlet destekleri, dış ticaret verileri, ülke raporları ve ticaret müşavirliklerini tek katalogda araştırın.</p></div>
+        <p id="lastSynced">Eşitleme bilgisi bekleniyor.</p>
       </section>
 
-      <form class="search-console" id="searchForm">
-        <div class="search-line">
-          <span class="search-prefix" aria-hidden="true">⌕</span>
+      <a class="official-domain" href="https://ticaret.gov.tr" target="_blank" rel="noreferrer">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3c3 3 3 15 0 18M12 3c-3 3-3 15 0 18"/></svg>
+        <span><small>Resmî kurum bağlantısı</small><b>ticaret.gov.tr</b></span>
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 16 16 8M9 8h7v7"/></svg>
+      </a>
+    </aside>
+
+    <main class="main-workspace">
+      <div id="researchWorkspace">
+      <h1 class="sr-only">Ticaret Bakanlığı resmî kaynaklarında araştırma</h1>
+      <form class="search-area" id="searchForm">
+        <div class="search-box">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m16 16 5 5"/></svg>
           <label class="sr-only" for="query">Araştırma konusu</label>
-          <input id="query" name="query" type="search" maxlength="300" autocomplete="off" placeholder="Örn. 4458 geçici ithalat, 5973 pazara giriş desteği…" autofocus>
-          <button class="search-submit" type="submit"><span>Araştır</span><span aria-hidden="true">→</span></button>
+          <input id="query" name="query" type="search" maxlength="300" autocomplete="off" placeholder="Gümrük, ithalat, ihracat, destek veya ülke raporu ara" autofocus>
+          <button type="submit">Ara</button>
         </div>
-        <div class="quick-queries" id="quickQueries" aria-label="Örnek araştırmalar">
-          <span>Örnek dosyalar</span>
-          <button type="button" data-query="4458 Gümrük Kanunu">4458 Gümrük Kanunu</button>
-          <button type="button" data-query="pazara giriş desteği">Pazara giriş desteği</button>
-          <button type="button" data-query="Çin sektör raporu">Çin sektör raporu</button>
-          <button type="button" data-query="ticaret müşavirliği iletişim">Müşavirlik iletişim</button>
-        </div>
-        <div class="filter-row" id="ticaretFilters">
-          <label><span>Resmî kaynak</span><select id="sourceFilter"><option value="">Tüm kaynaklar</option></select></label>
-          <label><span>Belge türü</span><select id="documentType"><option value="">Tüm belge türleri</option><option>Kanun</option><option>Yönetmelik</option><option>Tebliğ</option><option>Genelge</option><option>Karar</option><option>Rapor</option><option>İstatistik</option><option>Rehber</option></select></label>
+
+        <div class="filter-bar" id="ticaretFilters">
+          <label><span>Kaynak</span><select id="sourceFilter"><option value="">Tümü</option></select></label>
+          <label><span>Belge türü</span><select id="documentType"><option value="">Tümü</option><option>Kanun</option><option>Yönetmelik</option><option>Tebliğ</option><option>Genelge</option><option>Karar</option><option>Rapor</option><option>İstatistik</option><option>Rehber</option></select></label>
           <label><span>Yıl</span><input id="yearFilter" type="number" min="1900" max="2100" inputmode="numeric" placeholder="Tümü"></label>
-          <label class="check-filter"><input id="includeRepealed" type="checkbox"><span>Mülga kayıtları göster</span></label>
+          <label class="repealed-filter"><input id="includeRepealed" type="checkbox"><span><b>Mülga kayıtlar</b><small>Gösterme</small></span></label>
         </div>
-        <div class="filter-row general-filters" id="generalFilters" hidden>
-          <fieldset class="inline-choice"><legend>Arama alanı</legend><label><input type="radio" name="generalMode" value="title" checked><span>Başlık</span></label><label><input type="radio" name="generalMode" value="content"><span>İçerik</span></label><label><input type="radio" name="generalMode" value="number"><span>Numara</span></label></fieldset>
-          <label><span>Mevzuat türü</span><select id="generalType"><option value="">Tüm mevzuat</option><option value="KANUN">Kanun</option><option value="CB_KARARNAME">CB Kararnamesi</option><option value="CB_KARAR">CB Kararı</option><option value="CB_GENELGE">CB Genelgesi</option><option value="CB_YONETMELIK">CB Yönetmeliği</option><option value="YONETMELIK">Yönetmelik</option><option value="KKY">Kurum yönetmeliği</option><option value="KHK">KHK</option><option value="TEBLIGLER">Tebliğ</option><option value="MULGA">Mülga</option></select></label>
+
+        <div class="filter-bar general-filters" id="generalFilters" hidden>
+          <fieldset class="search-mode"><legend>Arama alanı</legend><label><input type="radio" name="generalMode" value="title" checked><span>Başlık</span></label><label><input type="radio" name="generalMode" value="content"><span>İçerik</span></label><label><input type="radio" name="generalMode" value="number"><span>Numara</span></label></fieldset>
+          <label><span>Mevzuat türü</span><select id="generalType"><option value="">Tümü</option><option value="KANUN">Kanun</option><option value="CB_KARARNAME">CB Kararnamesi</option><option value="CB_KARAR">CB Kararı</option><option value="CB_GENELGE">CB Genelgesi</option><option value="CB_YONETMELIK">CB Yönetmeliği</option><option value="YONETMELIK">Yönetmelik</option><option value="KKY">Kurum yönetmeliği</option><option value="KHK">KHK</option><option value="TEBLIGLER">Tebliğ</option><option value="MULGA">Mülga</option></select></label>
           <label><span>Başlangıç</span><input id="startDate" type="date"></label>
           <label><span>Bitiş</span><input id="endDate" type="date"></label>
         </div>
       </form>
 
       <section class="results" id="results" aria-live="polite">
-        <header class="results-header"><div><p class="kicker">Araştırma dökümü</p><h2 id="resultsTitle">Katalogdan son kayıtlar</h2></div><div class="result-tally"><strong id="resultCount">—</strong><span id="resultContext">kayıt</span></div></header>
+        <header class="results-header">
+          <h2 id="resultsTitle">Katalog sonuçları</h2>
+          <p><strong id="resultCount">—</strong> <span id="resultContext">resmî kayıt</span></p>
+        </header>
+        <div class="result-columns" aria-hidden="true"><span>Başlık</span><span>Kaynak</span><span>Tarih</span><i></i></div>
         <div class="status-note" id="status"><span aria-hidden="true">00</span><div><strong>Katalog hazırlanıyor.</strong><p>Canlı resmî kaynak durumu alınıyor.</p></div></div>
         <div class="result-list" id="resultList"></div>
-        <nav class="pagination" id="pagination" aria-label="Arama sonuçları sayfaları" hidden><button id="prevPage" type="button">← Önceki</button><span id="pageLabel">1 / 1</span><button id="nextPage" type="button">Sonraki →</button></nav>
+        <nav class="pagination" id="pagination" aria-label="Arama sonuçları sayfaları" hidden><button id="prevPage" type="button" aria-label="Önceki sayfa">←</button><span id="pageLabel">1 / 1</span><button id="nextPage" type="button" aria-label="Sonraki sayfa">→</button></nav>
       </section>
-      <footer class="desk-footer"><p>Hukuki veya mali karar öncesinde yürürlük ve değişiklik durumunu sonuçtaki resmî bağlantıdan doğrulayın.</p><span>Bilgilendirme amaçlıdır.</span></footer>
+
+      <footer class="legal-note">Hukuki veya mali karar öncesinde yürürlük ve değişiklik durumunu sonuçtaki resmî bağlantıdan doğrulayın.</footer>
+      </div>
+
+      <section class="customs-workspace" id="customsWorkspace" hidden aria-labelledby="customsTitle">
+        <header class="customs-hero">
+          <div>
+            <span class="eyebrow">Kanıt-temelli ithalat ön değerlendirmesi</span>
+            <h1 id="customsTitle">Gümrükçe’ye Sor</h1>
+            <p>Ürününüzü anlatın veya fotoğrafını yükleyin. Sistem aday GTİP’leri, TAREKS/TSE ve diğer kontrolleri, belgeleri ve maliyet bileşenlerini güncel resmî kaynaklarla araştırır.</p>
+          </div>
+          <div class="safety-seal"><b>ÖN</b><span>Bağlayıcı karar değildir</span></div>
+        </header>
+
+        <div class="customs-flow" aria-hidden="true">
+          <span class="active"><i>1</i>Ürünü tanımla</span><b></b>
+          <span><i>2</i>Resmî kaynak tara</span><b></b>
+          <span><i>3</i>Risk ve maliyet dosyası</span>
+        </div>
+
+        <form class="customs-form" id="customsForm">
+          <div class="intake-card">
+            <div class="section-heading"><span>01</span><div><h2>Ürün dosyası</h2><p>Doğru sınıflandırma için ticari isimden fazlası gerekir.</p></div></div>
+
+            <label class="field field-wide"><span>Sorunuz <b>*</b></span><textarea id="customsQuestion" maxlength="1500" required placeholder="Örn. Çin menşeli bu çocuk şortunu ithal etmek için TAREKS gerekir mi; vergi ve belge riskleri nelerdir?"></textarea></label>
+
+            <div class="product-input-grid">
+              <label class="upload-zone" id="uploadZone" for="productImage">
+                <input id="productImage" type="file" accept="image/jpeg,image/png,image/webp">
+                <span class="upload-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 16V4m0 0L7 9m5-5 5 5"/><path d="M4 15v5h16v-5"/></svg></span>
+                <b id="uploadTitle">Ürün fotoğrafı ekle</b>
+                <small id="uploadHint">JPEG, PNG veya WebP · en fazla 8 MB</small>
+                <img id="imagePreview" alt="Yüklenen ürün önizlemesi" hidden>
+              </label>
+              <div class="product-fields">
+                <label class="field"><span>Ürün tanımı <b>*</b></span><textarea id="productDescription" maxlength="2000" required placeholder="Ürünün adı, işlevi, marka/modeli, ölçüsü ve teknik özellikleri"></textarea></label>
+                <div class="field-row">
+                  <label class="field"><span>Aday GTİP</span><input id="candidateGtip" maxlength="30" inputmode="numeric" placeholder="12 hane veya boş bırakın"></label>
+                  <label class="field"><span>Menşe ülke <b>*</b></span><input id="originCountry" maxlength="100" required placeholder="Örn. Çin"></label>
+                </div>
+                <label class="field"><span>Malzeme / bileşim</span><input id="composition" maxlength="500" placeholder="Örn. %95 pamuk, %5 elastan; paslanmaz çelik 304"></label>
+              </div>
+            </div>
+
+            <details class="advanced-fields">
+              <summary><span>Ürün ve sevkiyat ayrıntıları</span><small>TAREKS, kimyasal ve KKDF riskini netleştirir</small></summary>
+              <div class="advanced-grid">
+                <label class="field"><span>Kullanım amacı</span><input id="intendedUse" maxlength="300" placeholder="Tüketici, sanayi girdisi, çocuk kullanımı…"></label>
+                <label class="field"><span>Sevk ülkesi</span><input id="dispatchCountry" maxlength="100" placeholder="Menşeden farklıysa"></label>
+                <label class="field"><span>Ürün durumu</span><select id="productCondition"><option value="unknown">Belirtilmedi</option><option value="new">Yeni</option><option value="used">Kullanılmış</option></select></label>
+                <label class="field"><span>Teslim şekli</span><input id="incoterm" maxlength="20" placeholder="EXW, FOB, CIF…"></label>
+                <label class="field"><span>Ödeme şekli</span><input id="paymentMethod" maxlength="80" placeholder="Peşin, mal mukabili, vadeli akreditif…"></label>
+              </div>
+            </details>
+
+            <details class="advanced-fields cost-fields">
+              <summary><span>Maliyet hesabı</span><small>Oranlar doğrulanmadan kesin toplam gösterilmez</small></summary>
+              <div class="advanced-grid cost-grid">
+                <label class="field"><span>Fatura bedeli</span><input id="invoiceValue" type="number" min="0" step="0.01" placeholder="0,00"></label>
+                <label class="field"><span>Navlun</span><input id="freight" type="number" min="0" step="0.01" placeholder="0,00"></label>
+                <label class="field"><span>Sigorta</span><input id="insurance" type="number" min="0" step="0.01" placeholder="0,00"></label>
+                <label class="field"><span>Diğer tescil öncesi gider</span><input id="otherCosts" type="number" min="0" step="0.01" placeholder="0,00"></label>
+                <label class="field"><span>Para birimi</span><select id="currency"><option>USD</option><option>EUR</option><option>TRY</option><option>GBP</option><option>CNY</option></select></label>
+                <label class="field verified-rate"><span>Doğrulanmış gümrük vergisi %</span><input id="customsDutyRate" type="number" min="0" max="1000" step="0.01" placeholder="Bilmiyorsanız boş"></label>
+                <label class="field verified-rate"><span>Doğrulanmış İGV / ek vergi %</span><input id="additionalDutyRate" type="number" min="0" max="1000" step="0.01" placeholder="Bilmiyorsanız boş"></label>
+                <label class="field verified-rate"><span>Doğrulanmış KDV %</span><input id="vatRate" type="number" min="0" max="100" step="0.01" placeholder="Bilmiyorsanız boş"></label>
+              </div>
+              <p class="rate-warning">Bu üç oran yalnızca resmî kaynaktan veya müşavirinizden doğruladıysanız girilmelidir.</p>
+            </details>
+
+            <div class="consent-line"><span aria-hidden="true">!</span><p>Fotoğraf aday sınıflandırmaya yardımcı olur; kesin GTİP sayılmaz. Atıfsız oranlar sonuçtan otomatik çıkarılır.</p></div>
+            <button class="analyse-button" id="analyseButton" type="submit"><span>Resmî kaynaklarla ön değerlendirme yap</span><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m5 12 14 0M14 6l6 6-6 6"/></svg></button>
+          </div>
+
+          <aside class="readiness-card" aria-labelledby="readinessTitle">
+            <span class="eyebrow">Dosya hazırlığı</span><h2 id="readinessTitle">Sonuç güvenini artırın</h2>
+            <ul id="readinessList">
+              <li data-check="description"><i></i><span><b>Teknik ürün tanımı</b><small>İşlev, malzeme, model</small></span></li>
+              <li data-check="origin"><i></i><span><b>Menşe ülke</b><small>Vergi ve önlem için</small></span></li>
+              <li data-check="gtip"><i></i><span><b>Aday GTİP</b><small>Varsa 12 hane</small></span></li>
+              <li data-check="cost"><i></i><span><b>Kıymet bilgileri</b><small>Fatura, navlun, sigorta</small></span></li>
+              <li data-check="payment"><i></i><span><b>Ödeme ve teslim</b><small>KKDF ve kıymet için</small></span></li>
+            </ul>
+            <div class="source-stack"><span>Kaynak katmanları</span><div><b>TR</b><p>Ticaret · TAREKS · TSE · GİB · Çevre</p></div><div><b>EU</b><p>EBTI · CLASS · CN · TARIC</p></div><small>AB verisi Türk GTİP12 veya Türk vergi oranı değildir.</small></div>
+          </aside>
+        </form>
+
+        <section class="customs-result" id="customsResult" hidden aria-live="polite">
+          <div class="analysis-loading" id="analysisLoading" hidden><i></i><div><b>Resmî kaynaklar taranıyor</b><span>TAREKS, tarife, vergi ve ürün güvenliği kanıtları karşılaştırılıyor…</span></div></div>
+          <div id="customsOutput"></div>
+        </section>
+      </section>
     </main>
 
-    <aside class="evidence-panel" id="reader" aria-labelledby="readerTitle" aria-hidden="true">
-      <div class="evidence-empty" id="evidenceEmpty"><span class="empty-folio" aria-hidden="true">⌁</span><p class="kicker">Kanıt dosyası</p><h2>Bir kayıt seçin.</h2><p>Belgenin resmî bağlantısı, kaynak zinciri ve çıkarılan tam metni burada görünür.</p></div>
-      <article class="evidence-document" id="evidenceDocument" hidden>
-        <header class="evidence-header"><div><p class="kicker" id="readerKind">Belge</p><h2 id="readerTitle">Belge başlığı</h2></div><button class="panel-close" type="button" data-close-reader aria-label="Belge panelini kapat">×</button></header>
+    <aside class="document-panel" id="reader" aria-labelledby="readerTitle" aria-hidden="true">
+      <div class="panel-empty" id="evidenceEmpty">
+        <span class="empty-mark" aria-hidden="true"><i></i><b></b></span>
+        <h2>Bir kayıt seçin</h2>
+        <p>Resmî kaynak zinciri, belge künyesi ve çıkarılan tam metin burada açılır.</p>
+      </div>
+
+      <article class="panel-document" id="evidenceDocument" hidden>
+        <div class="sheet-handle" aria-hidden="true"></div>
+        <header class="panel-header"><div><span id="readerKind">Belge</span><h2 id="readerTitle">Belge başlığı</h2></div><button class="panel-close" type="button" data-close-reader aria-label="Belge panelini kapat">×</button></header>
         <div class="citation-spine" id="citationSpine"></div>
-        <div class="evidence-actions"><a id="officialLink" href="#" target="_blank" rel="noreferrer">Resmî kaynağı aç ↗</a><button id="copyCitation" type="button">Atıfı kopyala</button></div>
-        <div class="reader-tools"><label><span class="sr-only">Belge metninde ara</span><input id="readerSearch" type="search" placeholder="Belge metninde ara…"></label><span id="readerLength">—</span></div>
+        <div class="panel-actions"><a id="officialLink" href="#" target="_blank" rel="noreferrer"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M14 4h6v6M20 4l-9 9"/><path d="M18 13v7H4V6h7"/></svg>Resmî kaynağı aç</a><button id="copyCitation" type="button"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="8" y="8" width="12" height="12"/><path d="M16 8V4H4v12h4"/></svg>Atıfı kopyala</button></div>
+        <div class="document-search"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m16 16 5 5"/></svg><label class="sr-only" for="readerSearch">Belge metninde ara</label><input id="readerSearch" type="search" placeholder="Belge metninde ara"><span id="readerLength">—</span></div>
         <div class="reader-warning" id="readerWarning" hidden></div>
         <pre class="reader-content" id="readerContent" tabindex="0">Belge seçildiğinde metin burada görüntülenir.</pre>
         <button class="load-more" id="loadMoreContent" type="button" hidden>Belgenin devamını getir</button>
       </article>
     </aside>
-    <button class="mobile-backdrop" type="button" data-close-reader aria-label="Belge panelini kapat" tabindex="-1"></button>
+
+    <button class="panel-backdrop" type="button" data-close-reader aria-label="Belge panelini kapat" tabindex="-1"></button>
   </div>
+
   <div class="toast" id="toast" role="status" aria-live="polite"></div>
 </body>
 </html>

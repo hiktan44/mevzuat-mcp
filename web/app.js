@@ -10,6 +10,7 @@ const state = {
   currentOffset: 0,
   currentTrigger: null,
   sourceData: null,
+  customsImageData: null,
 };
 
 const $ = (selector) => document.querySelector(selector);
@@ -75,6 +76,13 @@ function safeUrl(value) {
   }
 }
 
+function nullableNumber(selector) {
+  const value = $(selector)?.value?.trim();
+  if (!value) return null;
+  const number = Number(value);
+  return Number.isFinite(number) ? number : null;
+}
+
 function formatDate(value, includeTime = false) {
   if (!value) return "—";
   const date = new Date(value);
@@ -126,13 +134,6 @@ function setStatus(title, message, isError = false) {
   statusNote.querySelector("p").textContent = message;
 }
 
-function fileCode(documentData) {
-  if (documentData.is_repealed) return "MÜL";
-  const file = String(documentData.file_type || "").toUpperCase();
-  if (file && file !== "LINK") return file.slice(0, 4);
-  return (documentData.document_type || kindLabels[documentData.content_kind] || "WEB").slice(0, 4).toUpperCase();
-}
-
 function updatePagination(total, current, hasNext) {
   const page = state.scope === "ticaret" ? Math.floor(current / state.limit) + 1 : current;
   const pages = Math.max(1, Math.ceil(total / state.limit));
@@ -162,20 +163,17 @@ function renderTicaretResults(data) {
     const item = document.createElement("button");
     item.type = "button";
     item.className = `result-item${doc.is_repealed ? " repealed" : ""}`;
-    const meta = [
-      sourceLabels[doc.source_id] || doc.source_id,
-      doc.document_type || kindLabels[doc.content_kind],
-      doc.publication_date || doc.page_updated_at,
-      doc.number ? `No ${doc.number}` : "",
-    ].filter(Boolean);
+    const meta = [doc.document_type || kindLabels[doc.content_kind], doc.number ? `No ${doc.number}` : ""].filter(Boolean);
     item.innerHTML = `
-      <span class="result-node">${escapeHtml(fileCode(doc))}</span>
-      <span>
+      <span class="result-node" aria-hidden="true"></span>
+      <span class="result-main">
         <strong class="result-title">${escapeHtml(doc.title)}</strong>
+        <span class="result-subline">${meta.map((value) => `<span>${escapeHtml(value)}</span>`).join("")}</span>
         ${doc.context ? `<span class="result-context">${escapeHtml(doc.context)}</span>` : ""}
-        <span class="result-meta">${meta.map((value) => `<span>${escapeHtml(value)}</span>`).join("")}</span>
       </span>
-      <span class="result-open" aria-hidden="true">→</span>`;
+      <span class="result-source">${escapeHtml(sourceLabels[doc.source_id] || doc.source_id)}</span>
+      <span class="result-date">${escapeHtml(doc.publication_date || doc.page_updated_at || "—")}</span>
+      <span class="result-arrow" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="m9 5 7 7-7 7"/></svg></span>`;
     item.addEventListener("click", () => openTicaretDocument(doc, item));
     resultList.append(item);
   });
@@ -199,11 +197,13 @@ function renderGeneralResults(data) {
     const item = document.createElement("button");
     item.type = "button";
     item.className = "result-item";
-    const meta = [doc.type_label, doc.gazette_date ? `RG ${formatDate(doc.gazette_date)}` : "", doc.gazette_number ? `Sayı ${doc.gazette_number}` : ""].filter(Boolean);
+    const meta = [doc.type_label, doc.number ? `No ${doc.number}` : "", doc.gazette_number ? `RG ${doc.gazette_number}` : ""].filter(Boolean);
     item.innerHTML = `
-      <span class="result-node">${escapeHtml((doc.type || "MZV").slice(0, 4))}</span>
-      <span><strong class="result-title">${escapeHtml(doc.title)}</strong><span class="result-meta">${meta.map((value) => `<span>${escapeHtml(value)}</span>`).join("")}</span></span>
-      <span class="result-open" aria-hidden="true">→</span>`;
+      <span class="result-node" aria-hidden="true"></span>
+      <span class="result-main"><strong class="result-title">${escapeHtml(doc.title)}</strong><span class="result-subline">${meta.map((value) => `<span>${escapeHtml(value)}</span>`).join("")}</span></span>
+      <span class="result-source">${escapeHtml(doc.type_label || "Mevzuat")}</span>
+      <span class="result-date">${escapeHtml(doc.gazette_date ? formatDate(doc.gazette_date) : "—")}</span>
+      <span class="result-arrow" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="m9 5 7 7-7 7"/></svg></span>`;
     item.addEventListener("click", () => openGeneralDocument(doc, item));
     resultList.append(item);
   });
@@ -283,7 +283,8 @@ function showReader(documentData, trigger) {
   readerSearch.value = "";
   $("#readerWarning").hidden = true;
   loadMoreContent.hidden = true;
-  if (window.innerWidth <= 1240) $(".panel-close").focus();
+  $$(".result-item").forEach((item) => item.classList.toggle("selected", item === trigger));
+  if (window.innerWidth <= 1260) $(".panel-close").focus();
 }
 
 function setReaderContent(content, append = false) {
@@ -348,6 +349,7 @@ function closeReader() {
   document.body.classList.remove("reader-open");
   $("#evidenceDocument").hidden = true;
   $("#evidenceEmpty").hidden = false;
+  $$(".result-item").forEach((item) => item.classList.remove("selected"));
   state.currentTrigger?.focus();
 }
 
@@ -379,7 +381,7 @@ async function loadCatalogStatus() {
       sourceFilter.append(option);
     });
     if ([...sourceFilter.options].some((option) => option.value === selectedSource)) sourceFilter.value = selectedSource;
-    $$(".layer[data-kind]").forEach((button) => {
+    $$(".source-link[data-kind]").forEach((button) => {
       const kind = button.dataset.kind;
       if (!kind || !sources.layers[kind]) return;
       const small = button.querySelector("small");
@@ -400,13 +402,19 @@ function switchScope(scope) {
   $$("[data-scope]").forEach((button) => button.classList.toggle("active", button.dataset.scope === scope));
   $("#ticaretFilters").hidden = scope !== "ticaret";
   $("#generalFilters").hidden = scope !== "general";
-  $(".workspace").classList.toggle("general-layout", scope === "general");
-  $(".source-rail").hidden = scope === "general";
-  $("#deskKicker").textContent = scope === "ticaret" ? "Ticaret Bakanlığı açık kaynakları" : "Adalet Bakanlığı mevzuat sistemi";
-  $("#deskDescription").textContent = scope === "ticaret"
-    ? "Mevzuat, devlet destekleri, dış ticaret verileri, ülke raporları ve ticaret müşavirliklerini tek katalogda araştırın."
-    : "Türkiye Cumhuriyeti kanun, kararname, yönetmelik, genelge ve tebliğlerinde başlık, içerik veya numarayla arayın.";
-  queryInput.placeholder = scope === "ticaret" ? "Örn. 4458 geçici ithalat, 5973 pazara giriş desteği…" : "Örn. Türk Ticaret Kanunu veya 6102…";
+  $(".app-shell").classList.toggle("general-layout", scope === "general");
+  $(".app-shell").classList.toggle("customs-layout", scope === "customs");
+  $(".source-sidebar").hidden = scope !== "ticaret";
+  $("#researchWorkspace").hidden = scope === "customs";
+  $("#customsWorkspace").hidden = scope !== "customs";
+  reader.hidden = scope === "customs";
+  if (scope === "customs") {
+    closeReader();
+    $("#customsQuestion").focus();
+    return;
+  }
+  reader.hidden = false;
+  queryInput.placeholder = scope === "ticaret" ? "Gümrük, ithalat, ihracat, destek veya ülke raporu ara" : "Kanun adı, mevzuat numarası veya içerik ara";
   closeReader();
   runSearch(scope === "ticaret" ? { offset: 0 } : { page: 1 });
 }
@@ -415,14 +423,10 @@ form.addEventListener("submit", (event) => {
   event.preventDefault();
   runSearch(state.scope === "ticaret" ? { offset: 0 } : { page: 1 });
 });
-$$('[data-query]').forEach((button) => button.addEventListener("click", () => {
-  queryInput.value = button.dataset.query;
-  runSearch(state.scope === "ticaret" ? { offset: 0 } : { page: 1 });
-}));
 $$('[data-scope]').forEach((button) => button.addEventListener("click", () => switchScope(button.dataset.scope)));
-$$('.layer').forEach((button) => button.addEventListener("click", () => {
+$$('.source-link').forEach((button) => button.addEventListener("click", () => {
   state.activeKind = button.dataset.kind;
-  $$('.layer').forEach((item) => item.classList.toggle("active", item === button));
+  $$('.source-link').forEach((item) => item.classList.toggle("active", item === button));
   $("#sourceFilter").value = "";
   runTicaretSearch({ offset: 0 });
 }));
@@ -479,6 +483,186 @@ $("#copyCitation").addEventListener("click", () => {
   copyText(citation, "Belge atfı kopyalandı.");
 });
 $("#copyMcp").addEventListener("click", () => copyText(`${window.location.origin}/mcp`, "MCP adresi kopyalandı."));
+
+function customsSourceMap(data) {
+  return new Map((data.sources || []).map((source) => [source.id, source]));
+}
+
+function citationChips(citations, sourceMap) {
+  if (!citations?.length) return "";
+  return `<div class="citation-chips">${citations.map((id) => {
+    const source = sourceMap.get(id);
+    return source ? `<a href="${safeUrl(source.url)}" target="_blank" rel="noreferrer">[${escapeHtml(id)}]</a>` : "";
+  }).join("")}</div>`;
+}
+
+function renderFindings(items, sourceMap, type = "finding") {
+  if (!items?.length) return '<p class="missing-list">Bu başlıkta doğrulanmış bulgu üretilemedi.</p>';
+  return `<div class="finding-grid">${items.map((item) => `
+    <article class="finding-card ${escapeHtml(item.status)}">
+      <span>${escapeHtml(item.status)}</span>
+      <b>${escapeHtml(item.name)}</b>
+      ${type === "tax" && item.rate ? `<p><strong>Oran:</strong> ${escapeHtml(item.rate)}${item.basis ? ` · ${escapeHtml(item.basis)}` : ""}</p>` : ""}
+      <p>${escapeHtml(item.explanation)}</p>
+      ${citationChips(item.citations, sourceMap)}
+    </article>`).join("")}</div>`;
+}
+
+function renderCost(cost) {
+  if (!cost) return '<p class="missing-list">Fatura bedeli girilmediği için kıymet hesabı yapılmadı.</p>';
+  const currency = escapeHtml(cost.currency || "");
+  const amount = (value) => value == null ? "Doğrulanmış oran eksik" : `${numberFormat.format(value)} ${currency}`;
+  return `<table class="cost-table"><tbody>
+    <tr><td>Tahmini gümrük kıymeti</td><td>${amount(cost.customs_value_estimate)}</td></tr>
+    <tr><td>Gümrük vergisi</td><td>${amount(cost.customs_duty)}</td></tr>
+    <tr><td>İlave vergi</td><td>${amount(cost.additional_duty)}</td></tr>
+    <tr><td>KDV matrahı tahmini</td><td>${amount(cost.vat_base_estimate)}</td></tr>
+    <tr><td>KDV</td><td>${amount(cost.vat)}</td></tr>
+    <tr><td>Bilinen kalemlerle toplam</td><td>${amount(cost.known_landed_total)}</td></tr>
+  </tbody></table><p class="rate-warning">${escapeHtml(cost.note)}</p>`;
+}
+
+function renderCustomsResult(data) {
+  const sourceMap = customsSourceMap(data);
+  const statusLabels = {
+    preliminary: "Ön değerlendirme",
+    needs_information: "Bilgi gerekli",
+    insufficient_evidence: "Kanıt yetersiz",
+    evidence_only: "Yalnız kanıt paketi",
+  };
+  const warningStatus = data.status !== "preliminary";
+  const candidates = data.candidate_gtips?.length ? `
+    <div class="candidate-grid">${data.candidate_gtips.map((item) => `
+      <article class="candidate-card"><code>${escapeHtml(item.code)}</code><b>${escapeHtml(item.confidence)} güven</b><p>${escapeHtml(item.explanation)}</p>${citationChips(item.citations, sourceMap)}</article>`).join("")}</div>`
+    : '<p class="missing-list">Kanıtla desteklenen aday kod üretilemedi. Fotoğraf tek başına kesin GTİP değildir.</p>';
+  const sources = (data.sources || []).map((source) => `
+    <a href="${safeUrl(source.url)}" target="_blank" rel="noreferrer">
+      <code>[${escapeHtml(source.id)}]</code><span><b>${escapeHtml(source.title)}</b><small>${escapeHtml(source.authority)}${source.fetch_warning ? ` · ${escapeHtml(source.fetch_warning)}` : ""}</small></span>
+    </a>`).join("");
+  $("#customsOutput").innerHTML = `
+    <article class="answer-sheet">
+      <header class="answer-head">
+        <span class="answer-status${warningStatus ? " warning" : ""}">${escapeHtml(statusLabels[data.status] || data.status)}</span>
+        <div><h2>İthalat ön değerlendirme dosyası</h2><p>${escapeHtml(data.summary)}</p></div>
+        <time>${escapeHtml(formatDate(data.as_of, true))}</time>
+      </header>
+      <section class="answer-section"><h3>Aday GTİP / CN kodları</h3>${candidates}</section>
+      <section class="answer-section"><h3>Eksik veya teyit edilmesi gereken bilgiler</h3><ul class="missing-list">${(data.missing_information?.length ? data.missing_information : ["Kritik eksik alan bildirilmedi."]).map((item) => `<li>${escapeHtml(item)}</li>`).join("")}</ul></section>
+      <section class="answer-section"><h3>TAREKS · TSE · kimyasal · laboratuvar kontrolleri</h3>${renderFindings(data.controls, sourceMap)}</section>
+      <section class="answer-section"><h3>Gerekli belge ve izinler</h3>${renderFindings(data.required_documents, sourceMap)}</section>
+      <section class="answer-section"><h3>Vergi ve mali yükümlülük bulguları</h3>${renderFindings(data.taxes, sourceMap, "tax")}</section>
+      <section class="answer-section"><h3>Kullanıcı oranlarıyla maliyet taslağı</h3>${renderCost(data.deterministic_cost)}</section>
+      ${data.image_observation ? `<section class="answer-section"><h3>Fotoğrafta görülenler</h3><p class="missing-list">${escapeHtml(data.image_observation)}</p></section>` : ""}
+      <section class="answer-section"><h3>Sonraki güvenli adımlar</h3><ol class="next-list">${(data.next_steps || []).map((item) => `<li>${escapeHtml(item)}</li>`).join("")}</ol></section>
+      <section class="answer-section"><h3>Resmî kanıt defteri · ${(data.sources || []).length} kaynak</h3><div class="source-ledger">${sources}</div></section>
+      <div class="legal-banner"><strong>Önemli:</strong> ${escapeHtml(data.legal_notice)}</div>
+    </article>
+    <form class="followup-box" id="followupForm"><label class="field"><span>Bu ürün için takip sorusu</span><input id="followupQuestion" maxlength="1500" placeholder="Örn. TAREKS başvurusunda hangi teknik dosyalar hazırlanmalı?"></label><button class="analyse-button" type="submit"><span>Takip sorusunu sor</span><svg viewBox="0 0 24 24"><path d="m5 12 14 0M14 6l6 6-6 6"/></svg></button></form>`;
+  $("#followupForm")?.addEventListener("submit", (event) => {
+    event.preventDefault();
+    const value = $("#followupQuestion").value.trim();
+    if (!value) return;
+    $("#customsQuestion").value = value;
+    $("#customsForm").requestSubmit();
+  });
+}
+
+function updateReadiness() {
+  const checks = {
+    description: $("#productDescription").value.trim().length >= 12,
+    origin: Boolean($("#originCountry").value.trim()),
+    gtip: $("#candidateGtip").value.replace(/\D/g, "").length >= 4,
+    cost: ["#invoiceValue", "#freight", "#insurance"].every((selector) => $(selector).value !== ""),
+    payment: Boolean($("#paymentMethod").value.trim() && $("#incoterm").value.trim()),
+  };
+  Object.entries(checks).forEach(([key, ready]) => {
+    $(`[data-check="${key}"]`)?.classList.toggle("ready", ready);
+  });
+}
+
+async function setProductImage(file) {
+  const allowed = ["image/jpeg", "image/png", "image/webp"];
+  if (!file) {
+    state.customsImageData = null;
+    $("#imagePreview").hidden = true;
+    $("#uploadZone").classList.remove("has-image");
+    return;
+  }
+  if (!allowed.includes(file.type) || file.size > 8 * 1024 * 1024) {
+    $("#productImage").value = "";
+    showToast("JPEG, PNG veya WebP biçiminde en fazla 8 MB görsel yükleyin.");
+    return;
+  }
+  state.customsImageData = await new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(reader.result);
+    reader.onerror = reject;
+    reader.readAsDataURL(file);
+  });
+  $("#imagePreview").src = state.customsImageData;
+  $("#imagePreview").hidden = false;
+  $("#uploadZone").classList.add("has-image");
+  $("#uploadTitle").textContent = file.name;
+  $("#uploadHint").textContent = `${numberFormat.format(Math.ceil(file.size / 1024))} KB · sunucuda saklanmaz`;
+}
+
+function customsRequestBody() {
+  return {
+    question: $("#customsQuestion").value.trim(),
+    product_description: $("#productDescription").value.trim(),
+    candidate_gtip: $("#candidateGtip").value.trim() || null,
+    origin_country: $("#originCountry").value.trim() || null,
+    dispatch_country: $("#dispatchCountry").value.trim() || null,
+    intended_use: $("#intendedUse").value.trim() || null,
+    composition: $("#composition").value.trim() || null,
+    condition: $("#productCondition").value,
+    invoice_value: nullableNumber("#invoiceValue"),
+    freight: nullableNumber("#freight"),
+    insurance: nullableNumber("#insurance"),
+    other_pre_import_costs: nullableNumber("#otherCosts"),
+    currency: $("#currency").value,
+    incoterm: $("#incoterm").value.trim() || null,
+    payment_method: $("#paymentMethod").value.trim() || null,
+    customs_duty_rate: nullableNumber("#customsDutyRate"),
+    additional_duty_rate: nullableNumber("#additionalDutyRate"),
+    vat_rate: nullableNumber("#vatRate"),
+    image_data_url: state.customsImageData,
+  };
+}
+
+$("#productImage").addEventListener("change", (event) => setProductImage(event.target.files?.[0]).catch(() => showToast("Görsel okunamadı.")));
+const uploadZone = $("#uploadZone");
+["dragenter", "dragover"].forEach((name) => uploadZone.addEventListener(name, (event) => { event.preventDefault(); uploadZone.classList.add("dragging"); }));
+["dragleave", "drop"].forEach((name) => uploadZone.addEventListener(name, (event) => { event.preventDefault(); uploadZone.classList.remove("dragging"); }));
+uploadZone.addEventListener("drop", (event) => setProductImage(event.dataTransfer.files?.[0]).catch(() => showToast("Görsel okunamadı.")));
+$$('#customsForm input, #customsForm textarea, #customsForm select').forEach((input) => input.addEventListener("input", updateReadiness));
+
+$("#customsForm").addEventListener("submit", async (event) => {
+  event.preventDefault();
+  const button = $("#analyseButton");
+  const result = $("#customsResult");
+  const loading = $("#analysisLoading");
+  result.hidden = false;
+  loading.hidden = false;
+  $("#customsOutput").innerHTML = "";
+  button.disabled = true;
+  button.querySelector("span").textContent = "Resmî kaynaklar taranıyor…";
+  result.scrollIntoView({ behavior: "smooth", block: "start" });
+  try {
+    const data = await fetchJson("/api/customs/precheck", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(customsRequestBody()),
+    });
+    renderCustomsResult(data);
+  } catch (error) {
+    $("#customsOutput").innerHTML = `<div class="answer-error"><h2>Ön değerlendirme tamamlanamadı</h2><p>${escapeHtml(error.message || "Lütfen daha sonra yeniden deneyin.")}</p></div>`;
+  } finally {
+    loading.hidden = true;
+    button.disabled = false;
+    button.querySelector("span").textContent = "Resmî kaynaklarla ön değerlendirme yap";
+  }
+});
 
 const savedTheme = localStorage.getItem("ticaret-bilgi-theme");
 if (savedTheme) document.documentElement.dataset.theme = savedTheme;

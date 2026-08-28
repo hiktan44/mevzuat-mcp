@@ -11,10 +11,10 @@ Bu proje; Adalet Bakanlığı Mevzuat Bilgi Sistemi, Bedesten Mevzuat servisi ve
 🎯 **Temel Özellikler**
 
 * Adalet Bakanlığı Mevzuat Bilgi Sistemi'ne programatik erişim için standart bir MCP arayüzü.
-* **31 farklı tool** ile kapsamlı mevzuat ve Ticaret Bakanlığı bilgi erişimi (üç resmî kaynak ailesi):
+* **32 farklı tool** ile kapsamlı mevzuat ve Ticaret Bakanlığı bilgi erişimi (üç resmî kaynak ailesi):
     * **mevzuat.gov.tr** üzerinden 21 araç (türe özel arama ve içerik)
     * **bedesten.adalet.gov.tr** üzerinden 5 araç (birleşik arama, gerekçe, içindekiler)
-    * **ticaret.gov.tr** ve bağlı resmî alt alanlardan 5 araç (canlı katalog, belge okuma, tam metin arama ve güncellik)
+    * **ticaret.gov.tr** ve bağlı resmî alt alanlardan 6 araç (canlı katalog, belge okuma, tam metin arama, güncellik ve gümrük ön değerlendirme kanıtı)
 * Desteklenen 12 mevzuat türü:
     * **Kanun** - Türkiye Cumhuriyeti kanunları
     * **KHK** - Kanun Hükmünde Kararnameler
@@ -68,6 +68,26 @@ Yeni araçlar:
 * `get_ticaret_document`: resmî HTML/PDF/DOCX/XLSX/CSV/ZIP içeriklerini güvenli sınırlar içinde getirir.
 * `search_ticaret_content`: seçilen en fazla 25 belgenin tam metninde bağlamlı arama yapar.
 * `get_ticaret_catalog_status`: son yenileme, sonraki tarama, kapsam parmak izi ve kaynak hatalarını verir.
+* `prepare_customs_precheck`: ürün, aday GTİP, menşe ve maliyet girdileri için TAREKS/TSE, ürün güvenliği, kimyasallar, gümrük kıymeti, vergi ve ticaret politikası önlemlerine ilişkin tarihli resmî kanıt paketi hazırlar.
+
+## Gümrükçe’ye Sor
+
+Web arayüzündeki **Gümrükçe’ye Sor** sekmesi ürün açıklaması, aday GTİP ve isteğe bağlı ürün fotoğrafını birlikte değerlendirir. Sistem önce eksik sınıflandırma özelliklerini gösterir; ardından en fazla beş **aday** kodu, gerekli belgeleri, TAREKS/TSE ve diğer kontrol ihtimallerini, vergileri ve yalnızca kullanıcı tarafından doğrulanmış oranlarla hesaplanan tahmini maliyet kalemlerini resmî kaynak kimlikleriyle sunar.
+
+* Fotoğraf tek başına kesin veya bağlayıcı GTİP üretmez. Kesin sınıflandırma için teknik belge ve gerektiğinde Bağlayıcı Tarife Bilgisi gerekir.
+* EBTI, CLASS, CN 2026 ve TARIC karşılaştırmalı sınıflandırma kanıtıdır; bunların kodları Türkiye GTİP12 veya Türkiye vergi oranı olarak doğrudan kullanılmaz.
+* EBTI metinleri ve resmî indirme verileri kaynak olarak kullanılabilir. Açık kullanım hakkı teyit edilmemiş EBTI ürün görselleri topluca kopyalanmaz ve model eğitimine alınmaz.
+* Her sonuç tarihli resmî kaynak zinciri, belirsizlikler ve zorunlu hukuki uyarıyla birlikte döner. Sistem yüzde yüz doğruluk veya bağlayıcı idari karar iddiasında bulunmaz.
+
+Yapay zekâ yorumunu etkinleştirmek için Coolify uygulamasına şu ortam değişkenlerini ekleyin:
+
+```text
+OPENAI_API_KEY=<sunucuda gizli değer>
+CUSTOMS_AI_MODEL=gpt-5.4
+CUSTOMS_AI_REASONING=high
+```
+
+`OPENAI_API_KEY` yoksa arayüz uydurma yanıt üretmez; yalnızca güncel resmî kanıt paketini ve eksik bilgi listesini gösteren `evidence_only` modunda çalışır. Yüklenen JPEG/PNG/WebP görseli yeniden kodlanarak metaverisi temizlenir, kalıcı olarak saklanmaz ve istek başına 8 MB / 25 megapiksel sınırı uygulanır.
 
 > Hukuki yorumlar bilgilendirme amaçlıdır. Sonuçlarda verilen resmî URL, tarih, sayı, mülga/yürürlük durumu ve varsa sonraki değişiklikler karar öncesinde doğrulanmalıdır.
 
@@ -79,9 +99,9 @@ Web araştırma arayüzü: `https://mevzuat-mcp.seymata.com/`
 
 Arayüzde Ticaret Bakanlığının yedi bilgi katmanı canlı kayıt sayılarıyla ayrı gösterilir; kaynak, belge türü, yıl ve mülga durumu filtrelenebilir. Seçilen kaydın resmî kaynak zinciri, tam metni ve kopyalanabilir atfı aynı ekranda açılır. **Genel mevzuat** görünümü Bedesten resmî servisine bağlı ayrı arama alanıdır.
 
-> Bu Coolify dağıtımı v1.1.0 sağlık ve MCP araç taramasıyla doğrulanmıştır.
+> Bu Coolify dağıtımı v1.2.0 sağlık, web arayüzü ve MCP araç taramasıyla doğrulanır.
 
-ChatGPT'de geliştirici modu açıkken **Ayarlar → Uygulamalar → Oluştur** ekranında bu adresi endpoint olarak verin, kimlik doğrulamayı **Yok** seçin ve **Araçları tara** ile 31 aracı yükleyin. Codex için:
+ChatGPT'de geliştirici modu açıkken **Ayarlar → Uygulamalar → Oluştur** ekranında bu adresi endpoint olarak verin, kimlik doğrulamayı **Yok** seçin ve **Araçları tara** ile 32 aracı yükleyin. Codex için:
 
 ```bash
 codex mcp add mevzuat-mcp --url https://mevzuat-mcp.seymata.com/mcp
@@ -94,7 +114,7 @@ from openai import OpenAI
 
 client = OpenAI()
 response = client.responses.create(
-    model="gpt-5",
+    model="gpt-5.4",
     input="4458 sayılı Gümrük Kanununa göre bu ithalat işlemini resmî kaynaklarıyla değerlendir.",
     tools=[{
         "type": "mcp",
@@ -270,7 +290,7 @@ CB Kararı ve CB Genelgesi gibi PDF tabanlı mevzuatlar için Mistral OCR kullan
 ---
 🛠️ **Kullanılabilir Araçlar (MCP Tools)**
 
-Bu FastMCP sunucusu LLM modelleri için **31 araç** sunar (üç resmî kaynak ailesi).
+Bu FastMCP sunucusu LLM modelleri için **32 araç** sunar (üç resmî kaynak ailesi).
 
 ### A. mevzuat.gov.tr Araçları (21 araç)
 

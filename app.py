@@ -2,8 +2,10 @@
 
 from __future__ import annotations
 
-import logging
+import base64
 import json
+import logging
+import re
 import threading
 import time
 from pathlib import Path
@@ -11,11 +13,15 @@ from typing import Any
 
 from starlette.requests import Request
 from starlette.responses import FileResponse, JSONResponse
+from pydantic import ValidationError
+
+from customs_advisor import CustomsInquiry
 
 from mevzuat_mcp_server import (
     _BED_VALID_TYPES,
     app as mcp,
     bedesten_client,
+    customs_advisor_service,
     ticaret_client,
 )
 
@@ -58,9 +64,15 @@ def _client_ip(request: Request) -> str:
     return request.client.host if request.client else "unknown"
 
 
-def _rate_limit_response(request: Request, scope: str) -> JSONResponse | None:
+def _rate_limit_response(
+    request: Request,
+    scope: str,
+    *,
+    limit: int = 30,
+    window_seconds: int = 60,
+) -> JSONResponse | None:
     allowed, retry_after = rate_limiter.check(
-        f"{scope}:{_client_ip(request)}", limit=30, window_seconds=60
+        f"{scope}:{_client_ip(request)}", limit=limit, window_seconds=window_seconds
     )
     if allowed:
         return None
@@ -72,6 +84,9 @@ def _rate_limit_response(request: Request, scope: str) -> JSONResponse | None:
         status_code=429,
         headers={"Retry-After": str(retry_after)},
     )
+
+
+_DATA_URL_RE = re.compile(r"^data:(image/(?:jpeg|png|webp));base64,([A-Za-z0-9+/=\r\n]+)$")
 
 
 def _normalise_date(value: Any) -> str | None:
@@ -379,6 +394,70 @@ async def web_ticaret_document(request: Request):
         }
     )
 
+
+@mcp.custom_route("/api/customs/precheck", methods=["POST"])
+async def web_customs_precheck(request: Request):
+    """Run an evidence-first, non-binding customs pre-assessment."""
+    limited = _rate_limit_response(request, "customs-ai", limit=20, window_seconds=60)
+    if limited:
+        return limited
+    try:
+        content_length = int(request.headers.get("content-length", "0") or 0)
+    except ValueError:
+        content_length = 0
+    if content_length > 12 * 1024 * 1024:
+        return JSONResponse({"error": "İstek boyutu 12 MB sınırını aşıyor."}, status_code=413)
+
+    try:
+        body = await request.json()
+    except Exception:
+        return JSONResponse({"error": "Geçerli bir analiz isteği gönderin."}, status_code=400)
+    if not isinstance(body, dict):
+        return JSONResponse({"error": "Analiz isteği bir nesne olmalıdır."}, status_code=422)
+
+    image_bytes = None
+    image_media_type = None
+    image_data_url = body.pop("image_data_url", None)
+    if image_data_url:
+        upload_limited = _rate_limit_response(request, "customs-upload", limit=30, window_seconds=3600)
+        if upload_limited:
+            return upload_limited
+        if not isinstance(image_data_url, str) or len(image_data_url) > 11_500_000:
+            return JSONResponse({"error": "Görsel verisi çok büyük veya geçersiz."}, status_code=413)
+        match = _DATA_URL_RE.fullmatch(image_data_url)
+        if not match:
+            return JSONResponse({"error": "Görsel JPEG, PNG veya WebP olmalıdır."}, status_code=422)
+        try:
+            image_media_type = match.group(1)
+            image_bytes = base64.b64decode(match.group(2), validate=True)
+        except (ValueError, TypeError):
+            return JSONResponse({"error": "Görsel verisi çözümlenemedi."}, status_code=422)
+
+    try:
+        inquiry = CustomsInquiry.model_validate(body)
+        result = await customs_advisor_service.analyse(
+            inquiry,
+            image_bytes=image_bytes,
+            image_media_type=image_media_type,
+        )
+    except ValidationError as exc:
+        message = exc.errors(include_url=False)[0].get("msg", "Alanları kontrol edin.")
+        return JSONResponse({"error": f"İstek doğrulanamadı: {message}"}, status_code=422)
+    except ValueError as exc:
+        return JSONResponse({"error": str(exc)}, status_code=422)
+    except Exception:
+        logger.exception("Customs precheck failed")
+        return JSONResponse(
+            {
+                "error": (
+                    "Gümrük ön değerlendirmesi şu anda tamamlanamadı. Kesin işlem yapmadan önce "
+                    "resmî kaynak ve yetkili gümrük müşaviri teyidi alın."
+                )
+            },
+            status_code=502,
+        )
+    return JSONResponse(result.model_dump(mode="json"))
+
 # Add health check endpoint to the MCP server
 @mcp.custom_route("/health", methods=["GET"])
 async def health_check(request):
@@ -386,7 +465,7 @@ async def health_check(request):
     return JSONResponse({
         "status": "healthy",
         "service": "Mevzuat MCP Server",
-        "version": "1.1.0"
+        "version": "1.2.0"
     })
 
 class McpRateLimitMiddleware:

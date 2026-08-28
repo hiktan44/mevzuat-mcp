@@ -25,6 +25,7 @@ from ticaret_models import (
     TicaretDocumentContent,
     TicaretSearchResult,
 )
+from customs_advisor import CustomsAdvisor, CustomsEvidencePack, CustomsInquiry
 
 # Semantic search (optional, requires OPENROUTER_API_KEY)
 from semantic_search.embedder import is_openrouter_available
@@ -45,6 +46,7 @@ logging.getLogger("httpx").setLevel(logging.WARNING)
 logger = logging.getLogger(__name__)
 
 ticaret_client = TicaretApiClient()
+customs_advisor_service = CustomsAdvisor()
 
 
 @asynccontextmanager
@@ -55,7 +57,7 @@ async def _server_lifespan(server):
         name="ticaret-catalog-refresh",
     )
     try:
-        yield {"ticaret_client": ticaret_client}
+        yield {"ticaret_client": ticaret_client, "customs_advisor": customs_advisor_service}
     finally:
         refresh_task.cancel()
         try:
@@ -63,10 +65,11 @@ async def _server_lifespan(server):
         except asyncio.CancelledError:
             pass
         await ticaret_client.close()
+        await customs_advisor_service.close()
 
 app = FastMCP(
     name="MevzuatGovTrMCP",
-    version="1.1.0",
+    version="1.2.0",
     lifespan=_server_lifespan,
     instructions="MCP server for Turkish legislation search and content retrieval. "
     "Three source families: mevzuat.gov.tr, bedesten.adalet.gov.tr, and a continuously refreshed official "
@@ -87,12 +90,15 @@ app = FastMCP(
     "Solr operators: \"exact\", +required, -prohibited, wildcard*, fuzzy~, \"proximity\"~N, boost^N. "
     "NOTE: AND/OR/NOT do NOT work in search_mevzuat - use +term1 +term2 instead. "
     "\n\n"
-    "== Ticaret Bakanlığı tools (5 tools) ==\n"
+    "== Ticaret Bakanlığı ve Gümrükçe tools (6 tools) ==\n"
     "Use list_ticaret_sources to see source coverage and content kinds. Use search_ticaret_catalog for current "
     "Ministry metadata, get_ticaret_document for bounded full text, search_ticaret_content for bounded multi-document "
     "full-text search, and get_ticaret_catalog_status for freshness. Results always include official source URLs. "
     "For legal analysis, distinguish current and repealed material, cite the exact official source, state uncertainty, "
-    "and treat the output as informational rather than a substitute for professional legal advice."
+    "and treat the output as informational rather than a substitute for professional legal advice. "
+    "Use prepare_customs_precheck before answering product-specific import questions. It returns a dated official "
+    "evidence pack, missing intake fields, a user-rate-only cost calculation and a mandatory legal notice. Never "
+    "present a photo-derived code as a binding GTIP or invent an uncited tax rate."
 )
 
 # Initialize client with caching enabled (1 hour TTL by default)
@@ -2370,6 +2376,68 @@ async def list_ticaret_sources() -> dict:
     The URLs and counts come from the current live catalogue, not a generated sector list.
     """
     return await ticaret_client.list_sources()
+
+
+@app.tool(
+    annotations={
+        "title": "Gümrük ithalat ön değerlendirme kanıtını hazırla",
+        "readOnlyHint": True,
+        "destructiveHint": False,
+        "idempotentHint": False,
+        "openWorldHint": True,
+    }
+)
+async def prepare_customs_precheck(
+    question: str = Field(..., min_length=3, max_length=1500, description="Kullanıcının ithalat/gümrük sorusu."),
+    product_description: str = Field("", max_length=2000, description="Teknik ve ticari ürün tanımı."),
+    candidate_gtip: Optional[str] = Field(None, max_length=30, description="Varsa 4/6/8/10/12 haneli aday GTİP."),
+    origin_country: Optional[str] = Field(None, max_length=100, description="Menşe ülke; sevk ülkesinden ayrıdır."),
+    dispatch_country: Optional[str] = Field(None, max_length=100, description="Varsa sevk/çıkış ülkesi."),
+    intended_use: Optional[str] = Field(None, max_length=300, description="Ürünün kullanım amacı ve hedef kullanıcısı."),
+    composition: Optional[str] = Field(None, max_length=500, description="Malzeme, kimyasal bileşim veya tekstil elyaf oranları."),
+    condition: Literal["new", "used", "unknown"] = Field("unknown", description="Ürünün yeni/kullanılmış durumu."),
+    invoice_value: Optional[float] = Field(None, gt=0, le=1_000_000_000),
+    freight: Optional[float] = Field(None, ge=0, le=1_000_000_000),
+    insurance: Optional[float] = Field(None, ge=0, le=1_000_000_000),
+    other_pre_import_costs: Optional[float] = Field(None, ge=0, le=1_000_000_000),
+    currency: str = Field("USD", min_length=3, max_length=3),
+    incoterm: Optional[str] = Field(None, max_length=20),
+    payment_method: Optional[str] = Field(None, max_length=80, description="KKDF değerlendirmesi için ödeme şekli."),
+    customs_duty_rate: Optional[float] = Field(None, ge=0, le=1000, description="Yalnızca kullanıcıca doğrulanmış oran; araç oran üretmez."),
+    additional_duty_rate: Optional[float] = Field(None, ge=0, le=1000, description="Yalnızca kullanıcıca doğrulanmış İGV/ek oran."),
+    vat_rate: Optional[float] = Field(None, ge=0, le=100, description="Yalnızca kullanıcıca doğrulanmış KDV oranı."),
+) -> CustomsEvidencePack:
+    """Prepare the evidence required for a cautious product-specific import answer.
+
+    Returns current official Turkish sources for GTIP/BTB, TAREKS, TSE, product-safety
+    communiques, chemicals, customs value, tax and trade-defence checks plus comparative
+    EU EBTI/CLASS/CN/TARIC sources. EU codes are not Turkish GTIP12 or Turkish tax rates.
+    The caller must cite the returned source IDs, ask for the listed missing fields, and
+    include legal_notice verbatim. A product image may suggest questions/candidates but
+    cannot create a binding classification. Exact rates must not be inferred when the
+    official evidence does not directly establish product, origin and date applicability.
+    """
+    inquiry = CustomsInquiry(
+        question=question,
+        product_description=product_description,
+        candidate_gtip=candidate_gtip,
+        origin_country=origin_country,
+        dispatch_country=dispatch_country,
+        intended_use=intended_use,
+        composition=composition,
+        condition=condition,
+        invoice_value=invoice_value,
+        freight=freight,
+        insurance=insurance,
+        other_pre_import_costs=other_pre_import_costs,
+        currency=currency,
+        incoterm=incoterm,
+        payment_method=payment_method,
+        customs_duty_rate=customs_duty_rate,
+        additional_duty_rate=additional_duty_rate,
+        vat_rate=vat_rate,
+    )
+    return await customs_advisor_service.evidence_pack(inquiry)
 
 
 @app.tool(
