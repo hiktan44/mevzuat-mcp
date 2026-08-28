@@ -15,22 +15,31 @@ from __future__ import annotations
 
 import asyncio
 import hashlib
+import html
+import io
 import json
 import os
 import re
 import sqlite3
 import time
 import unicodedata
+import zipfile
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Literal
+from urllib.parse import urljoin, urlsplit
 
+import httpx
+import openpyxl
+import xlrd
+from markitdown import MarkItDown
 from pydantic import BaseModel, Field
 
 from bedesten_client import BedestenClient
 
-_CODE_RE = re.compile(r"(?<!\d)(\d{4}(?:[.\s]\d{2}){0,4})(?!\d)")
-_ANNEX_RE = re.compile(r"(?im)^\s*Ek\s*[-–]?\s*1\b")
+_CODE_RE = re.compile(
+    r"(?<!\d)(\d{4}(?:[.\t ]\d{2}){1,4}|\d{2}(?:[.\t ]\d{2}){1,5}|\d{4})(?!\d)"
+)
 _NEXT_ANNEX_RE = re.compile(r"(?im)^\s*Ek\s*[-–]?\s*[2-9]\b")
 _DOCUMENT_HEADING_RE = re.compile(
     r"(?i)(YÜKLENMESİ\s+GEREKEN\s+BELGELER|İBRAZ\s+EDİLECEK\s+BELGELER|BELGELER\s+VE\s+MUAFİYETLER)"
@@ -58,6 +67,7 @@ class ControlScopeRow(BaseModel):
     description: str | None = None
     source_line: str
     source_offset: int
+    excluded: bool = False
 
 
 class ImportControlRule(BaseModel):
@@ -119,17 +129,66 @@ class ControlSyncStatus(BaseModel):
     sync_interval_seconds: int
 
 
-def extract_annex_scope(text: str) -> list[ControlScopeRow]:
-    """Return GTIP rows from the most code-dense Ek-1 section.
+def _scope_rows_from_segment(segment: str) -> list[ControlScopeRow]:
+    """Parse GTIP/GTP codes and their adjacent descriptions from one table."""
+    matches = list(_CODE_RE.finditer(segment))
+    rows: list[ControlScopeRow] = []
+    seen: set[str] = set()
+    for index, match in enumerate(matches):
+        code = _normalise_gtip(match.group(1))
+        if not code or code in seen:
+            continue
+        # Four-digit years are common in footnotes; genuine four-digit tariff
+        # headings are dotted or appear after a GTIP/GTP column heading.
+        before = segment[max(0, match.start() - 300) : match.start()]
+        before_key = _key(before)
+        if len(code) == 4 and "gtip" not in before_key and "gtp" not in before_key and "." not in match.group(1):
+            continue
+        next_start = matches[index + 1].start() if index + 1 < len(matches) else match.end() + 500
+        raw_description = segment[match.end() : min(next_start, match.end() + 500)]
+        description = re.sub(r"\s+", " ", raw_description).strip(" \n\t-–:;.,")
+        source_line = re.sub(r"\s+", " ", segment[match.start() : min(next_start, match.end() + 500)]).strip()
+        before_context = segment[max(0, match.start() - 250) : match.start()]
+        after_context = segment[match.end() : min(len(segment), match.end() + 350)]
+        open_paren = before_context.rfind("(")
+        close_before = before_context.rfind(")")
+        close_paren = after_context.find(")")
+        parenthetical = (
+            before_context[open_paren:] + after_context[: close_paren + 1]
+            if open_paren > close_before and close_paren >= 0
+            else ""
+        )
+        excluded = "haric" in _key(parenthetical)
+        seen.add(code)
+        rows.append(
+            ControlScopeRow(
+                gtip_prefix=code,
+                description=description[:400] or None,
+                source_line=source_line[:600],
+                source_offset=match.start(),
+                excluded=excluded,
+            )
+        )
+    return rows
 
-    Earlier references such as "Ek-1'de" occur in the body.  Scoring every
+
+def extract_annex_scope(text: str, annex_number: int = 1) -> list[ControlScopeRow]:
+    """Return GTIP rows from the most code-dense requested annex section.
+
+    Earlier references such as "Ek-1'de" occur in the body. Scoring every
     candidate and cutting at the next annex avoids treating those references,
-    dates or article numbers as scope rows.
+    dates or article numbers as scope rows. Some annual communiques put the
+    actual GTIP table in Ek-2, so the annex number is source-configurable.
     """
+    if annex_number < 1 or annex_number > 9:
+        raise ValueError("Ek numarası 1 ile 9 arasında olmalıdır.")
+    annex_re = re.compile(rf"(?im)^\s*Ek\s*[-–]?\s*{annex_number}\b")
+    other_numbers = "|".join(str(value) for value in range(1, 10) if value != annex_number)
+    next_annex_re = re.compile(rf"(?im)^\s*Ek\s*[-–]?\s*(?:{other_numbers})\b")
     candidates: list[tuple[int, str]] = []
-    for match in _ANNEX_RE.finditer(text):
+    for match in annex_re.finditer(text):
         tail = text[match.start() :]
-        end = _NEXT_ANNEX_RE.search(tail[match.end() - match.start() :])
+        end = next_annex_re.search(tail[match.end() - match.start() :])
         segment_end = (match.end() - match.start()) + end.start() if end else len(tail)
         segment = tail[:segment_end]
         score = len(_CODE_RE.findall(segment))
@@ -140,32 +199,79 @@ def extract_annex_scope(text: str) -> list[ControlScopeRow]:
     if len(_CODE_RE.findall(segment)) < 1:
         return []
 
-    matches = list(_CODE_RE.finditer(segment))
-    rows: list[ControlScopeRow] = []
+    return _scope_rows_from_segment(segment)
+
+
+def extract_scope_table(text: str, start_pattern: str, end_pattern: str) -> list[ControlScopeRow]:
+    """Parse an inline GTIP/GTP table bounded by explicit official headings."""
+    start = re.search(start_pattern, text, flags=re.IGNORECASE | re.MULTILINE)
+    if not start:
+        return []
+    tail = text[start.start() :]
+    end = re.search(end_pattern, tail[start.end() - start.start() :], flags=re.IGNORECASE | re.MULTILINE)
+    segment_end = (start.end() - start.start()) + end.start() if end else len(tail)
+    return _scope_rows_from_segment(tail[:segment_end])
+
+
+def _dedupe_scope(rows: list[ControlScopeRow]) -> list[ControlScopeRow]:
+    result: list[ControlScopeRow] = []
     seen: set[str] = set()
-    for index, match in enumerate(matches):
-        code = _normalise_gtip(match.group(1))
-        if not code or code in seen:
+    for row in rows:
+        if row.gtip_prefix in seen:
             continue
-        # Four-digit years are common in footnotes; annex scope starts after a
-        # GTIP heading and genuine 4-digit headings are followed by item text.
-        before = segment[max(0, match.start() - 300) : match.start()]
-        if len(code) == 4 and "gtip" not in _key(before) and "." not in match.group(1):
-            continue
-        next_start = matches[index + 1].start() if index + 1 < len(matches) else match.end() + 500
-        raw_description = segment[match.end() : min(next_start, match.end() + 500)]
-        description = re.sub(r"\s+", " ", raw_description).strip(" \n\t-–:;.,")
-        source_line = re.sub(r"\s+", " ", segment[match.start() : min(next_start, match.end() + 500)]).strip()
-        seen.add(code)
-        rows.append(
-            ControlScopeRow(
-                gtip_prefix=code,
-                description=description[:400] or None,
-                source_line=source_line[:600],
-                source_offset=match.start(),
-            )
-        )
-    return rows
+        seen.add(row.gtip_prefix)
+        result.append(row)
+    return result
+
+
+def _tabular_bytes_to_text(data: bytes, extension: str) -> str:
+    lines: list[str] = []
+    if extension == ".xlsx":
+        workbook = openpyxl.load_workbook(io.BytesIO(data), read_only=True, data_only=True)
+        for sheet in workbook.worksheets:
+            lines.append(f"SAYFA {sheet.title}")
+            for row in sheet.iter_rows(values_only=True):
+                values = [str(value).strip() for value in row if value not in (None, "")]
+                if values:
+                    lines.append("\t".join(values))
+        workbook.close()
+    elif extension == ".xls":
+        workbook = xlrd.open_workbook(file_contents=data)
+        for sheet in workbook.sheets():
+            lines.append(f"SAYFA {sheet.name}")
+            for row_index in range(sheet.nrows):
+                values = [str(value).strip() for value in sheet.row_values(row_index) if value not in (None, "")]
+                if values:
+                    lines.append("\t".join(values))
+    return "\n".join(lines)
+
+
+def extract_attachment_scope(data: bytes, converter: MarkItDown | None = None) -> list[ControlScopeRow]:
+    """Extract tariff rows from an official annex ZIP without trusting filenames."""
+    if len(data) > 50 * 1024 * 1024:
+        raise ValueError("Resmî ek arşivi 50 MB güvenlik sınırını aşıyor.")
+    rows: list[ControlScopeRow] = []
+    converter = converter or MarkItDown()
+    with zipfile.ZipFile(io.BytesIO(data)) as archive:
+        total_uncompressed = sum(item.file_size for item in archive.infolist() if not item.is_dir())
+        if total_uncompressed > 150 * 1024 * 1024:
+            raise ValueError("Resmî ek arşivinin açılmış boyutu güvenlik sınırını aşıyor.")
+        for item in archive.infolist():
+            if item.is_dir() or item.file_size > 50 * 1024 * 1024:
+                continue
+            extension = Path(item.filename).suffix.casefold()
+            member = archive.read(item)
+            if extension in {".xlsx", ".xls"}:
+                text = _tabular_bytes_to_text(member, extension)
+            elif extension in {".docx", ".pdf"}:
+                converted = converter.convert_stream(io.BytesIO(member), file_extension=extension)
+                text = converted.text_content
+            elif extension in {".csv", ".txt", ".htm", ".html"}:
+                text = member.decode("utf-8", errors="replace")
+            else:
+                continue
+            rows.extend(_scope_rows_from_segment(text))
+    return _dedupe_scope(rows)
 
 
 def extract_required_documents(text: str) -> str | None:
@@ -236,6 +342,12 @@ class ImportControlEngine:
         root.mkdir(parents=True, exist_ok=True)
         self.db_path = root / "controls.sqlite3"
         self._client = BedestenClient(cache_ttl=self.sync_interval_seconds)
+        self._attachment_http = httpx.AsyncClient(
+            headers={"User-Agent": "MevzuatMCP/1.4 (+official-annex-indexer)"},
+            follow_redirects=True,
+            timeout=httpx.Timeout(75.0),
+        )
+        self._converter = MarkItDown()
         self._sync_lock = asyncio.Lock()
         self._request_lock = asyncio.Lock()
         self._last_request_at = 0.0
@@ -288,14 +400,19 @@ class ImportControlEngine:
                     description TEXT,
                     source_line TEXT NOT NULL,
                     source_offset INTEGER NOT NULL,
+                    excluded INTEGER NOT NULL DEFAULT 0,
                     PRIMARY KEY (snapshot_id, gtip_prefix)
                 );
                 CREATE INDEX IF NOT EXISTS idx_control_scope_gtip ON control_scope(gtip_prefix);
                 """
             )
+            columns = {row[1] for row in db.execute("PRAGMA table_info(control_scope)").fetchall()}
+            if "excluded" not in columns:
+                db.execute("ALTER TABLE control_scope ADD COLUMN excluded INTEGER NOT NULL DEFAULT 0")
 
     async def close(self) -> None:
         await self._client.close()
+        await self._attachment_http.aclose()
 
     async def _pace(self) -> None:
         delay = self._request_interval - (time.monotonic() - self._last_request_at)
@@ -337,20 +454,66 @@ class ImportControlEngine:
                 break
         return documents
 
-    async def _fetch_rule(self, config: dict[str, Any], document: Any, semaphore: asyncio.Semaphore) -> tuple[dict[str, Any], str, Any]:
+    async def _fetch_rule(
+        self,
+        config: dict[str, Any],
+        document: Any,
+        semaphore: asyncio.Semaphore,
+    ) -> tuple[dict[str, Any], str, Any, str]:
         async with semaphore:
             text = ""
+            raw_html = ""
             for attempt in range(4):
                 async with self._request_lock:
                     await self._pace()
                     text = await self._client.get_document_plain_text(document.mevzuat_id)
                     self._last_request_at = time.monotonic()
                 if text:
+                    # get_document_plain_text populated the Bedesten client's
+                    # cache, so this exposes official attachment hrefs without
+                    # a second network request.
+                    content = await self._client.get_document_content(document.mevzuat_id)
+                    raw_html = content.content
                     break
                 await asyncio.sleep(min(30, 3 * (2 ** attempt)))
             if not text:
                 raise RuntimeError(f"{config['code']} resmî metni boş döndü")
-            return config, text, document
+            return config, text, document, raw_html
+
+    @staticmethod
+    def _official_attachment_url(raw_html: str) -> str | None:
+        candidates = re.findall(r"(?is)href\s*=\s*['\"]([^'\"]+)['\"]", raw_html)
+        for candidate in candidates:
+            href = html.unescape(candidate).strip()
+            if not href.casefold().endswith(".zip"):
+                continue
+            url = urljoin("https://www.mevzuat.gov.tr/MevzuatMetin/", href)
+            parsed = urlsplit(url)
+            if parsed.scheme == "https" and parsed.hostname in {"mevzuat.gov.tr", "www.mevzuat.gov.tr"}:
+                return url
+        return None
+
+    async def _download_attachment(self, raw_html: str) -> tuple[bytes, str]:
+        url = self._official_attachment_url(raw_html)
+        if not url:
+            raise RuntimeError("Resmî metindeki ek arşivi bağlantısı bulunamadı")
+        async with self._attachment_http.stream("GET", url) as response:
+            response.raise_for_status()
+            resolved = str(response.url)
+            parsed = urlsplit(resolved)
+            if parsed.scheme != "https" or parsed.hostname not in {"mevzuat.gov.tr", "www.mevzuat.gov.tr"}:
+                raise RuntimeError("Resmî ek arşivi izin verilen alan adı dışına yönlendirildi")
+            content_length = response.headers.get("content-length")
+            if content_length and int(content_length) > 50 * 1024 * 1024:
+                raise RuntimeError("Resmî ek arşivi 50 MB güvenlik sınırını aşıyor")
+            chunks: list[bytes] = []
+            total = 0
+            async for chunk in response.aiter_bytes():
+                total += len(chunk)
+                if total > 50 * 1024 * 1024:
+                    raise RuntimeError("Resmî ek arşivi 50 MB güvenlik sınırını aşıyor")
+                chunks.append(chunk)
+        return b"".join(chunks), resolved
 
     async def sync(self, force: bool = False) -> ControlSyncStatus:
         async with self._sync_lock:
@@ -389,12 +552,30 @@ class ImportControlEngine:
                         if not config.get("optional"):
                             self._errors.append(f"{config['code']}: {result}")
                         continue
-                    _, text, document = result
-                    scope = extract_annex_scope(text)
+                    _, text, document, raw_html = result
+                    attachment_digest = ""
+                    if config.get("scope_table"):
+                        table = config["scope_table"]
+                        scope = extract_scope_table(text, table["start_pattern"], table["end_pattern"])
+                    else:
+                        scope = extract_annex_scope(text, int(config.get("scope_annex", 1)))
+                    if config.get("scope_attachment"):
+                        try:
+                            attachment, _ = await self._download_attachment(raw_html)
+                            scope = extract_attachment_scope(attachment, self._converter)
+                            attachment_digest = hashlib.sha256(attachment).hexdigest()
+                        except Exception as exc:
+                            self._errors.append(f"{config['code']}: resmî ek arşivi işlenemedi ({exc})")
+                            continue
                     if not scope:
-                        self._errors.append(f"{config['code']}: Ek-1 GTİP kapsamı ayrıştırılamadı")
+                        location = (
+                            "resmî ek arşivi" if config.get("scope_attachment")
+                            else f"Ek-{config.get('scope_annex', 1)}"
+                        )
+                        self._errors.append(f"{config['code']}: {location} GTİP kapsamı ayrıştırılamadı")
                         continue
-                    digest = hashlib.sha256(text.encode("utf-8")).hexdigest()
+                    digest_material = text.encode("utf-8") + attachment_digest.encode("ascii")
+                    digest = hashlib.sha256(digest_material).hexdigest()
                     snapshot_id = hashlib.sha256(f"{config['code']}:{digest}".encode()).hexdigest()[:32]
                     process = infer_process(text, document.mevzuat_adi)
                     documents = extract_required_documents(text)
@@ -417,16 +598,21 @@ class ImportControlEngine:
                                 snapshot_id, config["code"], document.mevzuat_adi, config["category"],
                                 document.mevzuat_id, source_url, document.resmi_gazete_tarihi,
                                 document.resmi_gazete_sayisi, digest, retrieved_at, self.valid_from,
-                                len(scope), process["authority"], process["system"],
+                                sum(not row.excluded for row in scope), process["authority"], process["system"],
                                 int(process["risk_based"]), int(process["physical_inspection_possible"]),
                                 int(process["laboratory_test_possible"]), documents,
                             ),
                         )
                         db.execute("DELETE FROM control_scope WHERE snapshot_id=?", (snapshot_id,))
                         db.executemany(
-                            "INSERT INTO control_scope VALUES (?,?,?,?,?)",
+                            """INSERT INTO control_scope
+                               (snapshot_id, gtip_prefix, description, source_line, source_offset, excluded)
+                               VALUES (?,?,?,?,?,?)""",
                             [
-                                (snapshot_id, row.gtip_prefix, row.description, row.source_line, row.source_offset)
+                                (
+                                    snapshot_id, row.gtip_prefix, row.description, row.source_line,
+                                    row.source_offset, int(row.excluded),
+                                )
                                 for row in scope
                             ],
                         )
@@ -445,6 +631,15 @@ class ImportControlEngine:
     def _fresh(self) -> bool:
         with self._connect() as db:
             row = db.execute("SELECT value FROM control_meta WHERE key='last_checked_at'").fetchone()
+            active_codes = {
+                item["code"]
+                for item in db.execute("SELECT code FROM control_snapshots WHERE active=1").fetchall()
+            }
+        required_codes = {item["code"] for item in self.rules_config if not item.get("optional")}
+        if not required_codes.issubset(active_codes):
+            # A partially parsed annual set must be retried on restart instead
+            # of being treated as fresh for the full sync interval.
+            return False
         if not row:
             return False
         try:
@@ -481,7 +676,9 @@ class ImportControlEngine:
             rows = db.execute("SELECT * FROM control_snapshots WHERE active=1 ORDER BY code").fetchall()
             meta = db.execute("SELECT value FROM control_meta WHERE key='last_checked_at'").fetchone()
             count = db.execute(
-                "SELECT COUNT(*) AS n FROM control_scope s JOIN control_snapshots d ON d.id=s.snapshot_id WHERE d.active=1"
+                """SELECT COUNT(*) AS n FROM control_scope s
+                   JOIN control_snapshots d ON d.id=s.snapshot_id
+                   WHERE d.active=1 AND s.excluded=0"""
             ).fetchone()["n"]
         snapshots = [self._snapshot(row) for row in rows]
         required_codes = {item["code"] for item in self.rules_config if not item.get("optional")}
@@ -505,7 +702,7 @@ class ImportControlEngine:
         with self._connect() as db:
             rows = db.execute(
                 """
-                SELECT d.*, s.gtip_prefix, s.description, s.source_line, s.source_offset
+                SELECT d.*, s.gtip_prefix, s.description, s.source_line, s.source_offset, s.excluded
                 FROM control_scope s
                 JOIN control_snapshots d ON d.id=s.snapshot_id
                 WHERE d.active=1 AND substr(?,1,length(s.gtip_prefix))=s.gtip_prefix
@@ -513,8 +710,14 @@ class ImportControlEngine:
                 """,
                 (code,),
             ).fetchall()
+        excluded_by_rule: dict[str, list[sqlite3.Row]] = {}
+        for row in rows:
+            if row["excluded"]:
+                excluded_by_rule.setdefault(row["code"], []).append(row)
         matches: list[ImportControlMatch] = []
         for row in rows:
+            if row["excluded"] or row["code"] in excluded_by_rule:
+                continue
             rule = self._rule(row)
             risk_sentence = (
                 "GTİP tebliğ ekinde yer alıyor; fiilî denetime yönlendirme TAREKS risk analiziyle belirlenir."
@@ -534,13 +737,20 @@ class ImportControlEngine:
                     matched_scope=ControlScopeRow(
                         gtip_prefix=row["gtip_prefix"], description=row["description"],
                         source_line=row["source_line"], source_offset=row["source_offset"],
+                        excluded=False,
                     ),
                     match_type="exact" if len(row["gtip_prefix"]) == 12 else "prefix",
                     assessment=risk_sentence,
                     cautions=cautions,
                 )
             )
-        warnings = []
+        warnings = [
+            (
+                f"{rule_code} tebliğinde {', '.join(item['gtip_prefix'] for item in exclusions)} "
+                "'hariç' hükmü eşleşti; bu tebliğ için pozitif kapsam sonucu üretilmedi."
+            )
+            for rule_code, exclusions in sorted(excluded_by_rule.items())
+        ]
         if not matches:
             warnings.append(
                 "GTİP, indekslenen güncel tebliğ eklerinde bulunamadı. Bu sonuç 'kontrole tabi değildir' anlamına gelmez; ürün niteliği, başka izin mevzuatı ve güncel değişiklikler ayrıca incelenmelidir."
