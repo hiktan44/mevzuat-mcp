@@ -283,15 +283,126 @@ function showReader(documentData, trigger) {
   reader.setAttribute("aria-hidden", "false");
   document.body.classList.add("reader-open");
   readerSearch.value = "";
+  $("#readerOutline").hidden = true;
+  $("#readerOutlineNav").innerHTML = "";
   $("#readerWarning").hidden = true;
   loadMoreContent.hidden = true;
   $$(".result-item").forEach((item) => item.classList.toggle("selected", item === trigger));
   if (window.innerWidth <= 1260) $(".panel-close").focus();
 }
 
+function highlightReaderText(value, term = "") {
+  if (!term) return escapeHtml(value);
+  const source = String(value);
+  const lower = source.toLocaleLowerCase("tr-TR");
+  const needle = term.toLocaleLowerCase("tr-TR");
+  if (!needle) return escapeHtml(source);
+  let cursor = 0;
+  let output = "";
+  while (cursor < source.length) {
+    const index = lower.indexOf(needle, cursor);
+    if (index < 0) {
+      output += escapeHtml(source.slice(cursor));
+      break;
+    }
+    output += `${escapeHtml(source.slice(cursor, index))}<mark>${escapeHtml(source.slice(index, index + term.length))}</mark>`;
+    cursor = index + term.length;
+  }
+  return output;
+}
+
+function readerReferenceKey(value) {
+  return String(value).trim().replace(/\s+/g, " ").toLocaleLowerCase("tr-TR");
+}
+
+function readerBlocks(content) {
+  const normalised = String(content || "")
+    .replace(/\r\n?/g, "\n")
+    .replace(/[ \t]+(?=(?:GEÇİCİ\s+)?MADDE\s+\d+[A-Za-z]?\s*[-–—])/giu, "\n");
+  const blocks = [];
+  normalised.split("\n").forEach((rawLine) => {
+    const line = rawLine.trim();
+    if (!line) return;
+    const article = line.match(/^((?:GEÇİCİ\s+)?MADDE\s+\d+[A-Za-z]?)\s*[-–—]\s*(.*)$/iu);
+    if (article) {
+      blocks.push({ type: "heading", text: article[1], article: true });
+      if (article[2]) blocks.push({ type: "paragraph", text: article[2] });
+      return;
+    }
+    const numberedSection = /^(?:(?:BİRİNCİ|İKİNCİ|ÜÇÜNCÜ|DÖRDÜNCÜ|BEŞİNCİ|ALTINCI|YEDİNCİ|SEKİZİNCİ|DOKUZUNCU|ONUNCU)\s+)?(?:KISIM|BÖLÜM|FASIL)\b/iu.test(line);
+    const appendixHeading = /^(?:EK|CETVEL|TABLO)\s*[-–—:]?\s*[A-Z0-9/]+(?:\s|$)/iu.test(line) && line.length <= 120;
+    blocks.push({ type: numberedSection || appendixHeading ? "heading" : "paragraph", text: line, article: false });
+  });
+  return blocks;
+}
+
+function formatReaderText(value, term = "") {
+  const source = String(value);
+  const tokenPattern = /https?:\/\/[^\s<>"']+/giu;
+  let cursor = 0;
+  let output = "";
+  for (const match of source.matchAll(tokenPattern)) {
+    const index = match.index ?? 0;
+    output += highlightReaderText(source.slice(cursor, index), term);
+    let token = match[0];
+    if (/^https?:\/\//iu.test(token)) {
+      const trailing = token.match(/[),.;:]+$/u)?.[0] || "";
+      if (trailing) token = token.slice(0, -trailing.length);
+      output += `<a class="reader-external-link" href="${safeUrl(token)}" target="_blank" rel="noreferrer">${highlightReaderText(token, term)}</a>${escapeHtml(trailing)}`;
+    }
+    cursor = index + match[0].length;
+  }
+  output += highlightReaderText(source.slice(cursor), term);
+  return output;
+}
+
+function renderReaderContent(term = "") {
+  const content = state.currentContent || "";
+  if (!content) {
+    readerContent.textContent = "Bu kayıtta çıkarılabilir metin bulunamadı. Resmî kaynak bağlantısını açın.";
+    $("#readerOutline").hidden = true;
+    return;
+  }
+
+  const blocks = readerBlocks(content);
+  const groups = [];
+  let current = { id: "reader-preamble", title: "Belge başlangıcı", outline: false, blocks: [] };
+  let sectionIndex = 0;
+  blocks.forEach((block) => {
+    if (block.type !== "heading") {
+      current.blocks.push(block);
+      return;
+    }
+    if (current.blocks.length || current.outline) groups.push(current);
+    sectionIndex += 1;
+    const articleKey = block.article ? readerReferenceKey(block.text) : "";
+    const id = block.article
+      ? `reader-${articleKey.replaceAll(" ", "-").replaceAll("ç", "c").replaceAll("ı", "i").replaceAll("ş", "s").replaceAll("ğ", "g").replaceAll("ü", "u").replaceAll("ö", "o")}`
+      : `reader-section-${sectionIndex}`;
+    current = { id, title: block.text, outline: true, blocks: [] };
+  });
+  if (current.blocks.length || current.outline) groups.push(current);
+
+  const outlineGroups = groups.filter((group) => group.outline);
+  const outline = $("#readerOutline");
+  outline.hidden = outlineGroups.length === 0;
+  $("#readerOutlineCount").textContent = `${numberFormat.format(outlineGroups.length)} bölüm`;
+  $("#readerOutlineNav").innerHTML = outlineGroups.map((group) => `
+    <button type="button" data-reader-anchor="${escapeHtml(group.id)}"><span>${escapeHtml(group.title)}</span><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m9 5 7 7-7 7"/></svg></button>`).join("");
+
+  readerContent.innerHTML = groups.map((group) => {
+    const body = group.blocks.map((block) => `<p>${formatReaderText(block.text, term)}</p>`).join("");
+    if (!group.outline) return `<div class="reader-preamble">${body}</div>`;
+    return `<details class="reader-section" id="${escapeHtml(group.id)}" tabindex="-1" open>
+      <summary><span>${highlightReaderText(group.title, term)}</span><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg></summary>
+      <div class="reader-section-body">${body || '<p class="reader-empty-section">Bu başlık altında ayrı metin bulunamadı.</p>'}</div>
+    </details>`;
+  }).join("");
+}
+
 function setReaderContent(content, append = false) {
-  state.currentContent = append ? `${state.currentContent}${content}` : content;
-  readerContent.textContent = state.currentContent || "Bu kayıtta çıkarılabilir metin bulunamadı. Resmî kaynak bağlantısını açın.";
+  state.currentContent = append ? `${state.currentContent}\n${content}` : content;
+  renderReaderContent(readerSearch.value.trim());
   $("#readerLength").textContent = `${numberFormat.format(state.currentContent.length)} karakter`;
 }
 
@@ -444,19 +555,27 @@ document.addEventListener("keydown", (event) => {
 });
 
 readerSearch.addEventListener("input", () => {
-  const term = readerSearch.value.trim();
-  if (!term || !state.currentContent) {
-    readerContent.textContent = state.currentContent;
-    return;
-  }
-  const lower = state.currentContent.toLocaleLowerCase("tr-TR");
-  const index = lower.indexOf(term.toLocaleLowerCase("tr-TR"));
-  if (index < 0) {
-    readerContent.textContent = state.currentContent;
-    return;
-  }
-  readerContent.innerHTML = `${escapeHtml(state.currentContent.slice(0, index))}<mark>${escapeHtml(state.currentContent.slice(index, index + term.length))}</mark>${escapeHtml(state.currentContent.slice(index + term.length))}`;
-  requestAnimationFrame(() => readerContent.querySelector("mark")?.scrollIntoView({ block: "center" }));
+  renderReaderContent(readerSearch.value.trim());
+  requestAnimationFrame(() => readerContent.querySelector("mark")?.scrollIntoView({ behavior: "smooth", block: "center" }));
+});
+
+reader.addEventListener("click", (event) => {
+  const control = event.target.closest("[data-reader-anchor]");
+  if (!control || !reader.contains(control)) return;
+  const target = document.getElementById(control.dataset.readerAnchor);
+  if (!target) return;
+  const section = target.matches("details") ? target : target.closest("details.reader-section");
+  if (section) section.open = true;
+  target.scrollIntoView({ behavior: "smooth", block: "start" });
+  target.focus({ preventScroll: true });
+});
+
+$("#expandAllSections").addEventListener("click", () => {
+  $$("#readerContent details.reader-section").forEach((section) => { section.open = true; });
+});
+
+$("#collapseAllSections").addEventListener("click", () => {
+  $$("#readerContent details.reader-section").forEach((section) => { section.open = false; });
 });
 
 loadMoreContent.addEventListener("click", async () => {

@@ -259,8 +259,15 @@
         <div class="citation-spine" id="citationSpine"></div>
         <div class="panel-actions"><a id="officialLink" href="#" target="_blank" rel="noreferrer"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M14 4h6v6M20 4l-9 9"/><path d="M18 13v7H4V6h7"/></svg>Resmî kaynağı aç</a><button id="copyCitation" type="button"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="8" y="8" width="12" height="12"/><path d="M16 8V4H4v12h4"/></svg>Atıfı kopyala</button></div>
         <div class="document-search"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m16 16 5 5"/></svg><label class="sr-only" for="readerSearch">Belge metninde ara</label><input id="readerSearch" type="search" placeholder="Belge metninde ara"><span id="readerLength">—</span></div>
+        <details class="reader-outline" id="readerOutline" hidden open>
+          <summary><span>Belge içi başlıklar</span><small id="readerOutlineCount">0 bölüm</small></summary>
+          <div class="reader-outline-body">
+            <div class="reader-outline-actions"><button id="expandAllSections" type="button">Tümünü aç</button><button id="collapseAllSections" type="button">Tümünü kapat</button></div>
+            <nav id="readerOutlineNav" aria-label="Belge içi bölüm bağlantıları"></nav>
+          </div>
+        </details>
         <div class="reader-warning" id="readerWarning" hidden></div>
-        <pre class="reader-content" id="readerContent" tabindex="0">Belge seçildiğinde metin burada görüntülenir.</pre>
+        <div class="reader-content" id="readerContent" tabindex="0">Belge seçildiğinde metin burada görüntülenir.</div>
         <button class="load-more" id="loadMoreContent" type="button" hidden>Belgenin devamını getir</button>
       </article>
     </aside>

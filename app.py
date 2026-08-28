@@ -506,7 +506,7 @@ async def health_check(request):
     return JSONResponse({
         "status": "healthy",
         "service": "Mevzuat MCP Server",
-        "version": "1.3.0"
+        "version": "1.3.1"
     })
 
 class McpRateLimitMiddleware:
