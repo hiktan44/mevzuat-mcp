@@ -675,7 +675,7 @@ def _missing_information(inquiry: CustomsInquiry) -> list[str]:
     if not inquiry.product_description:
         missing.append("Ürünün teknik ve ticari tanımı")
     if not inquiry.candidate_gtip:
-        missing.append("Aday 12 haneli GTİP veya sınıflandırma için ayrıntılı ürün özellikleri")
+        missing.append("Aday 6/8/10/12 haneli HS/CN/GTİP kodu veya sınıflandırma için ayrıntılı ürün özellikleri")
     if not inquiry.origin_country:
         missing.append("Menşe ülke")
     if not inquiry.composition:
@@ -841,17 +841,16 @@ class CustomsAdvisor:
         control_lookup: ImportControlLookupResult | None = None
         official_rates: dict[str, float] = {}
         tariff_sources: list[EvidenceSource] = []
-        if self.tariff_engine and inquiry.candidate_gtip and len(inquiry.candidate_gtip) == 12:
+        if self.tariff_engine and inquiry.candidate_gtip and len(inquiry.candidate_gtip) in {6, 8, 10, 12}:
             tariff_lookup = await self.tariff_engine.lookup(
                 inquiry.candidate_gtip,
                 origin_country=inquiry.origin_country,
             )
+            official_rates.update(tariff_lookup.unambiguous_rates)
             for measure in tariff_lookup.measures:
                 evidence_id = (
                     f"tariff_{measure.measure_type}_{measure.snapshot_id[:8]}_{measure.source_row}"
                 )
-                if measure.automatic_calculation_allowed and measure.rate is not None:
-                    official_rates.setdefault(measure.measure_type, measure.rate)
                 tariff_sources.append(
                     EvidenceSource(
                         id=evidence_id,

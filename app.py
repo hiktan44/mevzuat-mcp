@@ -515,7 +515,7 @@ async def web_tariff_status(request: Request):
 
 @mcp.custom_route("/api/tariff/lookup", methods=["POST"])
 async def web_tariff_lookup(request: Request):
-    """Look up official customs/IGV rows for a confirmed GTIP and origin."""
+    """Look up official customs/IGV rows for a 6/8/10/12 digit tariff code and origin."""
     limited = _rate_limit_response(request, "tariff-lookup", limit=60, window_seconds=60)
     if limited:
         return limited

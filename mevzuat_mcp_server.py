@@ -2419,14 +2419,19 @@ async def sync_official_tariff_data(
     }
 )
 async def lookup_tariff_measures(
-    gtip: str = Field(..., pattern=r"^(?:\d[. ]*){12}$", description="Noktalı veya düz 12 haneli Türk GTİP."),
+    gtip: str = Field(
+        ...,
+        pattern=r"^(?:(?:\d[. ]*){6}|(?:\d[. ]*){8}|(?:\d[. ]*){10}|(?:\d[. ]*){12})$",
+        description="Noktalı veya düz 6/8 haneli HS/CN ya da 10/12 haneli Türk tarife kodu.",
+    ),
     origin_country: Optional[str] = Field(None, max_length=100, description="Menşe ülke; sevk ülkesinden ayrıdır."),
 ) -> TariffLookupResult:
     """Return source-row-level customs duty and additional-duty evidence.
 
-    Results include the selected country column, alternatives, conditional end-use
-    rates, workbook/sheet/row, archive checksum and warnings. Dipnotlu or unresolved
-    rates are never marked safe for automatic calculation.
+    A 6/8/10 digit code expands to every matching 12-digit Turkish tariff line.
+    Results include rate variants, the selected country column, alternatives,
+    conditional end-use rates, workbook/sheet/row, archive checksum and warnings.
+    A rate is automatic only when every matching subline has the same unfootnoted rate.
     """
     return await tariff_engine.lookup(gtip, origin_country=origin_country)
 
@@ -2442,7 +2447,11 @@ async def lookup_tariff_measures(
     }
 )
 async def calculate_import_landed_cost(
-    gtip: str = Field(..., pattern=r"^(?:\d[. ]*){12}$"),
+    gtip: str = Field(
+        ...,
+        pattern=r"^(?:(?:\d[. ]*){6}|(?:\d[. ]*){8}|(?:\d[. ]*){10}|(?:\d[. ]*){12})$",
+        description="6/8/10/12 haneli tarife kodu; kısa kodlar 12 haneli alt satırlara açılır.",
+    ),
     origin_country: str = Field(..., min_length=2, max_length=100),
     invoice_value: float = Field(..., gt=0, le=1_000_000_000),
     freight: float = Field(0, ge=0, le=1_000_000_000),
@@ -2460,9 +2469,10 @@ async def calculate_import_landed_cost(
     """Calculate a reproducible landed cost with official safe-to-use tariff rates.
 
     Customs duty/İGV are taken only when the current official snapshot resolves one
-    unfootnoted rate for the given GTIP and origin. VAT, KKDF, dumping, SCT and
-    surveillance facts remain explicit inputs until their product-specific official
-    datasets are available. Missing rates block the total instead of becoming zero.
+    unfootnoted rate shared by every matching 12-digit subline for the code and origin.
+    VAT, KKDF, dumping, SCT and surveillance facts remain explicit inputs until their
+    product-specific official datasets are available. Missing or divergent rates block
+    the total instead of becoming zero.
     """
     return await tariff_engine.calculate(
         gtip,

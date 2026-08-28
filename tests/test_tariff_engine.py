@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import io
+import tempfile
 import unittest
 import zipfile
 
@@ -110,6 +111,86 @@ class LandedCostTests(unittest.TestCase):
         )
         self.assertEqual(result.customs_value, 2000)
         self.assertTrue(result.warnings)
+
+
+class TariffPrefixLookupTests(unittest.IsolatedAsyncioTestCase):
+    async def asyncSetUp(self) -> None:
+        self.temp_dir = tempfile.TemporaryDirectory()
+        self.engine = TariffEngine(data_dir=self.temp_dir.name)
+        with self.engine._connect() as db:
+            for snapshot_id, source_id, title in (
+                ("import-2026", "import_regime", "İthalat Rejimi"),
+                ("igv-2026", "additional_duty", "İlave Gümrük Vergisi"),
+            ):
+                db.execute(
+                    """
+                    INSERT INTO tariff_snapshots
+                    (id,source_id,source_title,landing_url,archive_url,archive_sha256,retrieved_at,
+                     checked_at,valid_from,measure_count,active,metadata_json)
+                    VALUES (?,?,?,?,?,?,?,?,?,?,1,'{}')
+                    """,
+                    (
+                        snapshot_id, source_id, title, "https://ticaret.gov.tr/test",
+                        "https://ticaret.gov.tr/test.zip", "a" * 64,
+                        "2026-08-29T00:00:00+03:00", "2026-08-29T00:00:00+03:00",
+                        "2026-01-01", 2,
+                    ),
+                )
+
+    async def asyncTearDown(self) -> None:
+        await self.engine.close()
+        self.temp_dir.cleanup()
+
+    def _insert_measure(
+        self,
+        row_id: str,
+        snapshot_id: str,
+        gtip: str,
+        measure_type: str,
+        rate: float,
+        country_group: str,
+    ) -> None:
+        with self.engine._connect() as db:
+            db.execute(
+                """
+                INSERT INTO tariff_measures
+                (id,snapshot_id,gtip,measure_type,rate,rate_text,country_group,
+                 country_group_description,footnote,description,condition_text,list_name,
+                 source_file,source_sheet,source_row,automatic_calculation_allowed)
+                VALUES (?,?,?,?,?,?,?,?,NULL,NULL,NULL,?,?,?,?,1)
+                """,
+                (
+                    row_id, snapshot_id, gtip, measure_type, rate, str(rate), country_group,
+                    "Diğer Ülkeler", "Test listesi", "test.xlsx", "84", 3,
+                ),
+            )
+
+    async def test_six_digit_prefix_uses_only_rates_shared_by_every_subline(self) -> None:
+        self._insert_measure("c1", "import-2026", "123456001111", "customs_duty", 10, "7")
+        self._insert_measure("c2", "import-2026", "123456002222", "customs_duty", 10, "7")
+        self._insert_measure("a1", "igv-2026", "123456001111", "additional_duty", 20, "DÜ")
+
+        result = await self.engine.lookup("123456", origin_country="Çin", auto_sync=False)
+
+        self.assertEqual(result.match_mode, "prefix")
+        self.assertEqual(result.matched_gtip_count, 2)
+        self.assertEqual(result.unambiguous_rates["customs_duty"], 10)
+        self.assertNotIn("additional_duty", result.unambiguous_rates)
+        self.assertIn("additional_duty", result.ambiguous_measure_types)
+        self.assertTrue(any(item.country_group == "DÜ" for item in result.measures))
+        self.assertEqual(result.status, "partial")
+
+    async def test_eight_digit_prefix_calculates_when_all_sublines_share_rates(self) -> None:
+        for suffix, row in (("0011", "1"), ("0022", "2")):
+            gtip = f"87654321{suffix}"
+            self._insert_measure(f"c{row}", "import-2026", gtip, "customs_duty", 5, "7")
+            self._insert_measure(f"a{row}", "igv-2026", gtip, "additional_duty", 12, "DÜ")
+
+        result = await self.engine.lookup("87654321", origin_country="Çin", auto_sync=False)
+
+        self.assertEqual(result.unambiguous_rates, {"customs_duty": 5.0, "additional_duty": 12.0})
+        self.assertEqual(result.ambiguous_measure_types, [])
+        self.assertEqual(result.status, "matched")
 
 
 if __name__ == "__main__":

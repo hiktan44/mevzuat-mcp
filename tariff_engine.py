@@ -135,8 +135,14 @@ class TariffSnapshot(BaseModel):
 class TariffLookupResult(BaseModel):
     status: Literal["matched", "partial", "not_found", "unavailable"]
     gtip: str
+    match_mode: Literal["exact", "prefix"] = "exact"
+    matched_gtips: list[str] = Field(default_factory=list)
+    matched_gtip_count: int = 0
     origin_country: str | None = None
     resolved_country_group: str | None = None
+    rate_variants: dict[str, list[float]] = Field(default_factory=dict)
+    unambiguous_rates: dict[str, float] = Field(default_factory=dict)
+    ambiguous_measure_types: list[str] = Field(default_factory=list)
     measures: list[TariffMeasure] = Field(default_factory=list)
     conditional_measures: list[TariffMeasure] = Field(default_factory=list)
     alternatives: list[TariffMeasure] = Field(default_factory=list)
@@ -705,8 +711,9 @@ class TariffEngine:
 
     async def lookup(self, gtip: str, *, origin_country: str | None = None, auto_sync: bool = True) -> TariffLookupResult:
         normalised = _normalise_gtip(gtip)
-        if not normalised or len(normalised) != 12:
-            raise ValueError("Tarife sorgusu için 12 haneli GTİP gereklidir.")
+        if not normalised or len(normalised) not in {6, 8, 10, 12}:
+            raise ValueError("Tarife sorgusu için 6, 8, 10 veya 12 haneli HS/CN/GTİP kodu gereklidir.")
+        match_mode: Literal["exact", "prefix"] = "exact" if len(normalised) == 12 else "prefix"
         if auto_sync and not self.status().ready:
             await self.sync()
         with self._connect() as db:
@@ -717,20 +724,47 @@ class TariffEngine:
             metadata: dict[str, Any] = {}
             for snapshot in snapshots:
                 metadata.update(json.loads(snapshot["metadata_json"] or "{}"))
-                rows = db.execute(
-                    "SELECT * FROM tariff_measures WHERE snapshot_id=? AND gtip=? ORDER BY measure_type,list_name,country_group",
-                    (snapshot["id"], normalised),
-                ).fetchall()
+                if match_mode == "exact":
+                    rows = db.execute(
+                        "SELECT * FROM tariff_measures WHERE snapshot_id=? AND gtip=? ORDER BY gtip,measure_type,list_name,country_group",
+                        (snapshot["id"], normalised),
+                    ).fetchall()
+                else:
+                    rows = db.execute(
+                        "SELECT * FROM tariff_measures WHERE snapshot_id=? AND gtip LIKE ? ORDER BY gtip,measure_type,list_name,country_group",
+                        (snapshot["id"], f"{normalised}%"),
+                    ).fetchall()
                 all_rows.extend((row, snapshot) for row in rows)
         if not all_rows:
             return TariffLookupResult(
-                status="not_found", gtip=normalised, origin_country=origin_country,
+                status="not_found", gtip=normalised, match_mode=match_mode, origin_country=origin_country,
                 snapshots=[self._snapshot(row) for row in snapshots], as_of=_now(),
-                warnings=["Bu GTİP aktif resmî tarife/İGV tablolarında birebir bulunamadı; fasıl ve GTİP doğrulaması gerekir."],
+                warnings=["Bu kod aktif resmî tarife/İGV tablolarında bulunamadı; kod ve fasıl doğrulaması gerekir."],
             )
 
-        labels = {row["country_group"] for row, _ in all_rows}
-        selected, warnings = self._matching_group(origin_country or "", labels, metadata, normalised)
+        matched_gtips = sorted({row["gtip"] for row, _ in all_rows})
+        selected_by_scope: dict[tuple[str, str], str | None] = {}
+        warnings: list[str] = []
+        scopes = {(row["gtip"], snapshot["id"]) for row, snapshot in all_rows}
+        for matched_gtip, snapshot_id in sorted(scopes):
+            labels = {
+                row["country_group"]
+                for row, snapshot in all_rows
+                if row["gtip"] == matched_gtip and snapshot["id"] == snapshot_id
+            }
+            selected_group, group_warnings = self._matching_group(
+                origin_country or "", labels, metadata, matched_gtip
+            )
+            selected_by_scope[(matched_gtip, snapshot_id)] = selected_group
+            warnings.extend(group_warnings)
+        warnings = list(dict.fromkeys(warnings))
+        selected_groups = {group for group in selected_by_scope.values() if group}
+        selected = " / ".join(sorted(selected_groups)) if selected_groups else None
+        if len(selected_groups) > 1:
+            warnings.append(
+                "Resmî tablolar aynı menşe grubu için farklı sütun etiketleri kullanıyor: "
+                + " / ".join(sorted(selected_groups))
+            )
         if any(int(str(snapshot["valid_from"])[:4]) < datetime.now().year for snapshot in snapshots):
             warnings.append(
                 "Aktif tarife snapshot'ı cari yıldan eskidir; oran otomatik karar için kullanılmadan önce yıllık cetvel güncellemesi doğrulanmalıdır."
@@ -742,7 +776,7 @@ class TariffEngine:
             measure = self._measure(row, snapshot)
             if measure.measure_type in {"customs_duty_suspension", "customs_duty_end_use"}:
                 conditional.append(measure)
-            elif selected and measure.country_group == selected:
+            elif selected_by_scope.get((measure.gtip, measure.snapshot_id)) == measure.country_group:
                 primary.append(measure)
             else:
                 alternatives.append(measure)
@@ -752,9 +786,49 @@ class TariffEngine:
             warnings.append("Menşe ülke resmî ülke gruplarına güvenle eşlenemedi; oran otomatik seçilmedi.")
         if any(item.footnote for item in primary):
             warnings.append("Seçilen oranlardan en az biri dipnotludur; otomatik maliyet hesabından önce dipnot şartı doğrulanmalıdır.")
+
+        calculable_types = ("customs_duty", "additional_duty", "additional_financial_liability")
+        rate_variants: dict[str, list[float]] = {}
+        unambiguous_rates: dict[str, float] = {}
+        ambiguous_measure_types: list[str] = []
+        matched_gtip_set = set(matched_gtips)
+        for measure_type in calculable_types:
+            typed = [item for item in primary if item.measure_type == measure_type]
+            if not typed:
+                continue
+            valid = [
+                item for item in typed
+                if item.automatic_calculation_allowed and item.rate is not None and not item.footnote
+            ]
+            values = sorted({float(item.rate) for item in valid if item.rate is not None})
+            rate_variants[measure_type] = values
+            covered_gtips = {item.gtip for item in valid}
+            has_unsafe_row = len(valid) != len(typed)
+            if len(values) == 1 and covered_gtips == matched_gtip_set and not has_unsafe_row:
+                unambiguous_rates[measure_type] = values[0]
+            else:
+                ambiguous_measure_types.append(measure_type)
+
+        if match_mode == "prefix":
+            warnings.insert(
+                0,
+                f"{len(normalised)} haneli kod {len(matched_gtips)} adet 12 haneli Türk GTİP satırıyla eşleşti.",
+            )
+            if ambiguous_measure_types:
+                warnings.append(
+                    "Alt GTİP satırlarında oran veya önlemin varlığı değişiyor; kesin alt GTİP seçilmeden bu kalemler maliyete otomatik alınmadı."
+                )
+            elif unambiguous_rates:
+                warnings.append(
+                    "Gösterilen otomatik oranlar bütün eşleşen 12 haneli satırlarda aynıdır; beyan öncesinde kesin 12 haneli GTİP yine doğrulanmalıdır."
+                )
         return TariffLookupResult(
-            status="matched" if primary else "partial", gtip=normalised, origin_country=origin_country,
-            resolved_country_group=selected, measures=primary, conditional_measures=conditional,
+            status="matched" if primary and not ambiguous_measure_types else "partial",
+            gtip=normalised, match_mode=match_mode, matched_gtips=matched_gtips[:500],
+            matched_gtip_count=len(matched_gtips), origin_country=origin_country,
+            resolved_country_group=selected, rate_variants=rate_variants,
+            unambiguous_rates=unambiguous_rates, ambiguous_measure_types=ambiguous_measure_types,
+            measures=primary[:500], conditional_measures=conditional[:240],
             alternatives=alternatives[:120], snapshots=[self._snapshot(row) for row in snapshots], warnings=warnings, as_of=_now(),
         )
 
@@ -766,20 +840,11 @@ class TariffEngine:
     ) -> dict[str, Any]:
         """Apply only one unambiguous, unfootnoted official rate per measure type."""
         lookup = await self.lookup(gtip, origin_country=origin_country)
-        safe_rates: dict[str, float] = {}
-        conflicts: list[str] = []
-        for measure_type in ("customs_duty", "additional_duty", "additional_financial_liability"):
-            values = {
-                measure.rate
-                for measure in lookup.measures
-                if measure.measure_type == measure_type
-                and measure.automatic_calculation_allowed
-                and measure.rate is not None
-            }
-            if len(values) == 1:
-                safe_rates[measure_type] = values.pop()
-            elif len(values) > 1:
-                conflicts.append(f"{measure_type}: birden fazla farklı resmî oran bulundu")
+        safe_rates = lookup.unambiguous_rates
+        conflicts = [
+            f"{measure_type}: alt GTİP satırlarında oran veya önlem kapsamı farklı"
+            for measure_type in lookup.ambiguous_measure_types
+        ]
         enriched = data.model_copy(
             update={
                 "customs_duty_rate": data.customs_duty_rate if data.customs_duty_rate is not None else safe_rates.get("customs_duty"),

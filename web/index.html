@@ -184,7 +184,7 @@
               <div class="product-fields">
                 <label class="field"><span>Ürün tanımı <b>*</b></span><textarea id="productDescription" maxlength="2000" required placeholder="Ürünün adı, işlevi, marka/modeli, ölçüsü ve teknik özellikleri"></textarea></label>
                 <div class="field-row">
-                  <label class="field"><span>Aday GTİP</span><input id="candidateGtip" maxlength="30" inputmode="numeric" placeholder="12 hane veya boş bırakın"></label>
+                  <label class="field"><span>Aday HS / CN / GTİP</span><input id="candidateGtip" maxlength="30" inputmode="numeric" placeholder="6, 8, 10 veya 12 hane"></label>
                   <label class="field"><span>Menşe ülke <b>*</b></span><input id="originCountry" maxlength="100" required placeholder="Örn. Çin"></label>
                 </div>
                 <label class="field"><span>Malzeme / bileşim</span><input id="composition" maxlength="500" placeholder="Örn. %95 pamuk, %5 elastan; paslanmaz çelik 304"></label>
@@ -256,7 +256,7 @@
               <li data-check="vision"><i></i><span><b>Görsel evsaf onayı</b><small>Fotoğraf varsa zorunlu</small></span></li>
               <li data-check="description"><i></i><span><b>Teknik ürün tanımı</b><small>İşlev, malzeme, model</small></span></li>
               <li data-check="origin"><i></i><span><b>Menşe ülke</b><small>Vergi ve önlem için</small></span></li>
-              <li data-check="gtip"><i></i><span><b>Aday GTİP</b><small>Varsa 12 hane</small></span></li>
+              <li data-check="gtip"><i></i><span><b>Aday tarife kodu</b><small>6, 8, 10 veya 12 hane</small></span></li>
               <li data-check="cost"><i></i><span><b>Kıymet bilgileri</b><small>Fatura, navlun, sigorta</small></span></li>
               <li data-check="payment"><i></i><span><b>Ödeme ve teslim</b><small>KKDF ve kıymet için</small></span></li>
             </ul>
@@ -273,7 +273,7 @@
         <section class="customs-tool-panel" data-customs-panel="tariff" hidden aria-labelledby="tariffPanelTitle">
           <header class="tool-panel-head"><span>01 / RESMÎ TARİFE</span><h2 id="tariffPanelTitle">GTİP, menşe ve ithalat maliyeti</h2><p>2026 İthalat Rejimi ve İlave Gümrük Vergisi arşivlerinin kaynak satırlarını sorgular. Dipnotlu veya belirsiz oran toplam hesaba otomatik alınmaz.</p></header>
           <form class="tool-form" id="tariffForm">
-            <label class="field"><span>12 haneli GTİP <b>*</b></span><input id="tariffGtip" required inputmode="numeric" maxlength="30" placeholder="2515.11.00.00.00"></label>
+            <label class="field"><span>HS / CN / GTİP kodu <b>*</b></span><input id="tariffGtip" required inputmode="numeric" maxlength="30" placeholder="6, 8, 10 veya 12 hane"></label>
             <label class="field"><span>Menşe ülke <b>*</b></span><input id="tariffOrigin" required maxlength="100" placeholder="Örn. Çin"></label>
             <label class="field"><span>Fatura bedeli</span><input id="tariffInvoice" type="number" min="0.01" step="0.01" placeholder="Maliyet için"></label>
             <label class="field"><span>Navlun</span><input id="tariffFreight" type="number" min="0" step="0.01" value="0"></label>
