@@ -11,19 +11,23 @@ import time
 from pathlib import Path
 from typing import Any
 
+from pydantic import ValidationError
 from starlette.requests import Request
 from starlette.responses import FileResponse, JSONResponse
-from pydantic import ValidationError
 
 from customs_advisor import CustomsInquiry
-
 from mevzuat_mcp_server import (
     _BED_VALID_TYPES,
-    app as mcp,
     bedesten_client,
+    control_engine,
     customs_advisor_service,
+    tariff_engine,
     ticaret_client,
 )
+from mevzuat_mcp_server import (
+    app as mcp,
+)
+from tariff_engine import LandedCostInput
 
 logger = logging.getLogger(__name__)
 WEB_DIR = Path(__file__).resolve().parent / "web"
@@ -499,14 +503,123 @@ async def web_customs_precheck(request: Request):
         )
     return JSONResponse(result.model_dump(mode="json"))
 
+
+@mcp.custom_route("/api/tariff/status", methods=["GET"])
+async def web_tariff_status(request: Request):
+    """Return official tariff snapshot freshness without forcing a network refresh."""
+    limited = _rate_limit_response(request, "tariff-status", limit=60, window_seconds=60)
+    if limited:
+        return limited
+    return JSONResponse(tariff_engine.status().model_dump(mode="json"))
+
+
+@mcp.custom_route("/api/tariff/lookup", methods=["POST"])
+async def web_tariff_lookup(request: Request):
+    """Look up official customs/IGV rows for a confirmed GTIP and origin."""
+    limited = _rate_limit_response(request, "tariff-lookup", limit=60, window_seconds=60)
+    if limited:
+        return limited
+    try:
+        body = await request.json()
+        if not isinstance(body, dict):
+            raise ValueError("Tarife isteği bir nesne olmalıdır.")
+        result = await tariff_engine.lookup(
+            str(body.get("gtip", "")),
+            origin_country=str(body.get("origin_country", "")).strip() or None,
+        )
+        return JSONResponse(result.model_dump(mode="json"))
+    except (ValueError, ValidationError) as exc:
+        return JSONResponse({"error": str(exc)}, status_code=422)
+    except Exception:
+        logger.exception("Tariff lookup failed")
+        return JSONResponse({"error": "Resmî tarife tabloları şu anda sorgulanamadı."}, status_code=502)
+
+
+@mcp.custom_route("/api/tariff/cost", methods=["POST"])
+async def web_tariff_cost(request: Request):
+    """Calculate landed cost from official safe rates plus explicit user inputs."""
+    limited = _rate_limit_response(request, "tariff-cost", limit=60, window_seconds=60)
+    if limited:
+        return limited
+    try:
+        body = await request.json()
+        if not isinstance(body, dict):
+            raise ValueError("Maliyet isteği bir nesne olmalıdır.")
+        gtip = str(body.pop("gtip", ""))
+        origin = str(body.pop("origin_country", "")).strip()
+        if not origin:
+            raise ValueError("Menşe ülke gereklidir.")
+        inputs = LandedCostInput.model_validate(body)
+        result = await tariff_engine.calculate(gtip, origin, inputs)
+        return JSONResponse(result)
+    except ValidationError as exc:
+        message = exc.errors(include_url=False)[0].get("msg", "Alanları kontrol edin.")
+        return JSONResponse({"error": f"İstek doğrulanamadı: {message}"}, status_code=422)
+    except ValueError as exc:
+        return JSONResponse({"error": str(exc)}, status_code=422)
+    except Exception:
+        logger.exception("Tariff cost calculation failed")
+        return JSONResponse({"error": "Kaynaklı maliyet hesabı şu anda tamamlanamadı."}, status_code=502)
+
+
+@mcp.custom_route("/api/controls/status", methods=["GET"])
+async def web_control_status(request: Request):
+    limited = _rate_limit_response(request, "control-status", limit=60, window_seconds=60)
+    if limited:
+        return limited
+    return JSONResponse(control_engine.status().model_dump(mode="json"))
+
+
+@mcp.custom_route("/api/controls/lookup", methods=["POST"])
+async def web_control_lookup(request: Request):
+    """Return official annex matches and explicitly preserve risk uncertainty."""
+    limited = _rate_limit_response(request, "control-lookup", limit=60, window_seconds=60)
+    if limited:
+        return limited
+    try:
+        body = await request.json()
+        if not isinstance(body, dict):
+            raise ValueError("Kontrol isteği bir nesne olmalıdır.")
+        result = await control_engine.lookup(str(body.get("gtip", "")))
+        return JSONResponse(result.model_dump(mode="json"))
+    except (ValueError, ValidationError) as exc:
+        return JSONResponse({"error": str(exc)}, status_code=422)
+    except Exception:
+        logger.exception("Import control lookup failed")
+        return JSONResponse({"error": "Resmî ithalat kontrol tebliğleri şu anda sorgulanamadı."}, status_code=502)
+
+
+@mcp.custom_route("/api/changes", methods=["GET"])
+async def web_changes(request: Request):
+    """Expose the local official snapshot ledger for the in-app monitor."""
+    limited = _rate_limit_response(request, "change-ledger", limit=60, window_seconds=60)
+    if limited:
+        return limited
+    return JSONResponse(
+        {
+            "tariff": {
+                "import_regime": tariff_engine.changes("import_regime", limit=100),
+                "additional_duty": tariff_engine.changes("additional_duty", limit=100),
+            },
+            "controls": control_engine.changes(limit=100),
+            "generated_at": time.time(),
+        }
+    )
+
 # Add health check endpoint to the MCP server
 @mcp.custom_route("/health", methods=["GET"])
 async def health_check(request):
     """Health check endpoint for Coolify and other monitoring services."""
+    tariff_status = tariff_engine.status()
+    control_status = control_engine.status()
     return JSONResponse({
         "status": "healthy",
         "service": "Mevzuat MCP Server",
-        "version": "1.3.2"
+        "version": "1.4.0",
+        "tariff_ready": tariff_status.ready,
+        "tariff_measures": tariff_status.measure_count,
+        "controls_ready": control_status.ready,
+        "control_scope_rows": control_status.scope_count,
     })
 
 class McpRateLimitMiddleware:

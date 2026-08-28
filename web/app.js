@@ -668,6 +668,8 @@ function renderCustomsResult(data) {
         <time>${escapeHtml(formatDate(data.as_of, true))}</time>
       </header>
       <section class="answer-section"><h3>Aday GTİP / CN kodları</h3>${candidates}</section>
+      ${data.tariff_lookup ? `<section class="answer-section"><h3>Resmî tarife snapshot eşleşmesi</h3><table class="evidence-table"><thead><tr><th>GTİP / Önlem</th><th>Oran</th><th>Menşe sütunu</th><th>Kaynak satırı</th><th>Kanıt</th></tr></thead><tbody>${tariffRows(data.tariff_lookup.measures)}</tbody></table>${(data.tariff_lookup.warnings || []).length ? `<div class="result-caution">${data.tariff_lookup.warnings.map((item) => escapeHtml(item)).join(" · ")}</div>` : ""}</section>` : ""}
+      ${data.control_lookup ? `<section class="answer-section"><h3>Resmî kontrol tebliği Ek-1 eşleşmeleri</h3>${renderControlTool(data.control_lookup)}</section>` : ""}
       <section class="answer-section"><h3>Eksik veya teyit edilmesi gereken bilgiler</h3><ul class="missing-list">${(data.missing_information?.length ? data.missing_information : ["Kritik eksik alan bildirilmedi."]).map((item) => `<li>${escapeHtml(item)}</li>`).join("")}</ul></section>
       <section class="answer-section"><h3>TAREKS · TSE · kimyasal · laboratuvar kontrolleri</h3>${renderFindings(data.controls, sourceMap)}</section>
       <section class="answer-section"><h3>Gerekli belge ve izinler</h3>${renderFindings(data.required_documents, sourceMap)}</section>
@@ -677,6 +679,7 @@ function renderCustomsResult(data) {
       <section class="answer-section"><h3>Sonraki güvenli adımlar</h3><ol class="next-list">${(data.next_steps || []).map((item) => `<li>${escapeHtml(item)}</li>`).join("")}</ol></section>
       <section class="answer-section"><h3>Resmî kanıt defteri · ${(data.sources || []).length} kaynak</h3><div class="source-ledger">${sources}</div></section>
       <div class="legal-banner"><strong>Önemli:</strong> ${escapeHtml(data.legal_notice)}</div>
+      <div class="result-actions"><button id="saveScenario" type="button">Bu ön değerlendirmeyi kaydet</button></div>
     </article>
     <form class="followup-box" id="followupForm"><label class="field"><span>Bu ürün için takip sorusu</span><input id="followupQuestion" maxlength="1500" placeholder="Örn. TAREKS başvurusunda hangi teknik dosyalar hazırlanmalı?"></label><button class="analyse-button" type="submit"><span>Takip sorusunu sor</span><svg viewBox="0 0 24 24"><path d="m5 12 14 0M14 6l6 6-6 6"/></svg></button></form>`;
   $("#followupForm")?.addEventListener("submit", (event) => {
@@ -685,6 +688,21 @@ function renderCustomsResult(data) {
     if (!value) return;
     $("#customsQuestion").value = value;
     $("#customsForm").requestSubmit();
+  });
+  $("#saveScenario")?.addEventListener("click", () => {
+    const items = savedScenarios();
+    items.unshift({
+      id: crypto.randomUUID?.() || String(Date.now()),
+      savedAt: new Date().toISOString(),
+      title: data.inquiry?.product_description || $("#productDescription").value.trim() || "İthalat ön değerlendirmesi",
+      gtip: data.inquiry?.candidate_gtip || $("#candidateGtip").value.trim(),
+      origin: data.inquiry?.origin_country || $("#originCountry").value.trim(),
+      result: data,
+    });
+    try {
+      localStorage.setItem("gumrukce-scenarios", JSON.stringify(items.slice(0, 20)));
+      showToast("Ön değerlendirme bu cihazda kaydedildi.");
+    } catch (_) { showToast("Tarayıcı depolama alanı dolu; dosya kaydedilemedi."); }
   });
 }
 
@@ -902,6 +920,166 @@ $("#customsForm").addEventListener("submit", async (event) => {
     button.querySelector("span").textContent = "Onaylanan evsaflarla resmî araştırmayı başlat";
   }
 });
+
+function switchCustomsView(view) {
+  $$('[data-customs-view]').forEach((button) => button.classList.toggle("active", button.dataset.customsView === view));
+  $$('[data-customs-panel]').forEach((panel) => { panel.hidden = panel.dataset.customsPanel !== view; });
+  if (view === "changes") {
+    renderWatchList();
+    loadChanges();
+  }
+}
+
+$$('[data-customs-view]').forEach((button) => button.addEventListener("click", () => switchCustomsView(button.dataset.customsView)));
+
+function tariffRows(items) {
+  if (!items?.length) return '<tr><td colspan="5">Bu menşe sütunu için uygulanabilir satır bulunamadı.</td></tr>';
+  return items.map((item) => `<tr>
+    <td><code>${escapeHtml(item.gtip)}</code><br>${escapeHtml(item.measure_type)}</td>
+    <td>${item.rate == null ? escapeHtml(item.rate_text) : `%${escapeHtml(item.rate)}`}${item.footnote ? `<br><small>Dipnot: ${escapeHtml(item.footnote)}</small>` : ""}</td>
+    <td>${escapeHtml(item.country_group)} · ${escapeHtml(item.country_group_description)}</td>
+    <td>${escapeHtml(item.source_file)}<br>${escapeHtml(item.source_sheet)} · satır ${escapeHtml(item.source_row)}</td>
+    <td><a href="${safeUrl(item.source_url)}" target="_blank" rel="noreferrer">Resmî kaynak ↗</a><br><small>SHA ${escapeHtml(item.archive_sha256.slice(0, 12))}</small></td>
+  </tr>`).join("");
+}
+
+function renderTariffTool(data) {
+  const tariff = data.tariff || data;
+  const cost = data.cost;
+  const warnings = [...(tariff.warnings || []), ...(cost?.warnings || [])];
+  const costLedger = cost ? `<div class="formula-ledger"><h3>Maliyet formülü · ${escapeHtml(cost.status)}</h3>
+    ${(cost.lines || []).map((line) => `<div class="formula-line"><span>${escapeHtml(line.label)} <small>${escapeHtml(line.formula)}</small></span><code>${line.amount == null ? "—" : `${numberFormat.format(line.amount)} ${escapeHtml(cost.currency)}`}</code></div>`).join("")}
+    <div class="formula-line"><strong>İthal edilmiş toplam</strong><code>${cost.landed_total == null ? "Oran eksik" : `${numberFormat.format(cost.landed_total)} ${escapeHtml(cost.currency)}`}</code></div></div>` : "";
+  return `<div class="answer-head"><span class="answer-status${tariff.status === "matched" ? "" : " warning"}">${escapeHtml(tariff.status)}</span><div><h2>${escapeHtml(tariff.gtip)} · ${escapeHtml(tariff.origin_country || "menşe seçilmedi")}</h2><p>Ülke grubu: ${escapeHtml(tariff.resolved_country_group || "çözümlenmedi")} · ${escapeHtml(tariff.as_of)}</p></div></div>
+    <table class="evidence-table"><thead><tr><th>GTİP / Önlem</th><th>Oran</th><th>Menşe sütunu</th><th>Kaynak satırı</th><th>Kanıt</th></tr></thead><tbody>${tariffRows(tariff.measures)}</tbody></table>
+    ${tariff.conditional_measures?.length ? `<details class="advanced-fields"><summary><span>Şarta bağlı askıya alma / nihai kullanım satırları</span><small>${tariff.conditional_measures.length} kayıt</small></summary><table class="evidence-table"><tbody>${tariffRows(tariff.conditional_measures)}</tbody></table></details>` : ""}
+    ${costLedger}
+    ${warnings.length ? `<div class="result-caution">${warnings.map((item) => escapeHtml(item)).join(" · ")}</div>` : ""}
+    ${data.legal_notice ? `<div class="legal-banner"><strong>Önemli:</strong> ${escapeHtml(data.legal_notice)}</div>` : ""}`;
+}
+
+$("#tariffForm").addEventListener("submit", async (event) => {
+  event.preventDefault();
+  const output = $("#tariffOutput");
+  const button = event.currentTarget.querySelector("button[type=submit]");
+  button.disabled = true;
+  output.innerHTML = '<div class="analysis-loading"><i></i><div><b>Resmî tarife satırları alınıyor</b><span>Menşe grubu, dipnot ve snapshot kanıtı denetleniyor…</span></div></div>';
+  const common = { gtip: $("#tariffGtip").value.trim(), origin_country: $("#tariffOrigin").value.trim() };
+  try {
+    const invoice = nullableNumber("#tariffInvoice");
+    const data = invoice == null
+      ? await fetchJson("/api/tariff/lookup", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(common) })
+      : await fetchJson("/api/tariff/cost", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({
+          ...common, invoice_value: invoice, freight: nullableNumber("#tariffFreight") || 0,
+          insurance: nullableNumber("#tariffInsurance") || 0, currency: $("#tariffCurrency").value,
+          vat_rate: nullableNumber("#tariffVat"),
+        }) });
+    output.innerHTML = renderTariffTool(data);
+  } catch (error) {
+    output.innerHTML = `<div class="answer-error"><h2>Tarife sorgusu tamamlanamadı</h2><p>${escapeHtml(error.message)}</p></div>`;
+  } finally { button.disabled = false; }
+});
+
+function renderControlTool(data) {
+  const cards = (data.matches || []).map((match) => {
+    const rule = match.rule;
+    return `<article class="control-card"><header><code>${escapeHtml(rule.code)}</code><b>${escapeHtml(rule.title)}</b><a href="${safeUrl(rule.source_url)}" target="_blank" rel="noreferrer">Resmî metin ↗</a></header>
+      <dl><div><dt>Ek-1 eşleşmesi</dt><dd>${escapeHtml(match.matched_scope.gtip_prefix)} · ${escapeHtml(match.match_type)}</dd></div><div><dt>Sistem</dt><dd>${escapeHtml(rule.system)}</dd></div><div><dt>Fiilî denetim</dt><dd>${rule.risk_based ? "Risk analizine bağlı" : "Yetkili kurum kararı"}</dd></div><div><dt>Laboratuvar</dt><dd>${rule.laboratory_test_possible ? "Mümkün; otomatik değil" : "Metinde tespit edilmedi"}</dd></div></dl>
+      <p><strong>Kapsam satırı:</strong> ${escapeHtml(match.matched_scope.source_line)}<br>${escapeHtml(match.assessment)}</p>
+      ${rule.required_documents_excerpt ? `<details class="advanced-fields"><summary><span>Belge listesi özeti</span><small>Resmî metinden</small></summary><p>${escapeHtml(rule.required_documents_excerpt)}</p></details>` : ""}
+      <div class="result-caution">${match.cautions.map((item) => escapeHtml(item)).join(" · ")}</div></article>`;
+  }).join("");
+  return `<div class="answer-head"><span class="answer-status${data.status === "matched" ? "" : " warning"}">${escapeHtml(data.status)}</span><div><h2>${escapeHtml(data.gtip)} kontrol dosyası</h2><p>${escapeHtml(data.as_of)} itibarıyla indekslenmiş resmî tebliğ ekleri</p></div></div>
+    ${cards || '<p class="missing-list">İndekslenen güncel Ek-1 listelerinde eşleşme bulunamadı.</p>'}
+    ${(data.warnings || []).length ? `<div class="result-caution">${data.warnings.map((item) => escapeHtml(item)).join(" · ")}</div>` : ""}`;
+}
+
+$("#controlsForm").addEventListener("submit", async (event) => {
+  event.preventDefault();
+  const output = $("#controlsOutput");
+  const button = event.currentTarget.querySelector("button[type=submit]");
+  button.disabled = true;
+  output.innerHTML = '<div class="analysis-loading"><i></i><div><b>Kontrol tebliğleri taranıyor</b><span>Ek-1 kapsamı ile risk sonucu birbirinden ayrılıyor…</span></div></div>';
+  try {
+    const data = await fetchJson("/api/controls/lookup", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ gtip: $("#controlsGtip").value.trim() }) });
+    output.innerHTML = renderControlTool(data);
+  } catch (error) {
+    output.innerHTML = `<div class="answer-error"><h2>Kontrol sorgusu tamamlanamadı</h2><p>${escapeHtml(error.message)}</p></div>`;
+  } finally { button.disabled = false; }
+});
+
+function savedWatchItems() {
+  try { return JSON.parse(localStorage.getItem("gumrukce-watchlist") || "[]"); } catch (_) { return []; }
+}
+
+function savedScenarios() {
+  try { return JSON.parse(localStorage.getItem("gumrukce-scenarios") || "[]"); } catch (_) { return []; }
+}
+
+function renderWatchList() {
+  const target = $("#watchList");
+  const items = savedWatchItems();
+  target.innerHTML = items.length ? items.map((item, index) => `<div class="watch-item"><code>${escapeHtml(item.gtip)}</code><span>${escapeHtml(item.label || "Adsız ürün")}</span><button type="button" data-watch-query="${index}">Kontrol et</button><button type="button" data-watch-remove="${index}">Kaldır</button></div>`).join("") : '<p class="missing-list">Bu cihazda izlenen GTİP yok.</p>';
+  const scenarios = savedScenarios();
+  $("#scenarioList").innerHTML = scenarios.length ? scenarios.map((item, index) => `<div class="watch-item"><code>${escapeHtml(item.gtip || "GTİP yok")}</code><span>${escapeHtml(item.title)}<small>${escapeHtml(formatDate(item.savedAt, true))} · ${escapeHtml(item.origin || "menşe yok")}</small></span><button type="button" data-scenario-open="${index}">Aç</button><button type="button" data-scenario-remove="${index}">Kaldır</button></div>`).join("") : '<p class="missing-list">Henüz kayıtlı ön değerlendirme yok.</p>';
+}
+
+$("#addWatch").addEventListener("click", () => {
+  const gtip = $("#watchGtip").value.replace(/\D/g, "");
+  if (gtip.length !== 12) return showToast("İzleme için 12 haneli GTİP girin.");
+  const items = savedWatchItems();
+  if (!items.some((item) => item.gtip === gtip)) items.push({ gtip, label: $("#watchLabel").value.trim(), addedAt: new Date().toISOString() });
+  localStorage.setItem("gumrukce-watchlist", JSON.stringify(items.slice(-100)));
+  renderWatchList();
+  showToast("GTİP bu cihazdaki izleme listesine eklendi.");
+});
+
+$("#watchList").addEventListener("click", (event) => {
+  const remove = event.target.closest("[data-watch-remove]");
+  const query = event.target.closest("[data-watch-query]");
+  if (remove) {
+    const items = savedWatchItems(); items.splice(Number(remove.dataset.watchRemove), 1);
+    localStorage.setItem("gumrukce-watchlist", JSON.stringify(items)); renderWatchList();
+  }
+  if (query) {
+    const item = savedWatchItems()[Number(query.dataset.watchQuery)];
+    if (!item) return;
+    $("#controlsGtip").value = item.gtip; switchCustomsView("controls"); $("#controlsForm").requestSubmit();
+  }
+});
+
+$("#scenarioList").addEventListener("click", (event) => {
+  const open = event.target.closest("[data-scenario-open]");
+  const remove = event.target.closest("[data-scenario-remove]");
+  const items = savedScenarios();
+  if (remove) {
+    items.splice(Number(remove.dataset.scenarioRemove), 1);
+    localStorage.setItem("gumrukce-scenarios", JSON.stringify(items)); renderWatchList();
+  }
+  if (open) {
+    const item = items[Number(open.dataset.scenarioOpen)];
+    if (!item?.result) return;
+    switchCustomsView("assistant");
+    $("#customsResult").hidden = false;
+    renderCustomsResult(item.result);
+    $("#customsResult").scrollIntoView({ behavior: "smooth", block: "start" });
+  }
+});
+
+async function loadChanges() {
+  const output = $("#changesOutput");
+  output.innerHTML = '<div class="analysis-loading"><i></i><div><b>Sürüm defteri okunuyor</b><span>Tarife ve kontrol snapshot’ları karşılaştırılıyor…</span></div></div>';
+  try {
+    const data = await fetchJson("/api/changes");
+    const controlRows = data.controls || [];
+    const tariffSummaries = Object.entries(data.tariff || {}).map(([name, value]) => `<article class="candidate-card"><code>${escapeHtml(name)}</code><b>${escapeHtml(value.status || (value.changes?.length ? "değişiklik" : "tek sürüm"))}</b><p>${escapeHtml(value.message || `${value.changes?.length || 0} satır farkı`)}</p></article>`).join("");
+    output.innerHTML = `<div class="candidate-grid">${tariffSummaries || '<p class="missing-list">Tarife sürümü henüz yok.</p>'}</div>
+      <div class="formula-ledger"><h3>Kontrol tebliği değişiklikleri</h3>${controlRows.length ? controlRows.map((item) => `<div class="formula-line"><span><strong>${escapeHtml(item.code)}</strong> · ${escapeHtml(item.title)}<br><small>${escapeHtml(item.changed_at)}</small></span><code>${item.scope_count_delta > 0 ? "+" : ""}${escapeHtml(item.scope_count_delta)}</code></div>`).join("") : '<p class="missing-list">Karşılaştırılabilir ikinci tebliğ sürümü henüz oluşmadı.</p>'}</div>`;
+  } catch (error) { output.innerHTML = `<div class="answer-error"><p>${escapeHtml(error.message)}</p></div>`; }
+}
+
+$("#refreshChanges").addEventListener("click", loadChanges);
+renderWatchList();
 
 const savedTheme = localStorage.getItem("ticaret-bilgi-theme");
 if (savedTheme) document.documentElement.dataset.theme = savedTheme;

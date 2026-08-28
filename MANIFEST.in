@@ -6,3 +6,5 @@ include *.png
 recursive-exclude * __pycache__
 recursive-exclude * *.py[co]
 recursive-exclude logs *
+include tariff_sources.json
+include control_sources.json

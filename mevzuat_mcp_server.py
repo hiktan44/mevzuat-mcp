@@ -26,6 +26,13 @@ from ticaret_models import (
     TicaretSearchResult,
 )
 from customs_advisor import CustomsAdvisor, CustomsEvidencePack, CustomsInquiry
+from tariff_engine import (
+    LandedCostInput,
+    TariffEngine,
+    TariffLookupResult,
+    TariffSyncStatus,
+)
+from control_engine import ImportControlEngine, ImportControlLookupResult, ControlSyncStatus
 
 # Semantic search (optional, requires OPENROUTER_API_KEY)
 from semantic_search.embedder import is_openrouter_available
@@ -46,7 +53,9 @@ logging.getLogger("httpx").setLevel(logging.WARNING)
 logger = logging.getLogger(__name__)
 
 ticaret_client = TicaretApiClient()
-customs_advisor_service = CustomsAdvisor()
+tariff_engine = TariffEngine()
+control_engine = ImportControlEngine()
+customs_advisor_service = CustomsAdvisor(tariff_engine=tariff_engine, control_engine=control_engine)
 
 
 @asynccontextmanager
@@ -56,20 +65,36 @@ async def _server_lifespan(server):
         ticaret_client.periodic_refresh_loop(),
         name="ticaret-catalog-refresh",
     )
+    tariff_task = asyncio.create_task(
+        tariff_engine.periodic_sync_loop(),
+        name="official-tariff-refresh",
+    )
+    control_task = asyncio.create_task(
+        control_engine.periodic_sync_loop(),
+        name="official-import-controls-refresh",
+    )
     try:
-        yield {"ticaret_client": ticaret_client, "customs_advisor": customs_advisor_service}
+        yield {
+            "ticaret_client": ticaret_client,
+            "customs_advisor": customs_advisor_service,
+            "tariff_engine": tariff_engine,
+            "control_engine": control_engine,
+        }
     finally:
-        refresh_task.cancel()
-        try:
-            await refresh_task
-        except asyncio.CancelledError:
-            pass
+        for task in (refresh_task, tariff_task, control_task):
+            task.cancel()
+            try:
+                await task
+            except asyncio.CancelledError:
+                pass
         await ticaret_client.close()
         await customs_advisor_service.close()
+        await tariff_engine.close()
+        await control_engine.close()
 
 app = FastMCP(
     name="MevzuatGovTrMCP",
-    version="1.3.2",
+    version="1.4.0",
     lifespan=_server_lifespan,
     instructions="MCP server for Turkish legislation search and content retrieval. "
     "Three source families: mevzuat.gov.tr, bedesten.adalet.gov.tr, and a continuously refreshed official "
@@ -90,7 +115,7 @@ app = FastMCP(
     "Solr operators: \"exact\", +required, -prohibited, wildcard*, fuzzy~, \"proximity\"~N, boost^N. "
     "NOTE: AND/OR/NOT do NOT work in search_mevzuat - use +term1 +term2 instead. "
     "\n\n"
-    "== Ticaret Bakanlığı ve Gümrükçe tools (6 tools) ==\n"
+    "== Ticaret Bakanlığı, Gümrükçe, resmî tarife ve ithalat kontrolü tools (13 tools) ==\n"
     "Use list_ticaret_sources to see source coverage and content kinds. Use search_ticaret_catalog for current "
     "Ministry metadata, get_ticaret_document for bounded full text, search_ticaret_content for bounded multi-document "
     "full-text search, and get_ticaret_catalog_status for freshness. Results always include official source URLs. "
@@ -2361,6 +2386,183 @@ _TICARET_CONTENT_KINDS = Literal[
 
 @app.tool(
     annotations={
+        "title": "Resmî tarife tablolarını eşitle",
+        "readOnlyHint": True,
+        "destructiveHint": False,
+        "idempotentHint": True,
+        "openWorldHint": True,
+    }
+)
+async def sync_official_tariff_data(
+    force_refresh: bool = Field(
+        False,
+        description="True ise Ticaret Bakanlığındaki ZIP arşivleri yeniden kontrol edilir; normalde altı saatlik önbellek kullanılır.",
+    ),
+) -> TariffSyncStatus:
+    """Synchronise versioned 2026 Import Regime and additional-duty tables.
+
+    Archive links are discovered on the current official Ministry landing pages.
+    Every workbook is ZIP/CRC checked and SHA-256 versioned. The tool never calls
+    the CAPTCHA-protected tariff search engine and never imports third-party rates.
+    """
+    return await tariff_engine.sync(force=force_refresh)
+
+
+@app.tool(
+    app=True,
+    annotations={
+        "title": "GTİP ve menşeye göre resmî tarife önlemlerini getir",
+        "readOnlyHint": True,
+        "destructiveHint": False,
+        "idempotentHint": True,
+        "openWorldHint": True,
+    }
+)
+async def lookup_tariff_measures(
+    gtip: str = Field(..., pattern=r"^(?:\d[. ]*){12}$", description="Noktalı veya düz 12 haneli Türk GTİP."),
+    origin_country: Optional[str] = Field(None, max_length=100, description="Menşe ülke; sevk ülkesinden ayrıdır."),
+) -> TariffLookupResult:
+    """Return source-row-level customs duty and additional-duty evidence.
+
+    Results include the selected country column, alternatives, conditional end-use
+    rates, workbook/sheet/row, archive checksum and warnings. Dipnotlu or unresolved
+    rates are never marked safe for automatic calculation.
+    """
+    return await tariff_engine.lookup(gtip, origin_country=origin_country)
+
+
+@app.tool(
+    app=True,
+    annotations={
+        "title": "Kaynaklı ithalat maliyeti hesapla",
+        "readOnlyHint": True,
+        "destructiveHint": False,
+        "idempotentHint": True,
+        "openWorldHint": True,
+    }
+)
+async def calculate_import_landed_cost(
+    gtip: str = Field(..., pattern=r"^(?:\d[. ]*){12}$"),
+    origin_country: str = Field(..., min_length=2, max_length=100),
+    invoice_value: float = Field(..., gt=0, le=1_000_000_000),
+    freight: float = Field(0, ge=0, le=1_000_000_000),
+    insurance: float = Field(0, ge=0, le=1_000_000_000),
+    other_costs: float = Field(0, ge=0, le=1_000_000_000),
+    quantity: Optional[float] = Field(None, gt=0, le=1_000_000_000),
+    currency: str = Field("USD", min_length=3, max_length=3),
+    vat_rate: Optional[float] = Field(None, ge=0, le=100, description="Resmî kaynaktan doğrulanmış ürüne özel KDV oranı."),
+    kkdf_rate: Optional[float] = Field(None, ge=0, le=100, description="Ödeme şekline göre doğrulanmış KKDF oranı; uygulanmıyorsa 0."),
+    anti_dumping_amount: float = Field(0, ge=0, le=1_000_000_000, description="Ürün/üretici için doğrulanmış damping vergisi toplamı."),
+    sct_amount: float = Field(0, ge=0, le=1_000_000_000, description="Doğrulanmış ÖTV toplamı; uygulanmıyorsa 0."),
+    surveillance_unit_value: Optional[float] = Field(None, ge=0, le=1_000_000_000),
+    has_surveillance_certificate: Optional[bool] = Field(None),
+) -> dict:
+    """Calculate a reproducible landed cost with official safe-to-use tariff rates.
+
+    Customs duty/İGV are taken only when the current official snapshot resolves one
+    unfootnoted rate for the given GTIP and origin. VAT, KKDF, dumping, SCT and
+    surveillance facts remain explicit inputs until their product-specific official
+    datasets are available. Missing rates block the total instead of becoming zero.
+    """
+    return await tariff_engine.calculate(
+        gtip,
+        origin_country,
+        LandedCostInput(
+            invoice_value=invoice_value,
+            freight=freight,
+            insurance=insurance,
+            other_costs=other_costs,
+            quantity=quantity,
+            currency=currency,
+            anti_dumping_amount=anti_dumping_amount,
+            kkdf_rate=kkdf_rate,
+            vat_rate=vat_rate,
+            sct_amount=sct_amount,
+            surveillance_unit_value=surveillance_unit_value,
+            has_surveillance_certificate=has_surveillance_certificate,
+        ),
+    )
+
+
+@app.tool(
+    annotations={
+        "title": "Tarife snapshot değişikliklerini karşılaştır",
+        "readOnlyHint": True,
+        "destructiveHint": False,
+        "idempotentHint": True,
+        "openWorldHint": False,
+    }
+)
+async def compare_tariff_snapshots(
+    source_id: Literal["import_regime", "additional_duty"] = Field(...),
+    limit: int = Field(200, ge=1, le=1000),
+) -> dict:
+    """Compare the two latest official archive snapshots by GTIP, measure and country group."""
+    return tariff_engine.changes(source_id, limit=limit)
+
+
+@app.tool(
+    annotations={
+        "title": "Güncel ithalat kontrol tebliğlerini eşitle",
+        "readOnlyHint": True,
+        "destructiveHint": False,
+        "idempotentHint": True,
+        "openWorldHint": True,
+    }
+)
+async def sync_import_control_rules(
+    force_refresh: bool = Field(False, description="Resmî konsolide tebliğ metinlerini yeniden kontrol eder."),
+) -> ControlSyncStatus:
+    """Version and index current Product Safety and Inspection communiques.
+
+    The source is the Ministry of Justice's official Bedesten legislation service.
+    GTIP annex scope, TAREKS/risk wording, possible inspection methods and the
+    document-list excerpt are stored with a full-text SHA-256 checksum.
+    """
+    return await control_engine.sync(force=force_refresh)
+
+
+@app.tool(
+    app=True,
+    annotations={
+        "title": "GTİP için TAREKS, TSE ve ithalat kontrollerini araştır",
+        "readOnlyHint": True,
+        "destructiveHint": False,
+        "idempotentHint": True,
+        "openWorldHint": True,
+    }
+)
+async def lookup_import_controls(
+    gtip: str = Field(..., pattern=r"^(?:\d[. ]*){12}$", description="Noktalı veya düz 12 haneli Türk GTİP."),
+) -> ImportControlLookupResult:
+    """Find GTIP annex matches without claiming automatic physical inspection.
+
+    A match establishes only that the code appears in an indexed communique
+    annex. Product nature, exemptions and the authority's risk result must still
+    be checked. Private laboratories are never presented as automatically required.
+    """
+    return await control_engine.lookup(gtip)
+
+
+@app.tool(
+    annotations={
+        "title": "İthalat kontrol tebliği sürüm değişikliklerini göster",
+        "readOnlyHint": True,
+        "destructiveHint": False,
+        "idempotentHint": True,
+        "openWorldHint": False,
+    }
+)
+async def compare_import_control_snapshots(
+    rule_code: Optional[str] = Field(None, max_length=20, description="Örn. 2026/18; boşsa tüm tebliğler."),
+    limit: int = Field(50, ge=1, le=200),
+) -> list[dict]:
+    """Return version changes detected in official consolidated control texts."""
+    return control_engine.changes(rule_code, limit=limit)
+
+
+@app.tool(
+    annotations={
         "title": "Ticaret Bakanlığı kaynaklarını listele",
         "readOnlyHint": True,
         "destructiveHint": False,
@@ -2379,6 +2581,7 @@ async def list_ticaret_sources() -> dict:
 
 
 @app.tool(
+    app=True,
     annotations={
         "title": "Gümrük ithalat ön değerlendirme kanıtını hazırla",
         "readOnlyHint": True,
@@ -2403,9 +2606,17 @@ async def prepare_customs_precheck(
     currency: str = Field("USD", min_length=3, max_length=3),
     incoterm: Optional[str] = Field(None, max_length=20),
     payment_method: Optional[str] = Field(None, max_length=80, description="KKDF değerlendirmesi için ödeme şekli."),
+    quantity: Optional[float] = Field(None, gt=0, le=1_000_000_000, description="Birim maliyet ve gözetim hesabı için miktar."),
+    as_of_date: Optional[str] = Field(None, pattern=r"^\d{4}-\d{2}-\d{2}$", description="İşlem tarihi; YYYY-AA-GG."),
     customs_duty_rate: Optional[float] = Field(None, ge=0, le=1000, description="Yalnızca kullanıcıca doğrulanmış oran; araç oran üretmez."),
     additional_duty_rate: Optional[float] = Field(None, ge=0, le=1000, description="Yalnızca kullanıcıca doğrulanmış İGV/ek oran."),
+    additional_financial_liability_rate: Optional[float] = Field(None, ge=0, le=1000),
+    anti_dumping_amount: float = Field(0, ge=0, le=1_000_000_000),
+    kkdf_rate: Optional[float] = Field(None, ge=0, le=100),
     vat_rate: Optional[float] = Field(None, ge=0, le=100, description="Yalnızca kullanıcıca doğrulanmış KDV oranı."),
+    sct_amount: float = Field(0, ge=0, le=1_000_000_000),
+    surveillance_unit_value: Optional[float] = Field(None, ge=0, le=1_000_000_000),
+    has_surveillance_certificate: Optional[bool] = Field(None),
 ) -> CustomsEvidencePack:
     """Prepare the evidence required for a cautious product-specific import answer.
 
@@ -2433,9 +2644,17 @@ async def prepare_customs_precheck(
         currency=currency,
         incoterm=incoterm,
         payment_method=payment_method,
+        quantity=quantity,
+        as_of_date=as_of_date,
         customs_duty_rate=customs_duty_rate,
         additional_duty_rate=additional_duty_rate,
+        additional_financial_liability_rate=additional_financial_liability_rate,
+        anti_dumping_amount=anti_dumping_amount,
+        kkdf_rate=kkdf_rate,
         vat_rate=vat_rate,
+        sct_amount=sct_amount,
+        surveillance_unit_value=surveillance_unit_value,
+        has_surveillance_certificate=has_surveillance_certificate,
     )
     return await customs_advisor_service.evidence_pack(inquiry)
 

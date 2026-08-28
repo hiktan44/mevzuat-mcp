@@ -26,6 +26,13 @@ from openai import AsyncOpenAI
 from PIL import Image, ImageOps, UnidentifiedImageError
 from pydantic import BaseModel, Field, field_validator
 
+from control_engine import ImportControlEngine, ImportControlLookupResult
+from tariff_engine import (
+    LandedCostInput,
+    TariffEngine,
+    TariffLookupResult,
+    calculate_landed_cost,
+)
 
 _GTIP_RE = re.compile(r"^\d{4}(?:\d{2}){0,4}$")
 _ALLOWED_IMAGE_TYPES = {"image/jpeg", "image/png", "image/webp"}
@@ -86,9 +93,17 @@ class CustomsInquiry(BaseModel):
     currency: str = Field("USD", min_length=3, max_length=3)
     incoterm: str | None = Field(None, max_length=20)
     payment_method: str | None = Field(None, max_length=80)
+    quantity: float | None = Field(None, gt=0, le=1_000_000_000)
+    as_of_date: str | None = Field(None, pattern=r"^\d{4}-\d{2}-\d{2}$")
     customs_duty_rate: float | None = Field(None, ge=0, le=1000)
     additional_duty_rate: float | None = Field(None, ge=0, le=1000)
+    additional_financial_liability_rate: float | None = Field(None, ge=0, le=1000)
+    anti_dumping_amount: float = Field(0, ge=0, le=1_000_000_000)
+    kkdf_rate: float | None = Field(None, ge=0, le=100)
     vat_rate: float | None = Field(None, ge=0, le=100)
+    sct_amount: float = Field(0, ge=0, le=1_000_000_000)
+    surveillance_unit_value: float | None = Field(None, ge=0, le=1_000_000_000)
+    has_surveillance_certificate: bool | None = None
 
     @field_validator("candidate_gtip")
     @classmethod
@@ -190,6 +205,8 @@ class CustomsPrecheckResult(BaseModel):
     required_documents: list[Finding] = Field(default_factory=list)
     taxes: list[TaxFinding] = Field(default_factory=list)
     deterministic_cost: dict[str, Any] | None = None
+    tariff_lookup: TariffLookupResult | None = None
+    control_lookup: ImportControlLookupResult | None = None
     next_steps: list[str] = Field(default_factory=list)
     image_observation: str | None = None
     sources: list[EvidenceSource] = Field(default_factory=list)
@@ -202,6 +219,8 @@ class CustomsEvidencePack(BaseModel):
     as_of: str
     missing_information: list[str]
     deterministic_cost: dict[str, Any] | None
+    tariff_lookup: TariffLookupResult | None = None
+    control_lookup: ImportControlLookupResult | None = None
     sources: list[EvidenceSource]
     legal_notice: str
     image_observation_rule: str = (
@@ -428,33 +447,64 @@ def _missing_information(inquiry: CustomsInquiry) -> list[str]:
     return missing
 
 
-def _deterministic_cost(inquiry: CustomsInquiry) -> dict[str, Any] | None:
+def _deterministic_cost(
+    inquiry: CustomsInquiry,
+    *,
+    customs_duty_rate: float | None = None,
+    additional_duty_rate: float | None = None,
+    additional_financial_liability_rate: float | None = None,
+) -> dict[str, Any] | None:
     if inquiry.invoice_value is None:
         return None
-    freight = inquiry.freight or 0.0
-    insurance = inquiry.insurance or 0.0
-    other = inquiry.other_pre_import_costs or 0.0
-    customs_value = inquiry.invoice_value + freight + insurance
-    duty = customs_value * (inquiry.customs_duty_rate or 0) / 100
-    additional = customs_value * (inquiry.additional_duty_rate or 0) / 100
-    vat_base = customs_value + duty + additional + other
-    vat = vat_base * (inquiry.vat_rate or 0) / 100
-    rates_complete = all(
-        rate is not None
-        for rate in (inquiry.customs_duty_rate, inquiry.additional_duty_rate, inquiry.vat_rate)
+    duty_rate = inquiry.customs_duty_rate if inquiry.customs_duty_rate is not None else customs_duty_rate
+    additional_rate = inquiry.additional_duty_rate if inquiry.additional_duty_rate is not None else additional_duty_rate
+    emy_rate = (
+        inquiry.additional_financial_liability_rate
+        if inquiry.additional_financial_liability_rate is not None
+        else additional_financial_liability_rate
     )
+    result = calculate_landed_cost(
+        LandedCostInput(
+            invoice_value=inquiry.invoice_value,
+            freight=inquiry.freight or 0,
+            insurance=inquiry.insurance or 0,
+            other_costs=inquiry.other_pre_import_costs or 0,
+            quantity=inquiry.quantity,
+            currency=inquiry.currency,
+            customs_duty_rate=duty_rate,
+            additional_duty_rate=additional_rate,
+            additional_financial_liability_rate=emy_rate,
+            anti_dumping_amount=inquiry.anti_dumping_amount,
+            kkdf_rate=inquiry.kkdf_rate,
+            vat_rate=inquiry.vat_rate,
+            sct_amount=inquiry.sct_amount,
+            surveillance_unit_value=inquiry.surveillance_unit_value,
+            has_surveillance_certificate=inquiry.has_surveillance_certificate,
+        )
+    )
+    by_code = {line["code"]: line for line in result.lines}
+    rates_complete = result.status == "complete"
+    rate_origin = "user" if all(
+        rate is not None for rate in (inquiry.customs_duty_rate, inquiry.additional_duty_rate, inquiry.vat_rate)
+    ) else "official_and_user"
     return {
         "currency": inquiry.currency,
-        "customs_value_estimate": round(customs_value, 2),
-        "customs_duty": round(duty, 2) if inquiry.customs_duty_rate is not None else None,
-        "additional_duty": round(additional, 2) if inquiry.additional_duty_rate is not None else None,
-        "vat_base_estimate": round(vat_base, 2) if rates_complete else None,
-        "vat": round(vat, 2) if inquiry.vat_rate is not None and rates_complete else None,
-        "known_landed_total": round(vat_base + vat, 2) if rates_complete else None,
-        "status": "user_rates_complete" if rates_complete else "rates_missing",
+        "customs_value_estimate": result.customs_value,
+        "customs_duty": by_code.get("customs_duty", {}).get("amount"),
+        "additional_duty": by_code.get("additional_duty", {}).get("amount"),
+        "additional_financial_liability": by_code.get("financial_liability", {}).get("amount"),
+        "vat_base_estimate": result.vat_base,
+        "vat": by_code.get("vat", {}).get("amount"),
+        "known_landed_total": result.landed_total,
+        "unit_landed_cost": result.unit_landed_cost,
+        "status": f"{rate_origin}_rates_complete" if rates_complete else "rates_missing",
+        "lines": result.lines,
+        "missing_rates": result.missing_rates,
+        "warnings": result.warnings,
+        "formula_version": result.formula_version,
         "note": (
-            "Bu aritmetik yalnızca kullanıcının girdiği oranlara dayanır; gözetim, anti-damping, "
-            "KKDF, ÖTV, fon, ardiye, laboratuvar, müşavirlik ve diğer giderleri kendiliğinden içermez."
+            "Hesap yalnızca resmî tarife snapshot'ından güvenle seçilen ve/veya kullanıcı tarafından doğrulanan "
+            "oranları içerir. Eksik kalemler toplamı bilinçli olarak durdurur."
         ),
     }
 
@@ -526,20 +576,87 @@ def _sanitize_model_result(result: CustomsModelResult, valid_ids: set[str]) -> C
 
 
 class CustomsAdvisor:
-    def __init__(self, registry: OfficialSourceRegistry | None = None) -> None:
+    def __init__(
+        self,
+        registry: OfficialSourceRegistry | None = None,
+        tariff_engine: TariffEngine | None = None,
+        control_engine: ImportControlEngine | None = None,
+    ) -> None:
         self.registry = registry or OfficialSourceRegistry()
+        self.tariff_engine = tariff_engine
+        self.control_engine = control_engine
 
     async def close(self) -> None:
         await self.registry.close()
 
     async def evidence_pack(self, inquiry: CustomsInquiry) -> CustomsEvidencePack:
         as_of = datetime.now().astimezone().isoformat(timespec="seconds")
+        tariff_lookup: TariffLookupResult | None = None
+        control_lookup: ImportControlLookupResult | None = None
+        official_rates: dict[str, float] = {}
+        tariff_sources: list[EvidenceSource] = []
+        if self.tariff_engine and inquiry.candidate_gtip and len(inquiry.candidate_gtip) == 12:
+            tariff_lookup = await self.tariff_engine.lookup(
+                inquiry.candidate_gtip,
+                origin_country=inquiry.origin_country,
+            )
+            for measure in tariff_lookup.measures:
+                evidence_id = (
+                    f"tariff_{measure.measure_type}_{measure.snapshot_id[:8]}_{measure.source_row}"
+                )
+                if measure.automatic_calculation_allowed and measure.rate is not None:
+                    official_rates.setdefault(measure.measure_type, measure.rate)
+                tariff_sources.append(
+                    EvidenceSource(
+                        id=evidence_id,
+                        title=f"{measure.source_title} — {measure.list_name}",
+                        authority="T.C. Ticaret Bakanlığı",
+                        url=measure.source_url,
+                        excerpt=(
+                            f"GTİP {measure.gtip}; menşe sütunu {measure.country_group} "
+                            f"({measure.country_group_description}); {measure.measure_type} oranı %{measure.rate_text}. "
+                            f"Kaynak: {measure.source_file} / {measure.source_sheet} / satır {measure.source_row}. "
+                            f"Arşiv SHA-256: {measure.archive_sha256}. "
+                            + (f"Dipnot: {measure.footnote}." if measure.footnote else "")
+                        ),
+                        retrieved_at=measure.retrieved_at,
+                        source_updated_at=measure.valid_from,
+                    )
+                )
+        control_sources: list[EvidenceSource] = []
+        if self.control_engine and inquiry.candidate_gtip and len(inquiry.candidate_gtip) == 12:
+            control_lookup = await self.control_engine.lookup(inquiry.candidate_gtip)
+            for index, match in enumerate(control_lookup.matches):
+                rule = match.rule
+                control_sources.append(
+                    EvidenceSource(
+                        id=f"control_{rule.code.replace('/', '_')}_{index}",
+                        title=rule.title,
+                        authority=rule.authority,
+                        url=rule.source_url,
+                        excerpt=(
+                            f"GTİP {inquiry.candidate_gtip}, Ek-1 kapsam satırı {match.matched_scope.gtip_prefix} ile "
+                            f"{match.match_type} eşleşti: {match.matched_scope.source_line}. {match.assessment} "
+                            f"Sistem: {rule.system}. Metin SHA-256: {rule.document_sha256}."
+                        ),
+                        retrieved_at=rule.retrieved_at,
+                        source_updated_at=rule.official_gazette_date or rule.valid_from,
+                    )
+                )
+        sources = [*await self.registry.gather(inquiry), *tariff_sources, *control_sources]
         return CustomsEvidencePack(
             inquiry=inquiry,
             as_of=as_of,
             missing_information=_missing_information(inquiry),
-            deterministic_cost=_deterministic_cost(inquiry),
-            sources=await self.registry.gather(inquiry),
+            deterministic_cost=_deterministic_cost(
+                inquiry,
+                customs_duty_rate=official_rates.get("customs_duty"),
+                additional_duty_rate=official_rates.get("additional_duty"),
+                additional_financial_liability_rate=official_rates.get("additional_financial_liability"),
+            ),
+            tariff_lookup=tariff_lookup,
+            control_lookup=control_lookup,
+            sources=sources,
             legal_notice=_legal_notice(as_of),
         )
 
@@ -692,6 +809,8 @@ class CustomsAdvisor:
                 summary=reason,
                 missing_information=pack.missing_information,
                 deterministic_cost=pack.deterministic_cost,
+                tariff_lookup=pack.tariff_lookup,
+                control_lookup=pack.control_lookup,
                 sources=pack.sources,
                 legal_notice=pack.legal_notice,
                 safety_notes=safety_notes,
@@ -741,6 +860,8 @@ class CustomsAdvisor:
             required_documents=parsed.required_documents,
             taxes=parsed.taxes,
             deterministic_cost=pack.deterministic_cost,
+            tariff_lookup=pack.tariff_lookup,
+            control_lookup=pack.control_lookup,
             next_steps=parsed.next_steps,
             image_observation=parsed.image_observation,
             sources=pack.sources,

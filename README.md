@@ -11,10 +11,10 @@ Bu proje; Adalet Bakanlığı Mevzuat Bilgi Sistemi, Bedesten Mevzuat servisi ve
 🎯 **Temel Özellikler**
 
 * Adalet Bakanlığı Mevzuat Bilgi Sistemi'ne programatik erişim için standart bir MCP arayüzü.
-* **32 farklı tool** ile kapsamlı mevzuat ve Ticaret Bakanlığı bilgi erişimi (üç resmî kaynak ailesi):
+* **39 farklı tool** ile kapsamlı mevzuat, tarife ve Ticaret Bakanlığı bilgi erişimi (üç resmî kaynak ailesi):
     * **mevzuat.gov.tr** üzerinden 21 araç (türe özel arama ve içerik)
     * **bedesten.adalet.gov.tr** üzerinden 5 araç (birleşik arama, gerekçe, içindekiler)
-    * **ticaret.gov.tr** ve bağlı resmî alt alanlardan 6 araç (canlı katalog, belge okuma, tam metin arama, güncellik ve gümrük ön değerlendirme kanıtı)
+    * **ticaret.gov.tr** ve bağlı resmî alt alanlardan 13 araç (canlı katalog, belge okuma, resmî tarife/İGV, maliyet, ürün kontrol tebliğleri ve gümrük ön değerlendirme kanıtı)
 * Desteklenen 12 mevzuat türü:
     * **Kanun** - Türkiye Cumhuriyeti kanunları
     * **KHK** - Kanun Hükmünde Kararnameler
@@ -69,10 +69,16 @@ Yeni araçlar:
 * `search_ticaret_content`: seçilen en fazla 25 belgenin tam metninde bağlamlı arama yapar.
 * `get_ticaret_catalog_status`: son yenileme, sonraki tarama, kapsam parmak izi ve kaynak hatalarını verir.
 * `prepare_customs_precheck`: ürün, aday GTİP, menşe ve maliyet girdileri için TAREKS/TSE, ürün güvenliği, kimyasallar, gümrük kıymeti, vergi ve ticaret politikası önlemlerine ilişkin tarihli resmî kanıt paketi hazırlar.
+* `sync_official_tariff_data`, `lookup_tariff_measures`, `calculate_import_landed_cost`, `compare_tariff_snapshots`: 2026 İthalat Rejimi ve İGV arşivlerini SHA-256 ile sürümler; GTİP/menşe sütununu kaynak dosya, sayfa ve satır düzeyinde gösterir.
+* `sync_import_control_rules`, `lookup_import_controls`, `compare_import_control_snapshots`: güncel Ürün Güvenliği ve Denetimi tebliğlerinin Ek-1 kapsamlarını resmî konsolide metinden indeksler; liste kapsamını TAREKS risk sonucu ve fiilî denetimden ayırır.
+
+Kontrol tebliğlerinin ilk soğuk eşitlemesi, resmî Bedesten hız sınırına saygı göstermek için tek tek ve aralıklı yapılır; birkaç dakika sürebilir. Sonraki sorgular `/data` içindeki snapshot'tan yanıtlanır ve altı saatte bir güncellenir. `CONTROL_REQUEST_INTERVAL_SECONDS` varsayılanı `6.5` saniyedir; resmî servisin sınırını aşacak şekilde düşürülmemelidir.
 
 ## Gümrükçe’ye Sor
 
-Web arayüzündeki **Gümrükçe’ye Sor** sekmesi iki ayrı güvenlik aşaması kullanır. Fotoğraf önce yalnızca ürün evsafına çevrilir; tanım, görünen marka/model, ölçü, etiket metni, görünen ve belirsiz özellikler düzenlenebilir satırlara gelir. Kullanıcı bu alanları açıkça onaylamadan GTİP, vergi veya TAREKS araştırması başlamaz. Ardından en fazla beş **aday** kod, gerekli belgeler, kontroller ve yalnızca kullanıcı tarafından doğrulanmış oranlarla maliyet kalemleri resmî kaynak kimlikleriyle sunulur.
+Web arayüzündeki **Gümrükçe’ye Sor** sekmesi iki ayrı güvenlik aşaması kullanır. Fotoğraf önce yalnızca ürün evsafına çevrilir; tanım, görünen marka/model, ölçü, etiket metni, görünen ve belirsiz özellikler düzenlenebilir satırlara gelir. Kullanıcı bu alanları açıkça onaylamadan GTİP, vergi veya TAREKS araştırması başlamaz. Ardından en fazla beş **aday** kod, gerekli belgeler, kontroller ve resmî snapshot'ta menşe/dipnot bakımından tek anlamlı olan oranlar ile kullanıcı tarafından ayrıca doğrulanan mali kalemler kaynak kimlikleriyle sunulur.
+
+Çalışma masasında ayrıca **Tarife & Maliyet**, **Kontroller & Belgeler**, **Değişiklikler** ve **İşlem Rehberi** sekmeleri bulunur. Tarife ekranı resmî workbook/sheet/row ve arşiv checksum'unu; kontrol ekranı tebliğ Ek-1 satırını, yetkili sistemi ve risk uyarısını; değişiklik ekranı snapshot farklarını, cihazdaki GTİP izleme listesini ve kaydedilmiş ön değerlendirmeleri gösterir.
 
 * Fotoğraf tek başına kesin veya bağlayıcı GTİP üretmez. Kesin sınıflandırma için teknik belge ve gerektiğinde Bağlayıcı Tarife Bilgisi gerekir.
 * Güvenlik sorusu/CAPTCHA kullanan Bakanlık Tarife Arama Motoru otomatik aşılmaz; sonuçlarda yalnızca manuel doğrulama bağlantısı olarak yer alır.
@@ -111,9 +117,9 @@ Web araştırma arayüzü: `https://mevzuat-mcp.seymata.com/`
 
 Arayüzde Ticaret Bakanlığının yedi bilgi katmanı canlı kayıt sayılarıyla ayrı gösterilir; kaynak, belge türü, yıl ve mülga durumu filtrelenebilir. Seçilen kaydın resmî kaynak zinciri, tam metni ve kopyalanabilir atfı aynı ekranda açılır. **Genel mevzuat** görünümü Bedesten resmî servisine bağlı ayrı arama alanıdır.
 
-> Bu Coolify dağıtımı v1.3.2 sağlık, web arayüzü ve MCP araç taramasıyla doğrulanır.
+> Coolify dağıtımı v1.4.0 sağlık, web arayüzü ve MCP araç taramasıyla doğrulanır. Snapshot verilerini kalıcı tutmak için uygulamada `/data` hedefine persistent volume bağlayın; imaj `MEVZUAT_DATA_DIR=/data` ile hazır gelir.
 
-ChatGPT'de geliştirici modu açıkken **Ayarlar → Uygulamalar → Oluştur** ekranında bu adresi endpoint olarak verin, kimlik doğrulamayı **Yok** seçin ve **Araçları tara** ile 32 aracı yükleyin. Codex için:
+ChatGPT'de geliştirici modu açıkken **Ayarlar → Uygulamalar → Oluştur** ekranında bu adresi endpoint olarak verin, kimlik doğrulamayı **Yok** seçin ve **Araçları tara** ile 39 aracı yükleyin. Tarife, maliyet, ithalat kontrolü ve Gümrükçe araçları MCP Apps yapılandırılmış sonuç görünümünü destekler. Codex için:
 
 ```bash
 codex mcp add mevzuat-mcp --url https://mevzuat-mcp.seymata.com/mcp

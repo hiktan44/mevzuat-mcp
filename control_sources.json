@@ -1,0 +1,33 @@
+{
+  "sync_interval_seconds": 21600,
+  "valid_from": "2026-01-01",
+  "official_gazette_date": "31/12/2025",
+  "official_gazette_number": "33124",
+  "rules": [
+    {"code": "2026/1", "title": "İthalatta Standartlara Uygunluk Denetimi Tebliği", "category": "sanayi girdileri"},
+    {"code": "2026/2", "title": "Karayolu Dışında Kullanılan Hareketli Makinaların İthalat Denetimi Tebliği", "category": "iş makineleri"},
+    {"code": "2026/3", "title": "Çevrenin Korunması Yönünden Kontrol Altında Tutulan Atıkların İthalat Denetimi Tebliği", "category": "atıklar"},
+    {"code": "2026/4", "title": "Sağlık Bakanlığının Özel İznine Tabi Maddelerin İthalat Denetimi Tebliği", "category": "özel izne tabi maddeler"},
+    {"code": "2026/5", "title": "Tarım ve Orman Bakanlığının Kontrolüne Tabi Ürünlerin İthalat Denetimi Tebliği", "category": "tarım ve gıda"},
+    {"code": "2026/6", "title": "Çevrenin Korunması Yönünden Kontrol Altında Tutulan Kimyasalların İthalat Denetimi Tebliği", "category": "kimyasallar"},
+    {"code": "2026/7", "title": "Çevrenin Korunması Yönünden Kontrol Altında Tutulan Katı Yakıtların İthalat Denetimi Tebliği", "category": "katı yakıtlar"},
+    {"code": "2026/8", "title": "Telsiz Ekipmanlarının İthalat Denetimi Tebliği", "category": "telsiz ekipmanları"},
+    {"code": "2026/9", "title": "CE İşareti Taşıması Gereken Bazı Ürünlerin İthalat Denetimi Tebliği", "category": "CE ürünleri"},
+    {"code": "2026/10", "title": "Oyuncakların İthalat Denetimi Tebliği", "category": "oyuncaklar"},
+    {"code": "2026/11", "title": "Kişisel Koruyucu Donanımların İthalat Denetimi Tebliği", "category": "kişisel koruyucu donanım"},
+    {"code": "2026/12", "title": "Tüketici Ürünlerinin İthalat Denetimi Tebliği", "category": "tüketici ürünleri"},
+    {"code": "2026/14", "title": "Yapı Malzemelerinin İthalat Denetimi Tebliği", "category": "yapı malzemeleri"},
+    {"code": "2026/15", "title": "Pil ve Akümülatörlerin İthalat Denetimi Tebliği", "category": "pil ve akümülatörler"},
+    {"code": "2026/16", "title": "Tıbbi Cihazların İthalat Denetimi Tebliği", "category": "tıbbi cihazlar"},
+    {"code": "2026/17", "title": "Anne ve Bebek Ürünlerinin İthalat Denetimi Tebliği", "category": "anne ve bebek ürünleri"},
+    {"code": "2026/18", "title": "Tekstil ve Deri Ürünlerinin İthalat Denetimi Tebliği", "category": "tekstil ve deri"},
+    {"code": "2026/19", "title": "Tütün, Tütün Mamulleri, Alkol ve Alkollü İçkilerin İthalat Denetimi Tebliği", "category": "tütün ve alkol"},
+    {"code": "2026/20", "title": "Sağlık Bakanlığınca Denetlenen Bazı Ürünlerin İthalat Denetimi Tebliği", "category": "sağlık ürünleri"},
+    {"code": "2026/21", "title": "Bazı Tarım Ürünlerinin İhracatında ve İthalatında Ticari Kalite Denetimi Tebliği", "category": "tarım ürünleri kalite denetimi"},
+    {"code": "2026/23", "title": "Çevrenin Korunması Yönünden Kontrol Altında Tutulan Metal Hurdaların İthalat Denetimi Tebliği", "category": "metal hurdalar"},
+    {"code": "2026/25", "title": "Araç Parçalarının İthalat Denetimi Tebliği", "category": "araç parçaları"},
+    {"code": "2026/31", "title": "Karayolu Taşıt Araçlarının İthalat Denetimi Tebliği", "category": "karayolu taşıtları"},
+    {"code": "2026/32", "title": "Makinaların İthalat Denetimi Tebliği", "category": "makinalar"},
+    {"code": "2026/35", "title": "Helal Uygunluk Belgeli Ürünlerin İthalat Denetimi Tebliği", "category": "helal uygunluk beyanlı ürünler", "optional": true}
+  ]
+}

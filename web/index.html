@@ -150,6 +150,16 @@
           <span><i>4</i>Risk ve maliyet dosyası</span>
         </div>
 
+        <nav class="customs-view-tabs" aria-label="Gümrükçe çalışma alanları">
+          <button type="button" class="active" data-customs-view="assistant">Ürüne Sor</button>
+          <button type="button" data-customs-view="tariff">Tarife &amp; Maliyet</button>
+          <button type="button" data-customs-view="controls">Kontroller &amp; Belgeler</button>
+          <button type="button" data-customs-view="changes">Değişiklikler</button>
+          <button type="button" data-customs-view="guide">İşlem Rehberi</button>
+        </nav>
+
+        <div data-customs-panel="assistant">
+
         <form class="customs-form" id="customsForm">
           <div class="intake-card">
             <div class="section-heading"><span>01</span><div><h2>Ürün dosyası</h2><p>Doğru sınıflandırma için ticari isimden fazlası gerekir.</p></div></div>
@@ -242,6 +252,53 @@
         <section class="customs-result" id="customsResult" hidden aria-live="polite">
           <div class="analysis-loading" id="analysisLoading" hidden><i></i><div><b>Resmî kaynaklar taranıyor</b><span>TAREKS, tarife, vergi ve ürün güvenliği kanıtları karşılaştırılıyor…</span></div></div>
           <div id="customsOutput"></div>
+        </section>
+        </div>
+
+        <section class="customs-tool-panel" data-customs-panel="tariff" hidden aria-labelledby="tariffPanelTitle">
+          <header class="tool-panel-head"><span>01 / RESMÎ TARİFE</span><h2 id="tariffPanelTitle">GTİP, menşe ve ithalat maliyeti</h2><p>2026 İthalat Rejimi ve İlave Gümrük Vergisi arşivlerinin kaynak satırlarını sorgular. Dipnotlu veya belirsiz oran toplam hesaba otomatik alınmaz.</p></header>
+          <form class="tool-form" id="tariffForm">
+            <label class="field"><span>12 haneli GTİP <b>*</b></span><input id="tariffGtip" required inputmode="numeric" maxlength="30" placeholder="2515.11.00.00.00"></label>
+            <label class="field"><span>Menşe ülke <b>*</b></span><input id="tariffOrigin" required maxlength="100" placeholder="Örn. Çin"></label>
+            <label class="field"><span>Fatura bedeli</span><input id="tariffInvoice" type="number" min="0.01" step="0.01" placeholder="Maliyet için"></label>
+            <label class="field"><span>Navlun</span><input id="tariffFreight" type="number" min="0" step="0.01" value="0"></label>
+            <label class="field"><span>Sigorta</span><input id="tariffInsurance" type="number" min="0" step="0.01" value="0"></label>
+            <label class="field"><span>Doğrulanmış KDV %</span><input id="tariffVat" type="number" min="0" max="100" step="0.01" placeholder="Bilinmiyorsa boş"></label>
+            <label class="field"><span>Para birimi</span><select id="tariffCurrency"><option>USD</option><option>EUR</option><option>TRY</option><option>GBP</option><option>CNY</option></select></label>
+            <button class="analyse-button" type="submit"><span>Resmî satırları ve maliyeti getir</span></button>
+          </form>
+          <div class="tool-output" id="tariffOutput" aria-live="polite"></div>
+        </section>
+
+        <section class="customs-tool-panel" data-customs-panel="controls" hidden aria-labelledby="controlsPanelTitle">
+          <header class="tool-panel-head"><span>02 / ÜRÜN GÜVENLİĞİ</span><h2 id="controlsPanelTitle">TAREKS, TSE, kimyasal ve belge kapsamı</h2><p>GTİP’i güncel Ürün Güvenliği ve Denetimi tebliğlerinin Ek-1 listelerinde arar. Liste eşleşmesi fiilî denetime seçildiğiniz anlamına gelmez.</p></header>
+          <form class="tool-form compact" id="controlsForm">
+            <label class="field"><span>12 haneli GTİP <b>*</b></span><input id="controlsGtip" required inputmode="numeric" maxlength="30" placeholder="6104.63.00.00.00"></label>
+            <button class="analyse-button" type="submit"><span>Kontrol ve belge kapsamını sorgula</span></button>
+          </form>
+          <div class="tool-output" id="controlsOutput" aria-live="polite"></div>
+        </section>
+
+        <section class="customs-tool-panel" data-customs-panel="changes" hidden aria-labelledby="changesPanelTitle">
+          <header class="tool-panel-head"><span>03 / SÜRÜM DEFTERİ</span><h2 id="changesPanelTitle">Resmî veri ve tebliğ değişiklikleri</h2><p>Arşiv SHA-256 sürümleri ve kapsam sayısı farkları burada izlenir. GTİP listenizi bu cihazda saklayarak hızlı yeniden kontrol edebilirsiniz.</p></header>
+          <div class="watch-form"><label class="field"><span>İzlenecek GTİP</span><input id="watchGtip" maxlength="30" inputmode="numeric" placeholder="12 hane"></label><label class="field"><span>Kısa ad</span><input id="watchLabel" maxlength="100" placeholder="Örn. çocuk şortu"></label><button id="addWatch" type="button">İzleme listesine ekle</button></div>
+          <div class="watch-list" id="watchList"></div>
+          <h3 class="subledger-title">Bu cihazda kayıtlı ön değerlendirmeler</h3>
+          <div class="watch-list" id="scenarioList"></div>
+          <button class="secondary-action" id="refreshChanges" type="button">Değişiklik defterini yenile</button>
+          <div class="tool-output" id="changesOutput" aria-live="polite"></div>
+        </section>
+
+        <section class="customs-tool-panel" data-customs-panel="guide" hidden aria-labelledby="guidePanelTitle">
+          <header class="tool-panel-head"><span>04 / KONTROL LİSTESİ</span><h2 id="guidePanelTitle">İthalat öncesi güvenli işlem rehberi</h2><p>Bir ürün fotoğrafından gümrük beyannamesine kadar hangi bilgiyi hangi sırada doğrulamanız gerektiğini gösterir.</p></header>
+          <div class="guide-grid">
+            <details open><summary><b>1</b> Ürünü teknik olarak tanımlayın</summary><p>İşlev, malzeme/bileşim, üretim biçimi, ölçü, güç, kullanıcı grubu, marka-model ve etiket metnini toplayın. Fotoğraf görünmeyen teknik özelliği kanıtlamaz.</p></details>
+            <details><summary><b>2</b> GTİP adayını doğrulayın</summary><p>Önce HS6/CN8 adayları, sonra Türk tarife cetvelindeki milli açılımlar incelenir. Tereddütte Bağlayıcı Tarife Bilgisi veya yetkili müşavir görüşü alınır.</p></details>
+            <details><summary><b>3</b> Menşe ve ticaret önlemlerini ayırın</summary><p>Menşe ülke ile sevk ülkesini ayrı kaydedin. Gümrük vergisi, İGV, EMY, dampinge karşı vergi, gözetim ve kota aynı şey değildir.</p></details>
+            <details><summary><b>4</b> Ürün güvenliği kapsamını inceleyin</summary><p>Tebliğ Ek-1 eşleşmesi, ürün tanımı ve istisnalar birlikte değerlendirilir. TAREKS risk analizi fiilî denetimi belirleyebilir; laboratuvar ihtiyacı baştan kesin değildir.</p></details>
+            <details><summary><b>5</b> Belgeleri ve maliyeti tamamlayın</summary><p>Fatura, taşıma belgesi, uygunluk/teknik dosya, ödeme şekli, navlun, sigorta, KDV/ÖTV/KKDF ve liman-müşavirlik giderlerini belgeleyin.</p></details>
+            <details><summary><b>6</b> İşlem gününde yeniden kontrol edin</summary><p>Tescil günündeki yürürlük, menşe ve ürün niteliğini resmî kaynakta doğrulayın. Bu sistem aday ve ön değerlendirme üretir; bağlayıcı idari karar oluşturmaz.</p></details>
+          </div>
         </section>
       </section>
     </main>
