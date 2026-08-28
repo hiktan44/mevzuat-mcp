@@ -88,26 +88,17 @@ Web arayüzündeki **Gümrükçe’ye Sor** sekmesi iki ayrı güvenlik aşamas�
 * EBTI metinleri ve resmî indirme verileri kaynak olarak kullanılabilir. Açık kullanım hakkı teyit edilmemiş EBTI ürün görselleri topluca kopyalanmaz ve model eğitimine alınmaz.
 * Her sonuç tarihli resmî kaynak zinciri, belirsizlikler ve zorunlu hukuki uyarıyla birlikte döner. Sistem yüzde yüz doğruluk veya bağlayıcı idari karar iddiasında bulunmaz.
 
-Yapay zekâ yorumunu etkinleştirmek için Coolify uygulamasına şu ortam değişkenlerini ekleyin:
+Görsel evsaf çıkarımı ve resmî kanıt paketinin yorumlanması tek bir OpenRouter anahtarıyla çalışır. OpenRouter, listedeki modelleri sırayla dener; bir modelin sağlayıcıları hata verir, hız sınırına takılır veya yanıtı reddederse sonraki modele geçer. Varsayılan zincir **Gemini → GLM 5.3 Flash → Grok → GPT → Claude** şeklindedir:
 
 ```text
-OPENAI_API_KEY=<sunucuda gizli değer>
-CUSTOMS_AI_MODEL=gpt-5.4
-CUSTOMS_AI_REASONING=high
+OPENROUTER_API_KEY=<sunucuda gizli değer>
+OPENROUTER_VISION_MODELS=~google/gemini-flash-latest,z-ai/glm-5.3-flash,~x-ai/grok-latest,openai/gpt-chat-latest,~anthropic/claude-opus-latest
+OPENROUTER_CUSTOMS_MODELS=~google/gemini-flash-latest,z-ai/glm-5.3-flash,~x-ai/grok-latest,openai/gpt-chat-latest,~anthropic/claude-opus-latest
 ```
 
-Görsel evsaf çıkarımı için `auto` modu önce **Gemini 3.7 Flash** ile katı JSON şeması kullanır; başarısız olursa yapılandırılmış görsel metin çıkarımı için GLM-5V-Turbo, ardından OpenAI görsel modelini dener. Nano Banana bir görsel üretim/düzenleme modelidir ve bu metin çıkarım akışında kullanılmaz. Model ürün adı, kategori, kapsamlı tanım, bileşim, kullanım, görünür menşe ibaresi, marka/model, ölçü, etiket, renk, fiziksel yapı, parçalar, çalışma mekanizması, ambalaj ve sınıflandırma sorularını ayrı alanlara çıkarır. Görselden belirlenemeyen menşe, teknik değer ve maliyet girdilerini uydurmak yerine kullanıcıya tamamlanacak bilgi olarak gösterir:
+Her çağrı katı JSON şeması ve `require_parameters=true` kullanır; bu nedenle görsel giriş veya yapılandırılmış çıktı desteği olmayan uçlar seçilmez. `data_collection=deny`, istemleri veri saklayabilen sağlayıcı uçlarına göndermemek için zorunludur. Nano Banana bir görsel üretim/düzenleme modelidir ve bu metin çıkarım akışında kullanılmaz. Model ürün adı, kategori, kapsamlı tanım, bileşim, kullanım, görünür menşe ibaresi, marka/model, ölçü, etiket, renk, fiziksel yapı, parçalar, çalışma mekanizması, ambalaj ve sınıflandırma sorularını ayrı alanlara çıkarır. Görselden belirlenemeyen menşe, teknik değer ve maliyet girdilerini uydurmak yerine kullanıcıya tamamlanacak bilgi olarak gösterir.
 
-```text
-CUSTOMS_VISION_PROVIDER=auto
-GEMINI_API_KEY=<sunucuda gizli değer>
-GEMINI_VISION_MODEL=gemini-3.7-flash
-# İsteğe bağlı yedek sağlayıcı:
-ZAI_API_KEY=<sunucuda gizli değer>
-ZAI_VISION_MODEL=glm-5v-turbo
-```
-
-`OPENAI_API_KEY` yoksa arayüz uydurma yanıt üretmez; yalnızca güncel resmî kanıt paketini ve eksik bilgi listesini gösteren `evidence_only` modunda çalışır. Yüklenen JPEG/PNG/WebP görseli yeniden kodlanarak metaverisi temizlenir, kalıcı olarak saklanmaz ve istek başına 8 MB / 25 megapiksel sınırı uygulanır.
+`OPENROUTER_API_KEY` yoksa arayüz uydurma yanıt üretmez; yalnızca güncel resmî kanıt paketini ve eksik bilgi listesini gösteren `evidence_only` modunda çalışır. Yüklenen JPEG/PNG/WebP görseli yeniden kodlanarak metaverisi temizlenir, kalıcı olarak saklanmaz ve istek başına 8 MB / 25 megapiksel sınırı uygulanır.
 
 > Hukuki yorumlar bilgilendirme amaçlıdır. Sonuçlarda verilen resmî URL, tarih, sayı, mülga/yürürlük durumu ve varsa sonraki değişiklikler karar öncesinde doğrulanmalıdır.
 
@@ -119,7 +110,7 @@ Web araştırma arayüzü: `https://mevzuat-mcp.seymata.com/`
 
 Arayüzde Ticaret Bakanlığının yedi bilgi katmanı canlı kayıt sayılarıyla ayrı gösterilir; kaynak, belge türü, yıl ve mülga durumu filtrelenebilir. Seçilen kaydın resmî kaynak zinciri, tam metni ve kopyalanabilir atfı aynı ekranda açılır. **Genel mevzuat** görünümü Bedesten resmî servisine bağlı ayrı arama alanıdır.
 
-> Coolify dağıtımı v1.4.1 sağlık, web arayüzü ve MCP araç taramasıyla doğrulanır. Snapshot verilerini kalıcı tutmak için uygulamada `/data` hedefine persistent volume bağlayın; imaj `MEVZUAT_DATA_DIR=/data` ile hazır gelir.
+> Coolify dağıtımı v1.5.0 sağlık, web arayüzü ve MCP araç taramasıyla doğrulanır. Snapshot verilerini kalıcı tutmak için uygulamada `/data` hedefine persistent volume bağlayın; imaj `MEVZUAT_DATA_DIR=/data` ile hazır gelir.
 
 ChatGPT'de geliştirici modu açıkken **Ayarlar → Uygulamalar → Oluştur** ekranında bu adresi endpoint olarak verin, kimlik doğrulamayı **Yok** seçin ve **Araçları tara** ile 39 aracı yükleyin. Tarife, maliyet, ithalat kontrolü ve Gümrükçe araçları MCP Apps yapılandırılmış sonuç görünümünü destekler. Codex için:
 

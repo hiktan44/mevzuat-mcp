@@ -615,7 +615,7 @@ async def health_check(request):
     return JSONResponse({
         "status": "healthy",
         "service": "Mevzuat MCP Server",
-        "version": "1.4.1",
+        "version": "1.5.0",
         "tariff_ready": tariff_status.ready,
         "tariff_measures": tariff_status.measure_count,
         "controls_ready": control_status.ready,

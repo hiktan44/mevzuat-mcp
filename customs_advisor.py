@@ -22,7 +22,6 @@ from urllib.parse import urlsplit
 
 import httpx
 from bs4 import BeautifulSoup
-from openai import AsyncOpenAI
 from PIL import Image, ImageOps, UnidentifiedImageError
 from pydantic import BaseModel, Field, field_validator
 
@@ -143,7 +142,7 @@ class EvidenceSource(BaseModel):
 class ProductAttributeAnalysis(BaseModel):
     """Visible product characteristics extracted before any customs research."""
 
-    provider: Literal["zai", "gemini", "openai"]
+    provider: Literal["openrouter", "zai", "gemini", "openai"]
     model: str
     product_name: str = Field("", max_length=200)
     product_category: str = Field("", max_length=200)
@@ -388,44 +387,137 @@ def _parse_json_object(value: str) -> dict[str, Any]:
     raise ValueError("Görsel modelinden doğrulanabilir ürün evsafı alınamadı.")
 
 
-def _vision_provider_candidates() -> list[tuple[str, str, str]]:
-    """Return configured providers in quality-first order for product analysis."""
-    requested = os.environ.get("CUSTOMS_VISION_PROVIDER", "auto").strip().lower()
-    candidates = {
-        "zai": (
-            os.environ.get("ZAI_API_KEY", "").strip(),
-            os.environ.get("ZAI_VISION_MODEL", "glm-5v-turbo").strip(),
-        ),
-        "gemini": (
-            os.environ.get("GEMINI_API_KEY", "").strip(),
-            os.environ.get("GEMINI_VISION_MODEL", "gemini-3.7-flash").strip(),
-        ),
-        "openai": (
-            os.environ.get("OPENAI_API_KEY", "").strip(),
-            os.environ.get("CUSTOMS_VISION_OPENAI_MODEL", "gpt-5.4").strip(),
-        ),
+_OPENROUTER_DEFAULT_MODELS = [
+    "~google/gemini-flash-latest",
+    "z-ai/glm-5.3-flash",
+    "~x-ai/grok-latest",
+    "openai/gpt-chat-latest",
+    "~anthropic/claude-opus-latest",
+]
+_OPENROUTER_MODEL_RE = re.compile(r"^~?[a-z0-9][a-z0-9._-]*/[a-z0-9][a-z0-9._:-]*$")
+
+
+def _openrouter_models(environment_name: str) -> list[str]:
+    """Read an ordered, bounded OpenRouter model fallback chain."""
+    configured = os.environ.get(environment_name, "").strip()
+    values = configured.split(",") if configured else _OPENROUTER_DEFAULT_MODELS
+    models: list[str] = []
+    for value in values:
+        model = value.strip()
+        if not model:
+            continue
+        if not _OPENROUTER_MODEL_RE.fullmatch(model):
+            raise ValueError(f"Geçersiz OpenRouter model kimliği: {model}")
+        if model not in models:
+            models.append(model)
+    if not models or len(models) > 8:
+        raise ValueError("OpenRouter model zinciri 1 ile 8 model içermelidir.")
+    return models
+
+
+def _openrouter_api_key() -> str:
+    api_key = os.environ.get("OPENROUTER_API_KEY", "").strip()
+    if not api_key:
+        raise RuntimeError("Görsel ve yorum modelleri için Coolify'a OPENROUTER_API_KEY ekleyin.")
+    return api_key
+
+
+def _openrouter_message_text(message: Any) -> str:
+    """Normalise OpenRouter text content without trusting annotations or tool calls."""
+    if isinstance(message, str):
+        return message
+    if isinstance(message, list):
+        return "\n".join(
+            str(item.get("text", ""))
+            for item in message
+            if isinstance(item, dict) and item.get("type") in {"text", "output_text"}
+        )
+    raise ValueError("OpenRouter modelinden metin yanıtı alınamadı.")
+
+
+def _strict_json_schema(schema: dict[str, Any]) -> dict[str, Any]:
+    """Normalise Pydantic schemas for cross-provider strict JSON enforcement."""
+    normalised = json.loads(json.dumps(schema))
+
+    def visit(node: Any) -> None:
+        if isinstance(node, dict):
+            properties = node.get("properties")
+            if isinstance(properties, dict):
+                node["additionalProperties"] = False
+                node["required"] = list(properties)
+            for value in node.values():
+                visit(value)
+        elif isinstance(node, list):
+            for value in node:
+                visit(value)
+
+    visit(normalised)
+    return normalised
+
+
+def _openrouter_payload(
+    *,
+    models: list[str],
+    messages: list[dict[str, Any]],
+    response_schema: dict[str, Any],
+    schema_name: str,
+    max_tokens: int,
+) -> dict[str, Any]:
+    """Build the audited OpenRouter request shared by vision and legal analysis."""
+    return {
+        "models": models,
+        "messages": messages,
+        "response_format": {
+            "type": "json_schema",
+            "json_schema": {
+                "name": schema_name,
+                "strict": True,
+                "schema": _strict_json_schema(response_schema),
+            },
+        },
+        "provider": {
+            "allow_fallbacks": True,
+            "require_parameters": True,
+            "data_collection": "deny",
+        },
+        "max_tokens": max_tokens,
+        "stream": False,
     }
-    # Gemini is primary because the user's existing product-analysis workflow is
-    # already validated on Gemini structured vision. GLM remains a failover, not
-    # an assumed quality-equivalent replacement.
-    order = [requested] if requested != "auto" else ["gemini", "zai", "openai"]
-    configured: list[tuple[str, str, str]] = []
-    for provider in order:
-        if provider not in candidates:
-            raise ValueError("CUSTOMS_VISION_PROVIDER auto, zai, gemini veya openai olmalıdır.")
-        key, model = candidates[provider]
-        if key:
-            configured.append((provider, model, key))
-    if configured:
-        return configured
-    raise RuntimeError(
-        "Görsel analiz modeli yapılandırılmadı. Coolify'a ZAI_API_KEY, GEMINI_API_KEY veya OPENAI_API_KEY ekleyin."
+
+
+async def _openrouter_chat(
+    *,
+    api_key: str,
+    models: list[str],
+    messages: list[dict[str, Any]],
+    response_schema: dict[str, Any],
+    schema_name: str,
+    max_tokens: int,
+) -> tuple[str, str]:
+    """Call OpenRouter with ordered model fallbacks and privacy-safe routing."""
+    payload = _openrouter_payload(
+        models=models,
+        messages=messages,
+        response_schema=response_schema,
+        schema_name=schema_name,
+        max_tokens=max_tokens,
     )
-
-
-def _select_vision_provider() -> tuple[str, str, str]:
-    """Backward-compatible first configured provider selector."""
-    return _vision_provider_candidates()[0]
+    async with httpx.AsyncClient(timeout=120) as client:
+        response = await client.post(
+            "https://openrouter.ai/api/v1/chat/completions",
+            headers={
+                "Authorization": f"Bearer {api_key}",
+                "Content-Type": "application/json",
+                "HTTP-Referer": "https://mevzuat-mcp.seymata.com/",
+                "X-OpenRouter-Title": "Gümrükçe",
+            },
+            json=payload,
+        )
+        response.raise_for_status()
+        body = response.json()
+    content = _openrouter_message_text(body["choices"][0]["message"]["content"])
+    resolved_model = str(body.get("model") or models[0])
+    return content, resolved_model
 
 
 _VISION_PROMPT = """
@@ -499,104 +591,34 @@ _VISION_RESPONSE_SCHEMA: dict[str, Any] = {
 }
 
 
-async def _request_vision_analysis(
-    provider: str,
-    model: str,
+async def _request_openrouter_vision_analysis(
+    models: list[str],
     api_key: str,
     encoded_image: str,
     media_type: str,
-) -> dict[str, Any]:
-    """Call one configured vision provider and return a parsed JSON object."""
-    if provider == "zai":
-        payload = {
-            "model": model,
-            "messages": [
-                {
-                    "role": "user",
-                    "content": [
-                        {"type": "text", "text": _VISION_PROMPT},
-                        {
-                            "type": "image_url",
-                            "image_url": {"url": f"data:{media_type};base64,{encoded_image}"},
-                        },
-                    ],
-                }
-            ],
-            "thinking": {"type": "enabled"},
-            "do_sample": False,
-            "max_tokens": 4000,
-            "response_format": {"type": "json_object"},
-        }
-        async with httpx.AsyncClient(timeout=90) as client:
-            response = await client.post(
-                "https://api.z.ai/api/paas/v4/chat/completions",
-                headers={"Authorization": f"Bearer {api_key}", "Content-Type": "application/json"},
-                json=payload,
-            )
-            response.raise_for_status()
-            message = response.json()["choices"][0]["message"]["content"]
-        if isinstance(message, list):
-            message = "\n".join(str(item.get("text", "")) for item in message if isinstance(item, dict))
-        return _parse_json_object(str(message))
-
-    if provider == "gemini":
-        payload = {
-            "contents": [
-                {
-                    "role": "user",
-                    "parts": [
-                        {"text": _VISION_PROMPT},
-                        {"inlineData": {"mimeType": media_type, "data": encoded_image}},
-                    ],
-                }
-            ],
-            "generationConfig": {
-                "temperature": 0.1,
-                "responseModalities": ["TEXT"],
-                "responseMimeType": "application/json",
-                "responseJsonSchema": _VISION_RESPONSE_SCHEMA,
-                "maxOutputTokens": 4000,
+) -> tuple[dict[str, Any], str]:
+    """Extract product attributes using OpenRouter's ordered multimodal fallbacks."""
+    text, resolved_model = await _openrouter_chat(
+        api_key=api_key,
+        models=models,
+        messages=[
+            {"role": "system", "content": _VISION_PROMPT},
+            {
+                "role": "user",
+                "content": [
+                    {"type": "text", "text": "Bu görselin bütün ürün evsaflarını çıkar."},
+                    {
+                        "type": "image_url",
+                        "image_url": {"url": f"data:{media_type};base64,{encoded_image}"},
+                    },
+                ],
             },
-        }
-        async with httpx.AsyncClient(timeout=90) as client:
-            response = await client.post(
-                f"https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent",
-                headers={"x-goog-api-key": api_key, "Content-Type": "application/json"},
-                json=payload,
-            )
-            response.raise_for_status()
-            parts = response.json()["candidates"][0]["content"]["parts"]
-        return _parse_json_object("\n".join(str(part.get("text", "")) for part in parts))
-
-    async with AsyncOpenAI(api_key=api_key, timeout=90, max_retries=1) as client:
-        response = await client.responses.create(
-            model=model,
-            instructions=_VISION_PROMPT,
-            input=[
-                {
-                    "role": "user",
-                    "content": [
-                        {"type": "input_text", "text": "Bu görselin bütün ürün evsaflarını çıkar."},
-                        {
-                            "type": "input_image",
-                            "image_url": f"data:{media_type};base64,{encoded_image}",
-                            "detail": "high",
-                        },
-                    ],
-                }
-            ],
-            text={
-                "format": {
-                    "type": "json_schema",
-                    "name": "product_attributes",
-                    "schema": _VISION_RESPONSE_SCHEMA,
-                    "strict": True,
-                }
-            },
-            max_output_tokens=4000,
-            store=False,
-        )
-    return _parse_json_object(response.output_text)
+        ],
+        response_schema=_VISION_RESPONSE_SCHEMA,
+        schema_name="product_attributes",
+        max_tokens=4000,
+    )
+    return _parse_json_object(text), resolved_model
 
 
 def _missing_information(inquiry: CustomsInquiry) -> list[str]:
@@ -843,26 +865,21 @@ class CustomsAdvisor:
         """Extract editable visual attributes without starting tariff or control research."""
         clean_image, clean_media_type = validate_image(image_bytes, image_media_type)
         encoded = base64.b64encode(clean_image).decode("ascii")
-        providers = _vision_provider_candidates()
-        failures: list[str] = []
-        for provider, model, api_key in providers:
-            try:
-                raw = await _request_vision_analysis(provider, model, api_key, encoded, clean_media_type)
-                # Provider/model and the confirmation gate are server-controlled,
-                # never model-controlled. Validate before accepting a provider so
-                # auto mode can fall back after malformed or oversized output.
-                raw.pop("provider", None)
-                raw.pop("model", None)
-                raw.pop("user_confirmation_required", None)
-                raw.pop("warning", None)
-                return ProductAttributeAnalysis.model_validate({**raw, "provider": provider, "model": model})
-            except (httpx.HTTPError, KeyError, IndexError, ValueError, TypeError) as exc:
-                failures.append(f"{provider}/{model}: {type(exc).__name__}")
-                if len(providers) == 1:
-                    raise
-        raise RuntimeError(
-            "Yapılandırılmış görsel analizi tamamlanamadı; alanları elle doldurabilirsiniz. "
-            + "; ".join(failures)
+        models = _openrouter_models("OPENROUTER_VISION_MODELS")
+        raw, resolved_model = await _request_openrouter_vision_analysis(
+            models,
+            _openrouter_api_key(),
+            encoded,
+            clean_media_type,
+        )
+        # Provider/model and the confirmation gate are server-controlled, never
+        # model-controlled. Extra model keys such as a candidate GTIP are dropped.
+        raw.pop("provider", None)
+        raw.pop("model", None)
+        raw.pop("user_confirmation_required", None)
+        raw.pop("warning", None)
+        return ProductAttributeAnalysis.model_validate(
+            {**raw, "provider": "openrouter", "model": resolved_model}
         )
 
     async def analyse(
@@ -878,8 +895,8 @@ class CustomsAdvisor:
             clean_image, clean_media_type = validate_image(image_bytes, image_media_type or "")
         pack = await self.evidence_pack(inquiry)
         usable_sources = [source for source in pack.sources if source.excerpt]
-        model = os.environ.get("CUSTOMS_AI_MODEL", "gpt-5.4").strip()
-        api_key = os.environ.get("OPENAI_API_KEY", "").strip()
+        models = _openrouter_models("OPENROUTER_CUSTOMS_MODELS")
+        api_key = os.environ.get("OPENROUTER_API_KEY", "").strip()
         safety_notes = [
             "Fotoğraf kesin GTİP değildir; bağlayıcı sınıflandırma için BTB ve teknik belge gerekir.",
             "Atıfsız mali oranlar sonuçtan otomatik olarak çıkarılır.",
@@ -905,42 +922,34 @@ class CustomsAdvisor:
                 next_steps=["Eksik ürün bilgilerini tamamlayın.", "Kesin sınıflandırma için BTB veya yetkili gümrük müşaviri teyidi alın."],
             )
 
-        content: list[dict[str, Any]] = [{"type": "input_text", "text": _evidence_prompt(pack)}]
+        content: list[dict[str, Any]] = [{"type": "text", "text": _evidence_prompt(pack)}]
         if clean_image and clean_media_type:
             encoded = base64.b64encode(clean_image).decode("ascii")
             content.append(
                 {
-                    "type": "input_image",
-                    "image_url": f"data:{clean_media_type};base64,{encoded}",
-                    "detail": "high",
+                    "type": "image_url",
+                    "image_url": {"url": f"data:{clean_media_type};base64,{encoded}"},
                 }
             )
-        async with AsyncOpenAI(api_key=api_key, timeout=90, max_retries=1) as client:
-            response = await client.responses.create(
-                model=model,
-                reasoning={"effort": os.environ.get("CUSTOMS_AI_REASONING", "high")},
-                instructions=_SYSTEM_INSTRUCTIONS,
-                input=[{"role": "user", "content": content}],
-                text={
-                    "format": {
-                        "type": "json_schema",
-                        "name": "customs_precheck",
-                        "schema": CustomsModelResult.model_json_schema(),
-                        "strict": True,
-                    },
-                    "verbosity": "medium",
-                },
-                max_output_tokens=7000,
-                store=False,
-            )
-        parsed = CustomsModelResult.model_validate_json(response.output_text)
+        response_text, resolved_model = await _openrouter_chat(
+            api_key=api_key,
+            models=models,
+            messages=[
+                {"role": "system", "content": _SYSTEM_INSTRUCTIONS},
+                {"role": "user", "content": content},
+            ],
+            response_schema=CustomsModelResult.model_json_schema(),
+            schema_name="customs_precheck",
+            max_tokens=7000,
+        )
+        parsed = CustomsModelResult.model_validate_json(response_text)
         parsed = _sanitize_model_result(parsed, {source.id for source in usable_sources})
         if pack.missing_information and parsed.answer_status == "preliminary":
             parsed.answer_status = "needs_information"
         return CustomsPrecheckResult(
             status=parsed.answer_status,
             as_of=pack.as_of,
-            model=model,
+            model=resolved_model,
             summary=parsed.summary,
             candidate_gtips=parsed.candidate_gtips,
             missing_information=list(dict.fromkeys([*pack.missing_information, *parsed.missing_information])),

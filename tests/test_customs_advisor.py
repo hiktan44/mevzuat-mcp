@@ -17,9 +17,12 @@ from customs_advisor import (
     TaxFinding,
     _deterministic_cost,
     _missing_information,
+    _openrouter_message_text,
+    _openrouter_models,
+    _openrouter_payload,
     _parse_json_object,
     _sanitize_model_result,
-    _select_vision_provider,
+    _strict_json_schema,
     validate_image,
 )
 
@@ -88,34 +91,76 @@ class CustomsAdvisorSafetyTests(unittest.TestCase):
         parsed = _parse_json_object('```json\n{"product_name":"Çocuk şortu"}\n```')
         self.assertEqual(parsed["product_name"], "Çocuk şortu")
 
-    def test_auto_provider_prefers_gemini_structured_vision(self) -> None:
-        with patch.dict(
-            os.environ,
-            {
-                "CUSTOMS_VISION_PROVIDER": "auto",
-                "ZAI_API_KEY": "zai-test",
-                "GEMINI_API_KEY": "gemini-test",
-                "OPENAI_API_KEY": "openai-test",
-            },
-            clear=True,
-        ):
-            provider, model, key = _select_vision_provider()
-        self.assertEqual((provider, model, key), ("gemini", "gemini-3.7-flash", "gemini-test"))
+    def test_openrouter_default_chain_starts_with_gemini_then_glm(self) -> None:
+        with patch.dict(os.environ, {}, clear=True):
+            models = _openrouter_models("OPENROUTER_VISION_MODELS")
+        self.assertEqual(
+            models,
+            [
+                "~google/gemini-flash-latest",
+                "z-ai/glm-5.3-flash",
+                "~x-ai/grok-latest",
+                "openai/gpt-chat-latest",
+                "~anthropic/claude-opus-latest",
+            ],
+        )
 
-    def test_zai_uses_current_vision_fallback_model(self) -> None:
+    def test_openrouter_chain_is_configurable_and_deduplicated(self) -> None:
         with patch.dict(
             os.environ,
-            {"CUSTOMS_VISION_PROVIDER": "zai", "ZAI_API_KEY": "zai-test"},
+            {"OPENROUTER_VISION_MODELS": "google/gemini-3.7-flash, z-ai/glm-5.3-flash, google/gemini-3.7-flash"},
             clear=True,
         ):
-            provider, model, key = _select_vision_provider()
-        self.assertEqual((provider, model, key), ("zai", "glm-5v-turbo", "zai-test"))
+            models = _openrouter_models("OPENROUTER_VISION_MODELS")
+        self.assertEqual(models, ["google/gemini-3.7-flash", "z-ai/glm-5.3-flash"])
+
+    def test_invalid_openrouter_model_id_is_rejected(self) -> None:
+        with patch.dict(
+            os.environ,
+            {"OPENROUTER_VISION_MODELS": "https://untrusted.example/model"},
+            clear=True,
+        ):
+            with self.assertRaises(ValueError):
+                _openrouter_models("OPENROUTER_VISION_MODELS")
+
+    def test_openrouter_multiblock_content_keeps_only_text(self) -> None:
+        content = _openrouter_message_text(
+            [
+                {"type": "text", "text": "ilk"},
+                {"type": "tool_call", "text": "çalıştırma"},
+                {"type": "output_text", "text": "ikinci"},
+            ]
+        )
+        self.assertEqual(content, "ilk\nikinci")
+
+    def test_openrouter_payload_enforces_order_schema_and_privacy(self) -> None:
+        models = ["~google/gemini-flash-latest", "z-ai/glm-5.3-flash"]
+        payload = _openrouter_payload(
+            models=models,
+            messages=[{"role": "user", "content": "test"}],
+            response_schema={"type": "object"},
+            schema_name="test_schema",
+            max_tokens=100,
+        )
+        self.assertEqual(payload["models"], models)
+        self.assertTrue(payload["provider"]["allow_fallbacks"])
+        self.assertTrue(payload["provider"]["require_parameters"])
+        self.assertEqual(payload["provider"]["data_collection"], "deny")
+        self.assertTrue(payload["response_format"]["json_schema"]["strict"])
+
+    def test_strict_schema_requires_all_nested_properties(self) -> None:
+        schema = _strict_json_schema(CustomsModelResult.model_json_schema())
+        self.assertEqual(set(schema["required"]), set(schema["properties"]))
+        self.assertFalse(schema["additionalProperties"])
+        for definition in schema["$defs"].values():
+            self.assertEqual(set(definition["required"]), set(definition["properties"]))
+            self.assertFalse(definition["additionalProperties"])
 
     def test_vision_result_never_exposes_model_supplied_gtip(self) -> None:
         result = ProductAttributeAnalysis.model_validate(
             {
-                "provider": "zai",
-                "model": "glm-4.6v",
+                "provider": "openrouter",
+                "model": "z-ai/glm-5.3-flash",
                 "product_name": "Şort",
                 "visible_origin_country": "",
                 "required_user_inputs": ["Menşe ülke", "Etiket bileşimi"],
