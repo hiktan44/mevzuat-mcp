@@ -722,7 +722,9 @@ function updateReadiness() {
 
 const visionFieldSelectors = [
   "#productDescription", "#composition", "#intendedUse", "#productCategory", "#brandModel",
-  "#dimensions", "#labelText", "#visibleFeatures", "#inferredFeatures", "#classificationQuestions",
+  "#dimensions", "#labelText", "#dominantColors", "#constructionForm", "#componentsAccessories",
+  "#functionMechanism", "#packaging", "#visibleFeatures", "#inferredFeatures",
+  "#classificationQuestions", "#requiredUserInputs", "#originCountry", "#productCondition",
 ];
 
 function setVisionState(status, message, provider = "") {
@@ -749,18 +751,36 @@ function joinLines(values) {
   return Array.isArray(values) ? values.filter(Boolean).join("\n") : "";
 }
 
+function setVisionValue(selector, value, { preserveWhenEmpty = false } = {}) {
+  const input = $(selector);
+  if (!input || (preserveWhenEmpty && !value)) return;
+  input.value = value || "";
+  input.classList.toggle("vision-filled", Boolean(value));
+}
+
 function applyVisionAttributes(data) {
   const description = data.product_description || [data.product_name, data.product_category].filter(Boolean).join(" — ");
-  $("#productDescription").value = description;
-  $("#composition").value = data.composition || "";
-  $("#intendedUse").value = data.intended_use || "";
-  $("#productCategory").value = data.product_category || "";
-  $("#brandModel").value = [data.visible_brand, data.visible_model].filter(Boolean).join(" / ");
-  $("#dimensions").value = data.dimensions || "";
-  $("#labelText").value = data.label_text || "";
-  $("#visibleFeatures").value = joinLines(data.visible_features);
-  $("#inferredFeatures").value = joinLines(data.inferred_features);
-  $("#classificationQuestions").value = joinLines(data.classification_questions);
+  setVisionValue("#productDescription", description);
+  setVisionValue("#composition", data.composition);
+  setVisionValue("#intendedUse", data.intended_use);
+  setVisionValue("#productCategory", data.product_category);
+  setVisionValue("#brandModel", [data.visible_brand, data.visible_model].filter(Boolean).join(" / "));
+  setVisionValue("#dimensions", data.dimensions);
+  setVisionValue("#labelText", data.label_text);
+  setVisionValue("#dominantColors", joinLines(data.dominant_colors).replaceAll("\n", ", "));
+  setVisionValue("#constructionForm", data.construction_form);
+  setVisionValue("#componentsAccessories", joinLines(data.components_accessories));
+  setVisionValue("#functionMechanism", data.function_mechanism);
+  setVisionValue("#packaging", data.packaging);
+  setVisionValue("#visibleFeatures", joinLines(data.visible_features));
+  setVisionValue("#inferredFeatures", joinLines(data.inferred_features));
+  setVisionValue("#classificationQuestions", joinLines(data.classification_questions));
+  setVisionValue("#requiredUserInputs", joinLines(data.required_user_inputs));
+  setVisionValue("#originCountry", data.visible_origin_country, { preserveWhenEmpty: true });
+  if (["new", "used"].includes(data.condition)) setVisionValue("#productCondition", data.condition);
+  if (!$("#customsQuestion").value.trim()) {
+    $("#customsQuestion").value = "Bu ürünün aday GTİP'i, ithalat vergileri, TAREKS/TSE kontrolleri, gerekli belgeleri ve ek maliyetleri nelerdir?";
+  }
   updateReadiness();
 }
 
@@ -839,9 +859,15 @@ function customsRequestBody() {
     brand_model: $("#brandModel").value.trim() || null,
     dimensions: $("#dimensions").value.trim() || null,
     label_text: $("#labelText").value.trim() || null,
+    dominant_colors: $("#dominantColors").value.trim() || null,
+    construction_form: $("#constructionForm").value.trim() || null,
+    components_accessories: $("#componentsAccessories").value.trim() || null,
+    function_mechanism: $("#functionMechanism").value.trim() || null,
+    packaging: $("#packaging").value.trim() || null,
     visible_features: $("#visibleFeatures").value.trim() || null,
     inferred_features: $("#inferredFeatures").value.trim() || null,
     classification_questions: $("#classificationQuestions").value.trim() || null,
+    required_user_inputs: $("#requiredUserInputs").value.trim() || null,
     condition: $("#productCondition").value,
     invoice_value: nullableNumber("#invoiceValue"),
     freight: nullableNumber("#freight"),
@@ -917,7 +943,7 @@ $("#customsForm").addEventListener("submit", async (event) => {
   } finally {
     loading.hidden = true;
     button.disabled = false;
-    button.querySelector("span").textContent = "Onaylanan evsaflarla resmî araştırmayı başlat";
+    button.querySelector("span").textContent = "GTİP bul · vergi ve TAREKS'i araştır";
   }
 });
 

@@ -88,7 +88,7 @@ class CustomsAdvisorSafetyTests(unittest.TestCase):
         parsed = _parse_json_object('```json\n{"product_name":"Çocuk şortu"}\n```')
         self.assertEqual(parsed["product_name"], "Çocuk şortu")
 
-    def test_auto_provider_prefers_zai_vision(self) -> None:
+    def test_auto_provider_prefers_gemini_structured_vision(self) -> None:
         with patch.dict(
             os.environ,
             {
@@ -100,7 +100,16 @@ class CustomsAdvisorSafetyTests(unittest.TestCase):
             clear=True,
         ):
             provider, model, key = _select_vision_provider()
-        self.assertEqual((provider, model, key), ("zai", "glm-4.6v", "zai-test"))
+        self.assertEqual((provider, model, key), ("gemini", "gemini-3.7-flash", "gemini-test"))
+
+    def test_zai_uses_current_vision_fallback_model(self) -> None:
+        with patch.dict(
+            os.environ,
+            {"CUSTOMS_VISION_PROVIDER": "zai", "ZAI_API_KEY": "zai-test"},
+            clear=True,
+        ):
+            provider, model, key = _select_vision_provider()
+        self.assertEqual((provider, model, key), ("zai", "glm-5v-turbo", "zai-test"))
 
     def test_vision_result_never_exposes_model_supplied_gtip(self) -> None:
         result = ProductAttributeAnalysis.model_validate(
@@ -108,10 +117,13 @@ class CustomsAdvisorSafetyTests(unittest.TestCase):
                 "provider": "zai",
                 "model": "glm-4.6v",
                 "product_name": "Şort",
+                "visible_origin_country": "",
+                "required_user_inputs": ["Menşe ülke", "Etiket bileşimi"],
                 "candidate_gtip": "610463000000",
             }
         )
         self.assertNotIn("candidate_gtip", result.model_dump())
+        self.assertEqual(result.required_user_inputs, ["Menşe ülke", "Etiket bileşimi"])
         self.assertTrue(result.user_confirmation_required)
 
 

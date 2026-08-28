@@ -313,10 +313,13 @@ svg { display: block; fill: none; stroke: currentColor; stroke-width: 1.8; strok
 .vision-state[data-state="review"], .vision-state[data-state="error"] { border-color: var(--danger); background: var(--danger-soft); color: var(--danger); }
 .vision-state[data-state="confirmed"] { border-color: var(--teal); background: var(--teal); color: #fff; }
 .vision-message { margin: 0; padding: 13px 18px; border-bottom: 1px solid var(--line); color: var(--ink-2); font-size: .6rem; line-height: 1.6; }
+.editable-note { margin: 0; padding: 11px 18px; border-bottom: 1px solid var(--line); background: var(--teal-soft); color: var(--ink-2); font-size: .6rem; line-height: 1.55; }
 .attribute-grid { display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); gap: 13px; padding: 18px; }
 .attribute-wide { grid-column: 1 / -1; }
 .attribute-wide textarea { min-height: 76px; }
 .uncertain-field textarea { border-color: color-mix(in srgb, var(--danger) 38%, var(--line)); }
+.required-field textarea { border-color: color-mix(in srgb, #b47b13 45%, var(--line)); background: #fffaf0; }
+.field input.vision-filled, .field textarea.vision-filled, .field select.vision-filled { border-left: 3px solid var(--teal); background: color-mix(in srgb, var(--teal-soft) 35%, var(--surface)); }
 .attribute-actions { display: grid; grid-template-columns: minmax(0,1fr) auto; align-items: center; gap: 16px; padding: 14px 18px; border-top: 1px solid var(--line); background: var(--surface); }
 .attribute-actions p { margin: 0; color: var(--ink-3); font-family: var(--mono); font-size: .52rem; line-height: 1.5; }
 .attribute-actions button { min-height: 42px; padding: 0 16px; border: 0; background: var(--ink); color: var(--surface); font-size: .62rem; font-weight: 700; }

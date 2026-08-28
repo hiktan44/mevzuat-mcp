@@ -190,14 +190,21 @@
                 <span class="vision-state" id="visionState" data-state="idle">Bekliyor</span>
               </header>
               <p class="vision-message" id="visionMessage">Fotoğraf analiz edildiğinde sonuçlar bu satırlara gelir. GTİP ve mevzuat araması henüz başlamaz.</p>
+              <p class="editable-note"><b>Tüm alanlar düzenlenebilir.</b> Modelin yanlış veya eksik gördüğü bir bilgiyi kutunun içine tıklayıp değiştirebilirsiniz.</p>
               <div class="attribute-grid">
                 <label class="field"><span>Ürün kategorisi</span><input id="productCategory" maxlength="200" placeholder="Örn. çocuk dış giyim"></label>
                 <label class="field"><span>Görünen marka / model</span><input id="brandModel" maxlength="300" placeholder="Yalnızca fotoğrafta okunuyorsa"></label>
                 <label class="field"><span>Ölçü / ebat / teknik değer</span><input id="dimensions" maxlength="300" placeholder="Görünen ölçü ve değerler"></label>
                 <label class="field"><span>Etikette okunan metin</span><input id="labelText" maxlength="1000" placeholder="Etiket, ambalaj veya ürün üzerindeki yazılar"></label>
+                <label class="field"><span>Renkler</span><input id="dominantColors" maxlength="300" placeholder="Ana ve ikincil renkler"></label>
+                <label class="field"><span>Ambalaj / sunum şekli</span><input id="packaging" maxlength="500" placeholder="Kutu, poşet, set, perakende ambalajı…"></label>
+                <label class="field attribute-wide"><span>Fiziksel yapı / üretim biçimi</span><textarea id="constructionForm" maxlength="1000" placeholder="Dokuma/örme, kalıplanmış, monte edilmiş; kesim, kapanma ve bağlantı biçimi…"></textarea></label>
+                <label class="field attribute-wide"><span>Parçalar / aksesuarlar</span><textarea id="componentsAccessories" maxlength="1000" placeholder="Her satıra görünen bir parça veya aksesuar"></textarea></label>
+                <label class="field attribute-wide"><span>İşlev / çalışma mekanizması</span><textarea id="functionMechanism" maxlength="1000" placeholder="Ürünün görünen işlevi, çalışma veya kullanım biçimi"></textarea></label>
                 <label class="field attribute-wide"><span>Kesin görülen özellikler</span><textarea id="visibleFeatures" maxlength="2000" placeholder="Her satıra bir görünür özellik"></textarea></label>
                 <label class="field attribute-wide uncertain-field"><span>Görüntüden kesinleşmeyen tahminler</span><textarea id="inferredFeatures" maxlength="1500" placeholder="Bunları teknik belge veya ürün etiketiyle doğrulayın"></textarea></label>
                 <label class="field attribute-wide"><span>Sınıflandırma için cevaplanması gereken sorular</span><textarea id="classificationQuestions" maxlength="1500" placeholder="Malzeme oranı, kullanım amacı, çalışma şekli…"></textarea></label>
+                <label class="field attribute-wide required-field"><span>Kullanıcının tamamlaması gereken bilgiler</span><textarea id="requiredUserInputs" maxlength="1800" placeholder="Görselden belirlenemeyen menşe, teknik belge ve maliyet bilgileri"></textarea></label>
               </div>
               <div class="attribute-actions">
                 <p id="visionProvider">Model bilgisi analizden sonra gösterilir.</p>
@@ -232,7 +239,7 @@
             </details>
 
             <div class="consent-line"><span aria-hidden="true">!</span><p>Fotoğraf yalnızca evsaf çıkarır; kesin GTİP sayılmaz. Güvenlik sorulu Tarife Arama Motoru otomatik aşılmaz ve yalnızca manuel doğrulama bağlantısı olarak gösterilir.</p></div>
-            <button class="analyse-button" id="analyseButton" type="submit"><span>Onaylanan evsaflarla resmî araştırmayı başlat</span><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m5 12 14 0M14 6l6 6-6 6"/></svg></button>
+            <button class="analyse-button" id="analyseButton" type="submit"><span>GTİP bul · vergi ve TAREKS'i araştır</span><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m5 12 14 0M14 6l6 6-6 6"/></svg></button>
           </div>
 
           <aside class="readiness-card" aria-labelledby="readinessTitle">

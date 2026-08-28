@@ -96,15 +96,15 @@ CUSTOMS_AI_MODEL=gpt-5.4
 CUSTOMS_AI_REASONING=high
 ```
 
-Görsel evsaf çıkarımı için `auto` modu önce GLM Vision, ardından Nano Banana Pro, son olarak OpenAI görsel modelini dener. Yapılandırılmış metin çıkarımı için GLM Vision varsayılan ve önerilen sağlayıcıdır:
+Görsel evsaf çıkarımı için `auto` modu önce **Gemini 3.7 Flash** ile katı JSON şeması kullanır; başarısız olursa yapılandırılmış görsel metin çıkarımı için GLM-5V-Turbo, ardından OpenAI görsel modelini dener. Nano Banana bir görsel üretim/düzenleme modelidir ve bu metin çıkarım akışında kullanılmaz. Model ürün adı, kategori, kapsamlı tanım, bileşim, kullanım, görünür menşe ibaresi, marka/model, ölçü, etiket, renk, fiziksel yapı, parçalar, çalışma mekanizması, ambalaj ve sınıflandırma sorularını ayrı alanlara çıkarır. Görselden belirlenemeyen menşe, teknik değer ve maliyet girdilerini uydurmak yerine kullanıcıya tamamlanacak bilgi olarak gösterir:
 
 ```text
 CUSTOMS_VISION_PROVIDER=auto
-ZAI_API_KEY=<sunucuda gizli değer>
-ZAI_VISION_MODEL=glm-4.6v
-# İsteğe bağlı ikinci sağlayıcı:
 GEMINI_API_KEY=<sunucuda gizli değer>
-GEMINI_VISION_MODEL=gemini-3-pro-image
+GEMINI_VISION_MODEL=gemini-3.7-flash
+# İsteğe bağlı yedek sağlayıcı:
+ZAI_API_KEY=<sunucuda gizli değer>
+ZAI_VISION_MODEL=glm-5v-turbo
 ```
 
 `OPENAI_API_KEY` yoksa arayüz uydurma yanıt üretmez; yalnızca güncel resmî kanıt paketini ve eksik bilgi listesini gösteren `evidence_only` modunda çalışır. Yüklenen JPEG/PNG/WebP görseli yeniden kodlanarak metaverisi temizlenir, kalıcı olarak saklanmaz ve istek başına 8 MB / 25 megapiksel sınırı uygulanır.
