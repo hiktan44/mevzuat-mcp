@@ -315,6 +315,9 @@ svg { display: block; fill: none; stroke: currentColor; stroke-width: 1.8; strok
 @media (prefers-reduced-motion: reduce) { .vision-analyse-button[aria-busy="true"] svg { animation: none; } }
 .product-fields { display: grid; gap: 13px; }
 .product-fields > .field textarea { min-height: 102px; }
+.product-file-status { margin: 0; padding: 10px 12px; border: 1px solid var(--line); color: var(--ink-3); font-size: .57rem; line-height: 1.5; }
+.product-file-status[data-state="filled"] { border-color: var(--teal); background: var(--teal-soft); color: var(--teal-dark); }
+.product-file-status[data-state="error"] { border-color: var(--danger); background: var(--danger-soft); color: var(--danger); }
 .field-row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
 .attribute-review { margin-top: 20px; border: 1px solid var(--teal); background: var(--canvas); }
 .attribute-review > header { display: flex; align-items: start; justify-content: space-between; gap: 18px; padding: 18px; border-bottom: 1px solid var(--line); background: var(--surface); }

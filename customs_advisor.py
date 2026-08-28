@@ -485,6 +485,26 @@ def _openrouter_payload(
     }
 
 
+def _openrouter_headers(api_key: str) -> dict[str, str]:
+    """Return HTTP/1.1-safe OpenRouter headers.
+
+    httpx encodes header values as ASCII. Keep the application title ASCII-only;
+    Turkish display names belong in the JSON payload or UI, not HTTP headers.
+    """
+    headers = {
+        "Authorization": f"Bearer {api_key}",
+        "Content-Type": "application/json",
+        "HTTP-Referer": "https://mevzuat-mcp.seymata.com/",
+        "X-OpenRouter-Title": "Gumrukce",
+    }
+    for name, value in headers.items():
+        try:
+            value.encode("ascii")
+        except UnicodeEncodeError as exc:
+            raise ValueError(f"OpenRouter HTTP başlığı ASCII uyumlu değil: {name}") from exc
+    return headers
+
+
 async def _openrouter_chat(
     *,
     api_key: str,
@@ -505,12 +525,7 @@ async def _openrouter_chat(
     async with httpx.AsyncClient(timeout=120) as client:
         response = await client.post(
             "https://openrouter.ai/api/v1/chat/completions",
-            headers={
-                "Authorization": f"Bearer {api_key}",
-                "Content-Type": "application/json",
-                "HTTP-Referer": "https://mevzuat-mcp.seymata.com/",
-                "X-OpenRouter-Title": "Gümrükçe",
-            },
+            headers=_openrouter_headers(api_key),
             json=payload,
         )
         response.raise_for_status()

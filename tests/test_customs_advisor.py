@@ -18,6 +18,7 @@ from customs_advisor import (
     _deterministic_cost,
     _missing_information,
     _openrouter_message_text,
+    _openrouter_headers,
     _openrouter_models,
     _openrouter_payload,
     _parse_json_object,
@@ -147,6 +148,12 @@ class CustomsAdvisorSafetyTests(unittest.TestCase):
         self.assertTrue(payload["provider"]["require_parameters"])
         self.assertEqual(payload["provider"]["data_collection"], "deny")
         self.assertTrue(payload["response_format"]["json_schema"]["strict"])
+
+    def test_openrouter_headers_are_ascii_safe(self) -> None:
+        headers = _openrouter_headers("sk-or-v1-test")
+        self.assertEqual(headers["X-OpenRouter-Title"], "Gumrukce")
+        for value in headers.values():
+            value.encode("ascii")
 
     def test_strict_schema_requires_all_nested_properties(self) -> None:
         schema = _strict_json_schema(CustomsModelResult.model_json_schema())

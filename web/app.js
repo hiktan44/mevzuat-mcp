@@ -801,6 +801,9 @@ function applyVisionAttributes(data) {
   if (!$("#customsQuestion").value.trim()) {
     $("#customsQuestion").value = "Bu ürünün aday GTİP'i, ithalat vergileri, TAREKS/TSE kontrolleri, gerekli belgeleri ve ek maliyetleri nelerdir?";
   }
+  const fileStatus = $("#productFileStatus");
+  fileStatus.dataset.state = "filled";
+  fileStatus.textContent = `${data.product_name || "Ürün"} evsafları ürün dosyasına eklendi. Alanları kontrol edip gerekiyorsa düzeltin.`;
   updateReadiness();
 }
 
@@ -823,9 +826,11 @@ async function analyseProductImage() {
       `${data.warning} Alanları düzeltin; araştırma ancak onayınızdan sonra başlar.`,
       `Görsel model: ${data.provider} · ${data.model} · güven: ${data.confidence}`,
     );
-    $("#attributeReview").scrollIntoView({ behavior: "smooth", block: "center" });
+    $("#productFileStatus").scrollIntoView({ behavior: "smooth", block: "center" });
   } catch (error) {
     state.customsVisionResult = null;
+    $("#productFileStatus").dataset.state = "error";
+    $("#productFileStatus").textContent = "Görsel analizi ürün dosyasına işlenemedi. Analizi tekrar deneyin veya alanları elle doldurun.";
     setVisionState(
       "error",
       `${error.message || "Görsel analizi tamamlanamadı."} Ürün evsaflarını elle doldurup yine de açıkça onaylayabilirsiniz.`,
@@ -844,6 +849,8 @@ async function setProductImage(file) {
     $("#attributeReview").hidden = true;
     $("#uploadTitle").textContent = "Ürün fotoğrafı ekle";
     $("#uploadHint").textContent = "JPEG, PNG veya WebP · en fazla 8 MB";
+    $("#productFileStatus").dataset.state = "waiting";
+    $("#productFileStatus").textContent = "Görsel analizi tamamlandığında temel evsaflar önce bu ürün dosyasına işlenir.";
     updateVisionAnalyseButton("idle");
     updateReadiness();
     return;
@@ -865,6 +872,8 @@ async function setProductImage(file) {
   $("#uploadTitle").textContent = file.name;
   $("#uploadHint").textContent = `${numberFormat.format(Math.ceil(file.size / 1024))} KB · analiz siz başlatmadan gönderilmez`;
   state.customsVisionResult = null;
+  $("#productFileStatus").dataset.state = "waiting";
+  $("#productFileStatus").textContent = "Fotoğraf hazır. Analiz sonucu önce bu ürün dosyasına işlenecek.";
   setVisionState(
     "ready",
     "Fotoğraf hazır. Ürünü Analiz Et düğmesine bastığınızda yalnızca görünür evsaflar çıkarılır.",
