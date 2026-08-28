@@ -1,0 +1,124 @@
+{
+  "sync_interval_seconds": 21600,
+  "sources": [
+    {
+      "id": "gumruk",
+      "url": "https://ticaret.gov.tr/gumruk-islemleri/mevzuat",
+      "content_kind": "mevzuat",
+      "follow_prefixes": ["/gumruk-islemleri/mevzuat"],
+      "max_pages": 180
+    },
+    {
+      "id": "ihracat",
+      "url": "https://ticaret.gov.tr/ihracat/mevzuat",
+      "content_kind": "mevzuat",
+      "follow_prefixes": ["/ihracat/mevzuat"],
+      "max_pages": 220
+    },
+    {
+      "id": "ithalat",
+      "url": "https://ticaret.gov.tr/ithalat/ithalat-mevzuati",
+      "content_kind": "mevzuat",
+      "follow_prefixes": ["/ithalat/ithalat-mevzuati"],
+      "max_pages": 220
+    },
+    {
+      "id": "destekler",
+      "url": "https://ticaret.gov.tr/destekler",
+      "content_kind": "destek",
+      "follow_prefixes": ["/destekler"],
+      "max_pages": 300
+    },
+    {
+      "id": "ic_ticaret",
+      "url": "https://ticaret.gov.tr/ic-ticaret/mevzuat",
+      "content_kind": "mevzuat",
+      "follow_prefixes": ["/ic-ticaret/mevzuat"],
+      "max_pages": 180
+    },
+    {
+      "id": "tuketici",
+      "url": "https://ticaret.gov.tr/tuketici/mevzuat",
+      "content_kind": "mevzuat",
+      "follow_prefixes": ["/tuketici/mevzuat"],
+      "max_pages": 180
+    },
+    {
+      "id": "serbest_bolgeler",
+      "url": "https://ticaret.gov.tr/serbest-bolgeler/serbest-bolgeler-mevzuati",
+      "content_kind": "mevzuat",
+      "follow_prefixes": ["/serbest-bolgeler/serbest-bolgeler-mevzuati"],
+      "max_pages": 180
+    },
+    {
+      "id": "urun_guvenligi",
+      "url": "https://ticaret.gov.tr/urun-guvenligi",
+      "content_kind": "mevzuat",
+      "follow_prefixes": ["/urun-guvenligi"],
+      "max_pages": 260
+    },
+    {
+      "id": "hizmet_ticareti",
+      "url": "https://ticaret.gov.tr/hizmet-ticareti",
+      "content_kind": "mevzuat",
+      "follow_prefixes": ["/hizmet-ticareti"],
+      "max_pages": 220
+    },
+    {
+      "id": "esnaf_kooperatif",
+      "url": "https://esnafkoop.ticaret.gov.tr/yayinlar/mevzuat",
+      "content_kind": "mevzuat",
+      "follow_prefixes": ["/yayinlar/mevzuat"],
+      "max_pages": 180
+    },
+    {
+      "id": "urun_kurallari",
+      "url": "https://urunkurallari.ticaret.gov.tr/tr/mevzuat",
+      "content_kind": "mevzuat",
+      "follow_prefixes": ["/tr/mevzuat", "/tr/sektorel-rehber"],
+      "max_pages": 320
+    },
+    {
+      "id": "istatistikler_veri",
+      "url": "https://ticaret.gov.tr/istatistikler",
+      "content_kind": "veri",
+      "follow_prefixes": ["/istatistikler"],
+      "max_pages": 500
+    },
+    {
+      "id": "musavirlik_pazar",
+      "url": "https://ticaret.gov.tr/ticaret-musavirlikleri-ve-pazar-bilgileri",
+      "content_kind": "rapor",
+      "follow_prefixes": ["/ticaret-musavirlikleri-ve-pazar-bilgileri"],
+      "max_pages": 400
+    },
+    {
+      "id": "musavirlik_blog_guncel",
+      "url": "https://dtybs.ticaret.gov.tr/blog/rss/",
+      "content_kind": "rapor",
+      "follow_prefixes": ["/blog/rss"],
+      "max_pages": 1
+    },
+    {
+      "id": "yurtdisi_teskilati",
+      "url": "https://ticaret.gov.tr/yurtdisi-teskilati",
+      "content_kind": "ulke_bilgisi",
+      "follow_prefixes": ["/yurtdisi-teskilati"],
+      "max_pages": 100
+    },
+    {
+      "id": "musavirlik_iletisim",
+      "url": "https://ticaret.gov.tr/dis-iliskiler/yurt-disi-teskilatimiz",
+      "content_kind": "iletisim",
+      "follow_prefixes": ["/dis-iliskiler/yurt-disi-teskilatimiz"],
+      "max_pages": 80
+    },
+    {
+      "id": "bakanlik_yayinlari",
+      "url": "https://ticaret.gov.tr/yayinlar",
+      "content_kind": "yayin",
+      "follow_prefixes": ["/yayinlar"],
+      "max_pages": 400
+    }
+  ]
+}

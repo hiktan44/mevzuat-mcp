@@ -2,9 +2,9 @@
 .git
 .gitignore
 
-# Documentation
-README.md
+# Documentation (README.md is required by pyproject.toml during pip install)
 *.md
+!README.md
 
 # Environment and virtual environments
 .env

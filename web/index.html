@@ -1,0 +1,142 @@
+<!doctype html>
+<html lang="tr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="Türkiye Cumhuriyeti mevzuatında hızlı ve güvenilir arama.">
+  <title>Mevzuat Ara — Kanun, yönetmelik ve karar arama</title>
+  <link rel="stylesheet" href="/assets/app.css">
+  <script src="/assets/app.js" defer></script>
+</head>
+<body>
+  <a class="skip-link" href="#results">Sonuçlara geç</a>
+
+  <header class="masthead">
+    <a class="brand" href="/" aria-label="Mevzuat Ara ana sayfa">
+      <span class="brand-mark" aria-hidden="true">M</span>
+      <span>
+        <strong>Mevzuat Ara</strong>
+        <small>Adalet Bakanlığı açık verileri</small>
+      </span>
+    </a>
+    <div class="masthead-actions">
+      <span class="service-state"><i aria-hidden="true"></i> Kaynak bağlı</span>
+      <button class="theme-toggle" id="themeToggle" type="button" aria-label="Renk temasını değiştir">
+        <span aria-hidden="true">◐</span>
+      </button>
+    </div>
+  </header>
+
+  <main>
+    <section class="search-stage" aria-labelledby="pageTitle">
+      <div class="section-watermark" aria-hidden="true">§</div>
+      <div class="search-copy">
+        <p class="eyebrow">Türkiye Cumhuriyeti mevzuatı</p>
+        <h1 id="pageTitle">Aradığınız hükme<br>doğrudan ulaşın.</h1>
+        <p>Kanun, kararname, yönetmelik, genelge ve tebliğleri tek ekrandan arayın; tam metni kaynağından okuyun.</p>
+      </div>
+
+      <form class="search-panel" id="searchForm">
+        <fieldset class="mode-switch" aria-label="Arama alanı">
+          <label><input type="radio" name="mode" value="title" checked><span>Başlık</span></label>
+          <label><input type="radio" name="mode" value="content"><span>İçerik</span></label>
+          <label><input type="radio" name="mode" value="number"><span>Numara</span></label>
+        </fieldset>
+
+        <div class="primary-search">
+          <label class="sr-only" for="query">Mevzuat arama metni</label>
+          <input id="query" name="query" type="search" maxlength="200" autocomplete="off" placeholder="Örn. Türk Ceza Kanunu" autofocus>
+          <button type="submit"><span>Ara</span><span aria-hidden="true">→</span></button>
+        </div>
+
+        <div class="filters">
+          <label>
+            <span>Mevzuat türü</span>
+            <select id="type" name="type">
+              <option value="">Tüm mevzuat</option>
+              <option value="KANUN">Kanunlar</option>
+              <option value="CB_KARARNAME">CB Kararnameleri</option>
+              <option value="CB_KARAR">CB Kararları</option>
+              <option value="CB_GENELGE">CB Genelgeleri</option>
+              <option value="CB_YONETMELIK">CB Yönetmelikleri</option>
+              <option value="YONETMELIK">Bakanlar Kurulu Yönetmelikleri</option>
+              <option value="KKY">Kurum Yönetmelikleri</option>
+              <option value="UY">Üniversite Yönetmelikleri</option>
+              <option value="KHK">KHK</option>
+              <option value="TUZUK">Tüzükler</option>
+              <option value="TEBLIGLER">Tebliğler</option>
+              <option value="MULGA">Mülga Mevzuat</option>
+            </select>
+          </label>
+          <label>
+            <span>Başlangıç tarihi</span>
+            <input id="startDate" name="startDate" type="date">
+          </label>
+          <label>
+            <span>Bitiş tarihi</span>
+            <input id="endDate" name="endDate" type="date">
+          </label>
+        </div>
+
+        <div class="quick-searches" aria-label="Örnek aramalar">
+          <span>Hızlı arama</span>
+          <button type="button" data-query="5237" data-mode="number" data-type="KANUN">5237</button>
+          <button type="button" data-query="Türk Ticaret Kanunu" data-mode="title" data-type="KANUN">Ticaret Kanunu</button>
+          <button type="button" data-query="kişisel verilerin korunması" data-mode="title" data-type="KANUN">KVKK</button>
+        </div>
+      </form>
+    </section>
+
+    <section class="results-section" id="results" aria-live="polite">
+      <div class="results-heading">
+        <div>
+          <p class="eyebrow">Arama dökümü</p>
+          <h2 id="resultsTitle">Son yayımlanan mevzuat</h2>
+        </div>
+        <p id="resultCount" class="result-count">Kaynak taranmaya hazır</p>
+      </div>
+
+      <div id="status" class="status-card">
+        <span class="status-seal" aria-hidden="true">§</span>
+        <div>
+          <strong>Bir kavram, başlık veya mevzuat numarası yazın.</strong>
+          <p>Sonuçlar doğrudan Adalet Bakanlığı Mevzuat Bilgi Sistemi’nden getirilir.</p>
+        </div>
+      </div>
+
+      <div id="resultList" class="result-list"></div>
+      <nav id="pagination" class="pagination" aria-label="Arama sonuçları sayfaları" hidden>
+        <button id="prevPage" type="button">← Önceki</button>
+        <span id="pageLabel">Sayfa 1</span>
+        <button id="nextPage" type="button">Sonraki →</button>
+      </nav>
+    </section>
+  </main>
+
+  <aside class="reader" id="reader" aria-hidden="true" aria-labelledby="readerTitle">
+    <div class="reader-backdrop" data-close-reader></div>
+    <article class="reader-sheet" role="dialog" aria-modal="true">
+      <header class="reader-header">
+        <div>
+          <p id="readerMeta" class="eyebrow">Mevzuat metni</p>
+          <h2 id="readerTitle">Belge yükleniyor</h2>
+        </div>
+        <button class="reader-close" type="button" data-close-reader aria-label="Metni kapat">×</button>
+      </header>
+      <div class="reader-toolbar">
+        <label>
+          <span class="sr-only">Metin içinde ara</span>
+          <input id="readerSearch" type="search" placeholder="Metin içinde ara…">
+        </label>
+        <span id="readerLength"></span>
+      </div>
+      <pre id="readerContent" class="reader-content" tabindex="0"></pre>
+    </article>
+  </aside>
+
+  <footer>
+    <p>Resmî işlem öncesinde metni <a href="https://mevzuat.gov.tr" target="_blank" rel="noreferrer">mevzuat.gov.tr</a> üzerinden doğrulayın.</p>
+    <span>MCP: <code>/mcp/</code></span>
+  </footer>
+</body>
+</html>

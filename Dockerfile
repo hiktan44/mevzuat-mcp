@@ -13,10 +13,12 @@ RUN apt-get update && apt-get install -y \
     && rm -rf /var/lib/apt/lists/*
 
 # Copy Python files and requirements
-COPY pyproject.toml setup.py ./
+COPY pyproject.toml setup.py README.md ./
 COPY *.py ./
+COPY ticaret_sources.json ./
 COPY requirements.txt ./
 COPY semantic_search/ ./semantic_search/
+COPY web/ ./web/
 
 # Install Python dependencies
 RUN pip install --no-cache-dir -r requirements.txt

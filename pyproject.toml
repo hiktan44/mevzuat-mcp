@@ -4,15 +4,15 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "mevzuat-mcp"
-version = "1.0.0"
-description = "MCP Server for Turkish Legislation - 18 tools for comprehensive access to Turkish laws, decrees, regulations and circulars"
+version = "1.1.0"
+description = "Remote MCP for Turkish legislation and live Ministry of Trade laws, supports, data, reports and overseas contacts"
 readme = "README.md"
 requires-python = ">=3.11"
 license = {text = "MIT"}
 authors = [
     {name = "Said Surucu", email = "saidsrc@gmail.com"}
 ]
-keywords = ["mcp", "mevzuat", "turkish-law", "legislation", "claude", "llm", "kanun", "khk", "tuzuk", "yonetmelik"]
+keywords = ["mcp", "mevzuat", "turkish-law", "legislation", "chatgpt", "codex", "ticaret", "gumruk", "ithalat", "ihracat", "devlet-destekleri"]
 classifiers = [
     "Development Status :: 5 - Production/Stable",
     "Intended Audience :: Developers",
@@ -40,13 +40,16 @@ dependencies = [
 ]
 
 [project.urls]
-"Homepage" = "https://github.com/saidsurucu/mevzuat-mcp"
-"Bug Tracker" = "https://github.com/saidsurucu/mevzuat-mcp/issues"
-"Repository" = "https://github.com/saidsurucu/mevzuat-mcp"
+"Homepage" = "https://github.com/hiktan44/mevzuat-mcp"
+"Bug Tracker" = "https://github.com/hiktan44/mevzuat-mcp/issues"
+"Repository" = "https://github.com/hiktan44/mevzuat-mcp"
 
 [project.scripts]
 mevzuat-mcp = "mevzuat_mcp_server:main"
 
 [tool.setuptools]
-py-modules = ["mevzuat_mcp_server", "mevzuat_client", "mevzuat_models", "article_search", "bedesten_client", "bedesten_models"]
+py-modules = ["mevzuat_mcp_server", "mevzuat_client", "mevzuat_models", "article_search", "bedesten_client", "bedesten_models", "ticaret_client", "ticaret_models"]
 packages = ["semantic_search"]
+
+[tool.setuptools.data-files]
+"." = ["ticaret_sources.json"]

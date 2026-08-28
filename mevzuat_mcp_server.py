@@ -3,9 +3,11 @@
 FastMCP server for mevzuat.gov.tr (direct API).
 Supports searching and PDF content extraction for Kanun (laws).
 """
+import asyncio
 import logging
+from contextlib import asynccontextmanager
 from pydantic import Field
-from typing import Optional
+from typing import Literal, Optional
 
 from fastmcp import FastMCP
 
@@ -16,6 +18,13 @@ from mevzuat_models import (
     MevzuatArticleContent
 )
 from article_search import search_articles_by_keyword, ArticleSearchResult, format_search_results, _matches_query, search_plain_text_articles
+from ticaret_client import TicaretApiClient
+from ticaret_models import (
+    TicaretCatalogStatus,
+    TicaretContentSearchResult,
+    TicaretDocumentContent,
+    TicaretSearchResult,
+)
 
 # Semantic search (optional, requires OPENROUTER_API_KEY)
 from semantic_search.embedder import is_openrouter_available
@@ -35,10 +44,35 @@ logging.basicConfig(
 logging.getLogger("httpx").setLevel(logging.WARNING)
 logger = logging.getLogger(__name__)
 
+ticaret_client = TicaretApiClient()
+
+
+@asynccontextmanager
+async def _server_lifespan(server):
+    """Keep the Ministry catalogue fresh without delaying ASGI startup."""
+    refresh_task = asyncio.create_task(
+        ticaret_client.periodic_refresh_loop(),
+        name="ticaret-catalog-refresh",
+    )
+    try:
+        yield {"ticaret_client": ticaret_client}
+    finally:
+        refresh_task.cancel()
+        try:
+            await refresh_task
+        except asyncio.CancelledError:
+            pass
+        await ticaret_client.close()
+
 app = FastMCP(
     name="MevzuatGovTrMCP",
+    version="1.1.0",
+    lifespan=_server_lifespan,
     instructions="MCP server for Turkish legislation search and content retrieval. "
-    "Two data sources: mevzuat.gov.tr (21 tools, Playwright-based) and bedesten.adalet.gov.tr (5 tools, pure REST). "
+    "Three source families: mevzuat.gov.tr, bedesten.adalet.gov.tr, and a continuously refreshed official "
+    "Ministry of Trade catalogue covering customs, imports, exports, state supports, internal trade, consumer law, "
+    "free zones, product safety, service trade, statistics/data, publications, country-market reports, commercial "
+    "counsellor/attaché reports and contact information. "
     "\n\n"
     "== mevzuat.gov.tr tools (21 tools) ==\n"
     "9 legislation types: Kanun, KHK, Tüzük, Kurum Yönetmeliği, Tebliğ, CB Kararnamesi, CB Kararı, CB Yönetmeliği, CB Genelgesi. "
@@ -51,7 +85,14 @@ app = FastMCP(
     "get_mevzuat_content (full text), search_within_mevzuat (article keyword search), "
     "get_mevzuat_gerekce (law rationale/gerekçe), get_mevzuat_madde_tree (article tree/TOC). "
     "Solr operators: \"exact\", +required, -prohibited, wildcard*, fuzzy~, \"proximity\"~N, boost^N. "
-    "NOTE: AND/OR/NOT do NOT work in search_mevzuat - use +term1 +term2 instead."
+    "NOTE: AND/OR/NOT do NOT work in search_mevzuat - use +term1 +term2 instead. "
+    "\n\n"
+    "== Ticaret Bakanlığı tools (5 tools) ==\n"
+    "Use list_ticaret_sources to see source coverage and content kinds. Use search_ticaret_catalog for current "
+    "Ministry metadata, get_ticaret_document for bounded full text, search_ticaret_content for bounded multi-document "
+    "full-text search, and get_ticaret_catalog_status for freshness. Results always include official source URLs. "
+    "For legal analysis, distinguish current and repealed material, cite the exact official source, state uncertainty, "
+    "and treat the output as informational rather than a substitute for professional legal advice."
 )
 
 # Initialize client with caching enabled (1 hour TTL by default)
@@ -2295,6 +2336,226 @@ async def get_mevzuat_madde_tree(
     except Exception as e:
         logger.exception("Error in get_mevzuat_madde_tree")
         return f"An unexpected error occurred: {str(e)}"
+
+
+# ============================================================================
+# Ticaret Bakanlığı live catalogue tools
+# ============================================================================
+
+_TICARET_CONTENT_KINDS = Literal[
+    "mevzuat",
+    "destek",
+    "veri",
+    "rapor",
+    "ulke_bilgisi",
+    "iletisim",
+    "yayin",
+]
+
+
+@app.tool(
+    annotations={
+        "title": "Ticaret Bakanlığı kaynaklarını listele",
+        "readOnlyHint": True,
+        "destructiveHint": False,
+        "idempotentHint": True,
+        "openWorldHint": True,
+    }
+)
+async def list_ticaret_sources() -> dict:
+    """List official Ministry of Trade source trees and live document/page counts.
+
+    Returns separate source families for legislation, state supports, statistics/data,
+    reports, country-market information, counsellor/attaché contacts and publications.
+    The URLs and counts come from the current live catalogue, not a generated sector list.
+    """
+    return await ticaret_client.list_sources()
+
+
+@app.tool(
+    annotations={
+        "title": "Ticaret Bakanlığı kataloğunda ara",
+        "readOnlyHint": True,
+        "destructiveHint": False,
+        "idempotentHint": True,
+        "openWorldHint": True,
+    }
+)
+async def search_ticaret_catalog(
+    query: str = Field(
+        "",
+        max_length=300,
+        description=(
+            "Turkish keywords, document number, country, sector, support name or contact term. "
+            "Examples: 'Gümrük Kanunu 4458', '5973 pazara giriş desteği', "
+            "'Çin kozmetik sektör raporu', 'Kabil Ticaret Müşavirliği'. Leave empty to browse with filters."
+        ),
+    ),
+    content_kinds: Optional[list[_TICARET_CONTENT_KINDS]] = Field(
+        None,
+        description=(
+            "Optional separate information layers: mevzuat, destek, veri, rapor, "
+            "ulke_bilgisi, iletisim, yayin. Leave empty to search all layers."
+        ),
+    ),
+    source_ids: Optional[list[str]] = Field(
+        None,
+        description="Optional source IDs returned by list_ticaret_sources, e.g. ['gumruk', 'destekler'].",
+    ),
+    document_types: Optional[list[str]] = Field(
+        None,
+        description="Optional types such as Kanun, Yönetmelik, Tebliğ, Genelge, Karar, Rapor, İstatistik or Rehber.",
+    ),
+    year: Optional[int] = Field(None, ge=1900, le=2100, description="Optional year filter."),
+    include_repealed: bool = Field(
+        False,
+        description="Include records visibly marked Mülga/yürürlükten kaldırılmış. Default false for safer current-law analysis.",
+    ),
+    offset: int = Field(0, ge=0, le=100000, description="Zero-based result offset."),
+    limit: int = Field(20, ge=1, le=50, description="Maximum results to return (1-50)."),
+) -> TicaretSearchResult:
+    """Search the continuously refreshed Ministry of Trade information catalogue.
+
+    Covers customs, import/export rules and implementation notices, state support
+    decisions/circulars, internal trade, consumer and product-safety rules, free zones,
+    service trade, official statistics/data links, Ministry publications, country-market
+    and commercial counsellor/attaché reports, and overseas contact information.
+
+    This is metadata and live-page-summary search. Use get_ticaret_document for a selected
+    result's full text or search_ticaret_content to scan selected candidates. Every result
+    carries both the document URL and the Ministry source-page URL.
+    """
+    return await ticaret_client.search(
+        query=query,
+        content_kinds=list(content_kinds) if content_kinds else None,
+        source_ids=source_ids,
+        document_types=document_types,
+        year=year,
+        include_repealed=include_repealed,
+        offset=offset,
+        limit=limit,
+    )
+
+
+@app.tool(
+    annotations={
+        "title": "Ticaret Bakanlığı belgesini getir",
+        "readOnlyHint": True,
+        "destructiveHint": False,
+        "idempotentHint": True,
+        "openWorldHint": True,
+    }
+)
+async def get_ticaret_document(
+    document_id: str = Field(
+        ...,
+        pattern=r"^ticaret_[0-9a-f]{24}$",
+        description="Document ID returned by search_ticaret_catalog. URLs are not accepted; this prevents arbitrary downloads.",
+    ),
+    offset: int = Field(0, ge=0, le=10000000, description="Character offset for reading a later part of a long document."),
+    max_characters: int = Field(
+        40000,
+        ge=1000,
+        le=100000,
+        description="Maximum extracted characters returned in this call. Continue with offset when truncated=true.",
+    ),
+) -> TicaretDocumentContent:
+    """Fetch and extract a bounded slice of an official Ministry document or page.
+
+    Supports live HTML and official PDF, DOCX, XLSX, CSV, text and ZIP resources.
+    ZIP contents are listed and supported members are extracted within safety limits.
+    Large documents are paginated by character offset. The response includes resolved
+    official URL, source metadata, total size, truncation state and extraction warnings.
+    """
+    return await ticaret_client.get_document_content(
+        document_id,
+        offset=offset,
+        max_characters=max_characters,
+    )
+
+
+@app.tool(
+    annotations={
+        "title": "Ticaret Bakanlığı belgelerinde tam metin ara",
+        "readOnlyHint": True,
+        "destructiveHint": False,
+        "idempotentHint": True,
+        "openWorldHint": True,
+    }
+)
+async def search_ticaret_content(
+    query: str = Field(
+        ...,
+        min_length=2,
+        max_length=300,
+        description="Text or phrase to find inside official pages/documents.",
+    ),
+    document_ids: Optional[list[str]] = Field(
+        None,
+        max_length=25,
+        description=(
+            "Preferred precise mode: IDs returned by search_ticaret_catalog. "
+            "Provide up to 25 IDs to scan those exact documents."
+        ),
+    ),
+    content_kinds: Optional[list[_TICARET_CONTENT_KINDS]] = Field(
+        None,
+        description="Optional information-layer filters when document_ids is omitted.",
+    ),
+    source_ids: Optional[list[str]] = Field(
+        None,
+        description="Optional source IDs when document_ids is omitted.",
+    ),
+    year: Optional[int] = Field(None, ge=1900, le=2100, description="Optional year filter."),
+    include_repealed: bool = Field(False, description="Include visibly repealed records in candidate selection."),
+    max_documents_to_scan: int = Field(
+        12,
+        ge=1,
+        le=25,
+        description="Maximum documents downloaded and scanned in this call (1-25).",
+    ),
+    max_results: int = Field(10, ge=1, le=20, description="Maximum matching documents returned (1-20)."),
+) -> TicaretContentSearchResult:
+    """Search inside a bounded set of live Ministry pages and downloadable documents.
+
+    For broad research, first narrow candidates with search_ticaret_catalog and then pass
+    their IDs here in batches. The response explicitly reports candidate and scanned counts,
+    so a partial scan cannot be mistaken for an exhaustive legal conclusion.
+    """
+    return await ticaret_client.search_content(
+        query=query,
+        document_ids=document_ids,
+        content_kinds=list(content_kinds) if content_kinds else None,
+        source_ids=source_ids,
+        year=year,
+        include_repealed=include_repealed,
+        max_documents_to_scan=max_documents_to_scan,
+        max_results=max_results,
+    )
+
+
+@app.tool(
+    annotations={
+        "title": "Ticaret Bakanlığı katalog güncelliğini göster",
+        "readOnlyHint": True,
+        "destructiveHint": False,
+        "idempotentHint": True,
+        "openWorldHint": True,
+    }
+)
+async def get_ticaret_catalog_status(
+    force_refresh: bool = Field(
+        False,
+        description=(
+            "When true, wait for a full live rescan before returning. This can take several minutes; "
+            "normally leave false because automatic six-hour refresh is enabled."
+        ),
+    ),
+) -> TicaretCatalogStatus:
+    """Return catalogue freshness, next sync time, coverage counts and source errors."""
+    if force_refresh:
+        await ticaret_client.refresh_catalog()
+    return ticaret_client.status()
 
 
 def main():

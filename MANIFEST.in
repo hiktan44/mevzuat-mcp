@@ -1,6 +1,7 @@
 include README.md
 include LICENSE
 include requirements.txt
+include ticaret_sources.json
 include *.png
 recursive-exclude * __pycache__
 recursive-exclude * *.py[co]

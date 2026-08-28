@@ -1,6 +1,6 @@
-# Mevzuat MCP: Adalet Bakanlığı Mevzuat Bilgi Sistemi için MCP Sunucusu
+# Türkiye Mevzuat ve Ticaret Bakanlığı Bilgi MCP Sunucusu
 
-Bu proje, Adalet Bakanlığı'na ait Mevzuat Bilgi Sistemi'ne (`mevzuat.gov.tr`) erişimi kolaylaştıran bir [FastMCP](https://gofastmcp.com/) sunucusu oluşturur. Bu sayede, Mevzuat Bilgi Sistemi'nden mevzuat arama ve tüm mevzuat içeriklerini Markdown formatında alma işlemleri, Model Context Protocol (MCP) destekleyen LLM (Büyük Dil Modeli) uygulamaları (örneğin Claude Desktop veya [5ire](https://5ire.app)) ve diğer istemciler tarafından araç (tool) olarak kullanılabilir hale gelir.
+Bu proje; Adalet Bakanlığı Mevzuat Bilgi Sistemi, Bedesten Mevzuat servisi ve Ticaret Bakanlığının resmî bilgi kaynaklarını tek bir [FastMCP](https://gofastmcp.com/) sunucusunda birleştirir. Kanun, karar, yönetmelik ve tebliğlerin yanında gümrük, ithalat-ihracat, devlet destekleri, istatistikler, yayınlar, ülke-pazar raporları ve ticaret müşavirliği/ataşeliği bilgileri ChatGPT, Codex ve diğer MCP istemcilerince aranabilir ve analiz edilebilir.
 
 <a href="https://glama.ai/mcp/servers/@saidsurucu/mevzuat-mcp">
   <img width="380" height="200" src="https://glama.ai/mcp/servers/@saidsurucu/mevzuat-mcp/badge" alt="Mevzuat MCP server" />
@@ -11,9 +11,10 @@ Bu proje, Adalet Bakanlığı'na ait Mevzuat Bilgi Sistemi'ne (`mevzuat.gov.tr`)
 🎯 **Temel Özellikler**
 
 * Adalet Bakanlığı Mevzuat Bilgi Sistemi'ne programatik erişim için standart bir MCP arayüzü.
-* **26 farklı tool** ile kapsamlı mevzuat erişimi (iki farklı veri kaynağı):
+* **31 farklı tool** ile kapsamlı mevzuat ve Ticaret Bakanlığı bilgi erişimi (üç resmî kaynak ailesi):
     * **mevzuat.gov.tr** üzerinden 21 araç (türe özel arama ve içerik)
     * **bedesten.adalet.gov.tr** üzerinden 5 araç (birleşik arama, gerekçe, içindekiler)
+    * **ticaret.gov.tr** ve bağlı resmî alt alanlardan 5 araç (canlı katalog, belge okuma, tam metin arama ve güncellik)
 * Desteklenen 12 mevzuat türü:
     * **Kanun** - Türkiye Cumhuriyeti kanunları
     * **KHK** - Kanun Hükmünde Kararnameler
@@ -45,6 +46,61 @@ Bu proje, Adalet Bakanlığı'na ait Mevzuat Bilgi Sistemi'ne (`mevzuat.gov.tr`)
     * Tam cümle araması (exact phrase)
     * Tarih aralığı filtreleme
 * Claude Desktop ve 5ire gibi MCP istemcileri ile kolay entegrasyon
+
+## Ticaret Bakanlığı bilgi katmanları
+
+Kaynak listesi `ticaret_sources.json` dosyasında ayrı ve elle düzenlenebilir tutulur; başlıklar, sektörler, ülke adları ve belge bilgileri canlı sayfalardan dinamik olarak çıkarılır. Katalog varsayılan olarak altı saatte bir tamamen yenilenir. `TICARET_SYNC_INTERVAL_SECONDS`, `TICARET_SOURCES_FILE` ve `TICARET_EXTRA_SOURCES_JSON` değişkenleriyle dağıtım yeniden kod yazmadan özelleştirilebilir.
+
+| Katman | `content_kind` | Kapsam |
+|---|---|---|
+| Mevzuat | `mevzuat` | Gümrük, ithalat, ihracat, iç ticaret, tüketici, ürün güvenliği, serbest bölgeler, hizmet ticareti, esnaf/kooperatif ve ürün kuralları |
+| Devlet destekleri | `destek` | Destek kararları, uygulama esasları, genelgeler, program ve başvuru sayfaları |
+| İstatistik ve veri | `veri` | Bakanlık istatistikleri ve resmî veri kaynaklarına açılan bağlantılar |
+| Müşavirlik/pazar raporları | `rapor` | Ticaret müşavirleri ve ataşelerden gelen ülke, sektör, pazar, ihale ve ticari bilgi içerikleri |
+| Ülke/pazar bilgileri | `ulke_bilgisi` | Yurt dışı teşkilatı ülke sayfaları ve doğrudan yayımlanan ülke belgeleri |
+| İletişim | `iletisim` | Müşavirlik/ataşelik listeleri, adres ve iletişim servisleri |
+| Bakanlık yayınları | `yayin` | Faaliyet, strateji, performans ve diğer Bakanlık rapor/yayınları |
+
+Yeni araçlar:
+
+* `list_ticaret_sources`: katmanları, resmî başlangıç URL'lerini ve canlı kayıt sayılarını gösterir.
+* `search_ticaret_catalog`: katman, kaynak, belge türü, yıl ve mülga durumu filtreleriyle arar.
+* `get_ticaret_document`: resmî HTML/PDF/DOCX/XLSX/CSV/ZIP içeriklerini güvenli sınırlar içinde getirir.
+* `search_ticaret_content`: seçilen en fazla 25 belgenin tam metninde bağlamlı arama yapar.
+* `get_ticaret_catalog_status`: son yenileme, sonraki tarama, kapsam parmak izi ve kaynak hatalarını verir.
+
+> Hukuki yorumlar bilgilendirme amaçlıdır. Sonuçlarda verilen resmî URL, tarih, sayı, mülga/yürürlük durumu ve varsa sonraki değişiklikler karar öncesinde doğrulanmalıdır.
+
+## ChatGPT ve Codex bağlantısı
+
+Uzak MCP adresi: `https://mevzuat-mcp.fly.dev/mcp`
+
+> Bu adres, v1.1.0 Fly dağıtımı tamamlandıktan ve sağlık/MCP taraması doğrulandıktan sonra aşağıdaki bağlantılar için kullanılmalıdır.
+
+ChatGPT'de geliştirici modu açıkken **Ayarlar → Uygulamalar → Oluştur** ekranında bu adresi endpoint olarak verin, kimlik doğrulamayı **Yok** seçin ve **Araçları tara** ile 31 aracı yükleyin. Codex için:
+
+```bash
+codex mcp add mevzuat-mcp --url https://mevzuat-mcp.fly.dev/mcp
+```
+
+Responses API örneği:
+
+```python
+from openai import OpenAI
+
+client = OpenAI()
+response = client.responses.create(
+    model="gpt-5",
+    input="4458 sayılı Gümrük Kanununa göre bu ithalat işlemini resmî kaynaklarıyla değerlendir.",
+    tools=[{
+        "type": "mcp",
+        "server_label": "turkiye_mevzuat_ticaret",
+        "server_url": "https://mevzuat-mcp.fly.dev/mcp",
+        "require_approval": "never",
+    }],
+)
+print(response.output_text)
+```
 
 ---
 🌐 **En Kolay Yol: Ücretsiz Remote MCP (Claude Desktop için)**
@@ -210,7 +266,7 @@ CB Kararı ve CB Genelgesi gibi PDF tabanlı mevzuatlar için Mistral OCR kullan
 ---
 🛠️ **Kullanılabilir Araçlar (MCP Tools)**
 
-Bu FastMCP sunucusu LLM modelleri için **26 araç** sunar (iki farklı veri kaynağı).
+Bu FastMCP sunucusu LLM modelleri için **31 araç** sunar (üç resmî kaynak ailesi).
 
 ### A. mevzuat.gov.tr Araçları (21 araç)
 
