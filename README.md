@@ -70,9 +70,11 @@ Yeni araçlar:
 * `get_ticaret_catalog_status`: son yenileme, sonraki tarama, kapsam parmak izi ve kaynak hatalarını verir.
 * `prepare_customs_precheck`: ürün, aday GTİP, menşe ve maliyet girdileri için TAREKS/TSE, ürün güvenliği, kimyasallar, gümrük kıymeti, vergi ve ticaret politikası önlemlerine ilişkin tarihli resmî kanıt paketi hazırlar.
 * `sync_official_tariff_data`, `lookup_tariff_measures`, `calculate_import_landed_cost`, `compare_tariff_snapshots`: 2026 İthalat Rejimi ve İGV arşivlerini SHA-256 ile sürümler; GTİP/menşe sütununu kaynak dosya, sayfa ve satır düzeyinde gösterir.
-* `sync_import_control_rules`, `lookup_import_controls`, `compare_import_control_snapshots`: güncel Ürün Güvenliği ve Denetimi tebliğlerinin Ek-1 kapsamlarını resmî konsolide metinden indeksler; liste kapsamını TAREKS risk sonucu ve fiilî denetimden ayırır.
+* `sync_import_control_rules`, `lookup_import_controls`, `compare_import_control_snapshots`: güncel Ürün Güvenliği ve Denetimi tebliğlerinin kaynakta belirtilen kapsam eklerini resmî konsolide metin veya resmî ek arşivinden indeksler; liste kapsamını TAREKS risk sonucu ve fiilî denetimden ayırır. 2026/21 için yalnız kapsam oluşturan Ek-1/A–D ile Ek-2 alınır; form ekleri dışarıda bırakılır ve 168 GTİP satırı indekslenir.
 
 Kontrol tebliğlerinin ilk soğuk eşitlemesi, resmî Bedesten hız sınırına saygı göstermek için tek tek ve aralıklı yapılır; birkaç dakika sürebilir. Sonraki sorgular `/data` içindeki snapshot'tan yanıtlanır ve altı saatte bir güncellenir. `CONTROL_REQUEST_INTERVAL_SECONDS` varsayılanı `6.5` saniyedir; resmî servisin sınırını aşacak şekilde düşürülmemelidir.
+
+Mevzuat/Resmî Gazete sunucusu geçerli TLS uç sertifikasıyla birlikte zaman zaman ara sertifikayı göndermediği için uygulama yalnızca DigiCert tarafından yayımlanan **GeoTrust TLS RSA CA G1** ara sertifikasını varsayılan güven zincirine ekler. Kök güveni, alan adı kontrolü, imza ve geçerlilik tarihleri kapatılmaz; `verify=False` kullanılmaz.
 
 ## Gümrükçe’ye Sor
 
@@ -117,7 +119,7 @@ Web araştırma arayüzü: `https://mevzuat-mcp.seymata.com/`
 
 Arayüzde Ticaret Bakanlığının yedi bilgi katmanı canlı kayıt sayılarıyla ayrı gösterilir; kaynak, belge türü, yıl ve mülga durumu filtrelenebilir. Seçilen kaydın resmî kaynak zinciri, tam metni ve kopyalanabilir atfı aynı ekranda açılır. **Genel mevzuat** görünümü Bedesten resmî servisine bağlı ayrı arama alanıdır.
 
-> Coolify dağıtımı v1.4.0 sağlık, web arayüzü ve MCP araç taramasıyla doğrulanır. Snapshot verilerini kalıcı tutmak için uygulamada `/data` hedefine persistent volume bağlayın; imaj `MEVZUAT_DATA_DIR=/data` ile hazır gelir.
+> Coolify dağıtımı v1.4.1 sağlık, web arayüzü ve MCP araç taramasıyla doğrulanır. Snapshot verilerini kalıcı tutmak için uygulamada `/data` hedefine persistent volume bağlayın; imaj `MEVZUAT_DATA_DIR=/data` ile hazır gelir.
 
 ChatGPT'de geliştirici modu açıkken **Ayarlar → Uygulamalar → Oluştur** ekranında bu adresi endpoint olarak verin, kimlik doğrulamayı **Yok** seçin ve **Araçları tara** ile 39 aracı yükleyin. Tarife, maliyet, ithalat kontrolü ve Gümrükçe araçları MCP Apps yapılandırılmış sonuç görünümünü destekler. Codex için:
 
@@ -308,7 +310,7 @@ CB Kararı ve CB Genelgesi gibi PDF tabanlı mevzuatlar için Mistral OCR kullan
 ---
 🛠️ **Kullanılabilir Araçlar (MCP Tools)**
 
-Bu FastMCP sunucusu LLM modelleri için **32 araç** sunar (üç resmî kaynak ailesi).
+Bu FastMCP sunucusu LLM modelleri için **39 araç** sunar (üç resmî kaynak ailesi).
 
 ### A. mevzuat.gov.tr Araçları (21 araç)
 

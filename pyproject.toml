@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "mevzuat-mcp"
-version = "1.4.0"
+version = "1.4.1"
 description = "Remote MCP for Turkish legislation and live Ministry of Trade laws, supports, data, reports and overseas contacts"
 readme = "README.md"
 requires-python = ">=3.11"
@@ -50,7 +50,7 @@ dependencies = [
 mevzuat-mcp = "mevzuat_mcp_server:main"
 
 [tool.setuptools]
-py-modules = ["mevzuat_mcp_server", "mevzuat_client", "mevzuat_models", "article_search", "bedesten_client", "bedesten_models", "ticaret_client", "ticaret_models", "customs_advisor", "tariff_engine", "control_engine"]
+py-modules = ["mevzuat_mcp_server", "mevzuat_client", "mevzuat_models", "article_search", "bedesten_client", "bedesten_models", "ticaret_client", "ticaret_models", "customs_advisor", "tariff_engine", "control_engine", "trusted_certificates"]
 packages = ["semantic_search"]
 
 [tool.setuptools.data-files]

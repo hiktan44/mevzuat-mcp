@@ -1,3 +1,4 @@
+import asyncio
 import io
 import tempfile
 import unittest
@@ -13,7 +14,6 @@ from control_engine import (
     extract_scope_table,
     infer_process,
 )
-
 
 SAMPLE = """
 Amaç MADDE 1- Ek-1'de yer alan ürünler risk analizine göre denetlenir.
@@ -100,7 +100,6 @@ Yürürlükten kaldırılan tebliğ
                         ("vehicles", "870310110000", "Acil müdahale araçları hariç", "8703.10.11.00.00 hariç", 20, 1),
                     ],
                 )
-            import asyncio
             result = asyncio.run(engine.lookup("870310110000"))
             asyncio.run(engine.close())
             self.assertEqual(result.status, "not_found")
@@ -119,6 +118,22 @@ Yürürlükten kaldırılan tebliğ
         rows = extract_attachment_scope(archive.getvalue())
         self.assertEqual([row.gtip_prefix for row in rows], ["080510200000"])
         self.assertIn("Portakal", rows[0].description)
+
+    def test_attachment_filter_excludes_forms_and_standard_years(self):
+        archive = io.BytesIO()
+        with zipfile.ZipFile(archive, "w") as output:
+            output.writestr("2026-21 Ek 1 A.txt", "GTİP\n1507.90.90.00.00 Soya yağı TS 890 Nisan 2016")
+            output.writestr("2026 21 Ek 4.txt", "2026/21 formu 0407.21.00.00.00")
+        rows = extract_attachment_scope(
+            archive.getvalue(),
+            member_suffixes=["Ek 1 A.txt"],
+        )
+        self.assertEqual([row.gtip_prefix for row in rows], ["150790900000"])
+
+    def test_prefers_exact_official_document_attachment(self):
+        raw = '<a href="9.5.42906-Ek.zip">Ek</a>'
+        exact = "https://www.mevzuat.gov.tr/MevzuatMetin/yonetmelik/9.5.42906-Ek.zip"
+        self.assertEqual(ImportControlEngine._official_attachment_url(raw, [exact]), exact)
 
     def test_process_keeps_risk_separate(self):
         process = infer_process(SAMPLE, "İthalatta Standartlara Uygunluk Denetimi Tebliği")
@@ -145,7 +160,6 @@ Yürürlükten kaldırılan tebliğ
                     "INSERT INTO control_scope VALUES (?,?,?,?,?,?)",
                     ("snap", "6104", "Kadın giyim", "6104 Kadın giyim", 10, 0),
                 )
-            import asyncio
             result = asyncio.run(engine.lookup("850760000000"))
             asyncio.run(engine.close())
             self.assertEqual(result.status, "not_found")

@@ -24,7 +24,7 @@ import sqlite3
 import time
 import unicodedata
 import zipfile
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any, Literal
 from urllib.parse import urljoin, urlsplit
@@ -36,6 +36,7 @@ from markitdown import MarkItDown
 from pydantic import BaseModel, Field
 
 from bedesten_client import BedestenClient
+from trusted_certificates import GEOTRUST_TLS_RSA_CA_G1_PEM
 
 _CODE_RE = re.compile(
     r"(?<!\d)(\d{4}(?:[.\t ]\d{2}){1,4}|\d{2}(?:[.\t ]\d{2}){1,5}|\d{4})(?!\d)"
@@ -47,7 +48,7 @@ _DOCUMENT_HEADING_RE = re.compile(
 
 
 def _now() -> str:
-    return datetime.now(timezone.utc).astimezone().isoformat(timespec="seconds")
+    return datetime.now(UTC).astimezone().isoformat(timespec="seconds")
 
 
 def _key(value: Any) -> str:
@@ -142,8 +143,20 @@ def _scope_rows_from_segment(segment: str) -> list[ControlScopeRow]:
         # headings are dotted or appear after a GTIP/GTP column heading.
         before = segment[max(0, match.start() - 300) : match.start()]
         before_key = _key(before)
-        if len(code) == 4 and "gtip" not in before_key and "gtp" not in before_key and "." not in match.group(1):
-            continue
+        if len(code) == 4:
+            # Bare four-digit values in rich annex tables are overwhelmingly
+            # standard numbers and years (TS 1275, 2016, 2024), not tariff
+            # headings. Genuine four-digit headings are printed as 87.02.
+            if "." not in match.group(1):
+                continue
+            line_start = max(segment.rfind("\n", 0, match.start()), segment.rfind("|", 0, match.start()))
+            line_prefix = segment[line_start + 1 : match.start()]
+            if not (
+                re.fullmatch(r"\s*(?:\d+\s*[.)-]?)?\s*", line_prefix)
+                or "gtip" in before_key[-100:]
+                or "gtp" in before_key[-100:]
+            ):
+                continue
         next_start = matches[index + 1].start() if index + 1 < len(matches) else match.end() + 500
         raw_description = segment[match.end() : min(next_start, match.end() + 500)]
         description = re.sub(r"\s+", " ", raw_description).strip(" \n\t-–:;.,")
@@ -246,8 +259,12 @@ def _tabular_bytes_to_text(data: bytes, extension: str) -> str:
     return "\n".join(lines)
 
 
-def extract_attachment_scope(data: bytes, converter: MarkItDown | None = None) -> list[ControlScopeRow]:
-    """Extract tariff rows from an official annex ZIP without trusting filenames."""
+def extract_attachment_scope(
+    data: bytes,
+    converter: MarkItDown | None = None,
+    member_suffixes: list[str] | None = None,
+) -> list[ControlScopeRow]:
+    """Extract tariff rows from selected scope members of an official ZIP."""
     if len(data) > 50 * 1024 * 1024:
         raise ValueError("Resmî ek arşivi 50 MB güvenlik sınırını aşıyor.")
     rows: list[ControlScopeRow] = []
@@ -259,6 +276,10 @@ def extract_attachment_scope(data: bytes, converter: MarkItDown | None = None) -
         for item in archive.infolist():
             if item.is_dir() or item.file_size > 50 * 1024 * 1024:
                 continue
+            if member_suffixes:
+                member_key = _key(Path(item.filename).name)
+                if not any(member_key.endswith(_key(suffix)) for suffix in member_suffixes):
+                    continue
             extension = Path(item.filename).suffix.casefold()
             member = archive.read(item)
             if extension in {".xlsx", ".xls"}:
@@ -331,7 +352,7 @@ class ImportControlEngine:
         config = json.loads(config_file.read_text(encoding="utf-8"))
         self.rules_config = list(config.get("rules", []))
         configured_year = str(config.get("valid_from", ""))[:4]
-        self.year = datetime.now().year
+        self.year = datetime.now(UTC).year
         if configured_year.isdigit() and int(configured_year) != self.year:
             for rule in self.rules_config:
                 rule["code"] = str(rule["code"]).replace(configured_year, str(self.year), 1)
@@ -342,10 +363,17 @@ class ImportControlEngine:
         root.mkdir(parents=True, exist_ok=True)
         self.db_path = root / "controls.sqlite3"
         self._client = BedestenClient(cache_ttl=self.sync_interval_seconds)
+        attachment_ssl = httpx.create_ssl_context()
+        attachment_ssl.load_verify_locations(cadata=GEOTRUST_TLS_RSA_CA_G1_PEM)
         self._attachment_http = httpx.AsyncClient(
-            headers={"User-Agent": "MevzuatMCP/1.4 (+official-annex-indexer)"},
+            verify=attachment_ssl,
+            headers={
+                "User-Agent": "Mozilla/5.0 (compatible; MevzuatMCP/1.4; +https://mevzuat-mcp.seymata.com/)",
+                "Accept": "application/zip,application/octet-stream;q=0.9,*/*;q=0.8",
+            },
             follow_redirects=True,
             timeout=httpx.Timeout(75.0),
+            trust_env=False,
         )
         self._converter = MarkItDown()
         self._sync_lock = asyncio.Lock()
@@ -481,8 +509,9 @@ class ImportControlEngine:
             return config, text, document, raw_html
 
     @staticmethod
-    def _official_attachment_url(raw_html: str) -> str | None:
-        candidates = re.findall(r"(?is)href\s*=\s*['\"]([^'\"]+)['\"]", raw_html)
+    def _official_attachment_url(raw_html: str, document_attachments: list[str] | None = None) -> str | None:
+        candidates = list(document_attachments or [])
+        candidates.extend(re.findall(r"(?is)href\s*=\s*['\"]([^'\"]+)['\"]", raw_html))
         for candidate in candidates:
             href = html.unescape(candidate).strip()
             if not href.casefold().endswith(".zip"):
@@ -493,8 +522,12 @@ class ImportControlEngine:
                 return url
         return None
 
-    async def _download_attachment(self, raw_html: str) -> tuple[bytes, str]:
-        url = self._official_attachment_url(raw_html)
+    async def _download_attachment(
+        self,
+        raw_html: str,
+        document_attachments: list[str] | None = None,
+    ) -> tuple[bytes, str]:
+        url = self._official_attachment_url(raw_html, document_attachments)
         if not url:
             raise RuntimeError("Resmî metindeki ek arşivi bağlantısı bulunamadı")
         async with self._attachment_http.stream("GET", url) as response:
@@ -561,8 +594,12 @@ class ImportControlEngine:
                         scope = extract_annex_scope(text, int(config.get("scope_annex", 1)))
                     if config.get("scope_attachment"):
                         try:
-                            attachment, _ = await self._download_attachment(raw_html)
-                            scope = extract_attachment_scope(attachment, self._converter)
+                            attachment, _ = await self._download_attachment(raw_html, document.ekler)
+                            scope = extract_attachment_scope(
+                                attachment,
+                                self._converter,
+                                list(config.get("scope_attachment_member_suffixes", [])),
+                            )
                             attachment_digest = hashlib.sha256(attachment).hexdigest()
                         except Exception as exc:
                             self._errors.append(f"{config['code']}: resmî ek arşivi işlenemedi ({exc})")

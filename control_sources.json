@@ -23,7 +23,7 @@
     {"code": "2026/18", "title": "Tekstil ve Deri Ürünlerinin İthalat Denetimi Tebliği", "category": "tekstil ve deri"},
     {"code": "2026/19", "title": "Tütün, Tütün Mamulleri, Alkol ve Alkollü İçkilerin İthalat Denetimi Tebliği", "category": "tütün ve alkol"},
     {"code": "2026/20", "title": "Sağlık Bakanlığınca Denetlenen Bazı Ürünlerin İthalat Denetimi Tebliği", "category": "sağlık ürünleri"},
-    {"code": "2026/21", "title": "Bazı Tarım Ürünlerinin İhracatında ve İthalatında Ticari Kalite Denetimi Tebliği", "category": "tarım ürünleri kalite denetimi", "scope_attachment": true},
+    {"code": "2026/21", "title": "Bazı Tarım Ürünlerinin İhracatında ve İthalatında Ticari Kalite Denetimi Tebliği", "category": "tarım ürünleri kalite denetimi", "scope_attachment": true, "scope_attachment_member_suffixes": ["Ek 2.docx", "Ek 1 A.docx", "Ek 1 B.docx", "Ek 1 C.docx", "Ek 1 D.docx"]},
     {"code": "2026/23", "title": "Çevrenin Korunması Yönünden Kontrol Altında Tutulan Metal Hurdaların İthalat Denetimi Tebliği", "category": "metal hurdalar"},
     {"code": "2026/25", "title": "Araç Parçalarının İthalat Denetimi Tebliği", "category": "araç parçaları"},
     {"code": "2026/31", "title": "Karayolu Taşıt Araçlarının İthalat Denetimi Tebliği", "category": "karayolu taşıtları", "scope_table": {"start_pattern": "^\\s*GTP\\s*$", "end_pattern": "^\\s*Yürürlükten kaldırılan tebliğ"}},
