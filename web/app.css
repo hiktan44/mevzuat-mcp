@@ -293,6 +293,7 @@ svg { display: block; fill: none; stroke: currentColor; stroke-width: 1.8; strok
 .field-wide { margin-bottom: 20px; }
 .field-wide textarea { min-height: 78px; }
 .product-input-grid { display: grid; grid-template-columns: 240px minmax(0,1fr); gap: 18px; }
+.image-intake { min-width: 0; display: flex; flex-direction: column; gap: 9px; }
 .upload-zone { position: relative; min-height: 260px; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 18px; overflow: hidden; border: 1px dashed var(--line-strong); background: var(--canvas); text-align: center; cursor: pointer; }
 .upload-zone.dragging { border-color: var(--teal); background: var(--teal-soft); }
 .upload-zone input { position: absolute; width: 1px; height: 1px; opacity: 0; }
@@ -302,6 +303,16 @@ svg { display: block; fill: none; stroke: currentColor; stroke-width: 1.8; strok
 .upload-zone small { max-width: 175px; margin-top: 6px; color: var(--ink-3); font-size: .57rem; }
 .upload-zone img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
 .upload-zone.has-image::after { content: "Değiştir"; position: absolute; right: 8px; bottom: 8px; padding: 6px 9px; background: rgba(11,30,63,.9); color: #fff; font-size: .56rem; font-weight: 700; }
+.vision-analyse-button { min-height: 50px; display: flex; align-items: center; justify-content: center; gap: 10px; width: 100%; border: 1px solid var(--teal); background: var(--teal); color: #fff; font-family: var(--display); font-size: .88rem; font-weight: 700; cursor: pointer; }
+.vision-analyse-button[hidden], .vision-route[hidden] { display: none; }
+.vision-analyse-button:hover { background: var(--teal-dark); border-color: var(--teal-dark); }
+.vision-analyse-button:focus-visible { outline: 3px solid color-mix(in srgb, var(--teal) 34%, transparent); outline-offset: 2px; }
+.vision-analyse-button:disabled { opacity: .68; cursor: wait; }
+.vision-analyse-button svg { width: 19px; height: 19px; fill: none; stroke: currentColor; stroke-width: 1.8; }
+.vision-analyse-button[aria-busy="true"] svg { animation: vision-spin 1.1s linear infinite; }
+.vision-route { display: block; color: var(--ink-3); font-size: .55rem; line-height: 1.45; text-align: center; }
+@keyframes vision-spin { to { transform: rotate(360deg); } }
+@media (prefers-reduced-motion: reduce) { .vision-analyse-button[aria-busy="true"] svg { animation: none; } }
 .product-fields { display: grid; gap: 13px; }
 .product-fields > .field textarea { min-height: 102px; }
 .field-row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }

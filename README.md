@@ -78,7 +78,7 @@ Mevzuat/Resmî Gazete sunucusu geçerli TLS uç sertifikasıyla birlikte zaman z
 
 ## Gümrükçe’ye Sor
 
-Web arayüzündeki **Gümrükçe’ye Sor** sekmesi iki ayrı güvenlik aşaması kullanır. Fotoğraf önce yalnızca ürün evsafına çevrilir; tanım, görünen marka/model, ölçü, etiket metni, görünen ve belirsiz özellikler düzenlenebilir satırlara gelir. Kullanıcı bu alanları açıkça onaylamadan GTİP, vergi veya TAREKS araştırması başlamaz. Ardından en fazla beş **aday** kod, gerekli belgeler, kontroller ve resmî snapshot'ta menşe/dipnot bakımından tek anlamlı olan oranlar ile kullanıcı tarafından ayrıca doğrulanan mali kalemler kaynak kimlikleriyle sunulur.
+Web arayüzündeki **Gümrükçe’ye Sor** sekmesi iki ayrı güvenlik aşaması kullanır. Fotoğraf cihazda önizlendikten sonra görünen **Ürünü Analiz Et** düğmesiyle kullanıcı analizi açıkça başlatır; görsel bu eylemden önce sunucuya gönderilmez. Fotoğraf yalnızca ürün evsafına çevrilir; tanım, görünen marka/model, ölçü, etiket metni, görünen ve belirsiz özellikler düzenlenebilir satırlara gelir. Kullanıcı bu alanları açıkça onaylamadan GTİP, vergi veya TAREKS araştırması başlamaz. Ardından en fazla beş **aday** kod, gerekli belgeler, kontroller ve resmî snapshot'ta menşe/dipnot bakımından tek anlamlı olan oranlar ile kullanıcı tarafından ayrıca doğrulanan mali kalemler kaynak kimlikleriyle sunulur.
 
 Çalışma masasında ayrıca **Tarife & Maliyet**, **Kontroller & Belgeler**, **Değişiklikler** ve **İşlem Rehberi** sekmeleri bulunur. Tarife ekranı resmî workbook/sheet/row ve arşiv checksum'unu; kontrol ekranı tebliğ Ek-1 satırını, yetkili sistemi ve risk uyarısını; değişiklik ekranı snapshot farklarını, cihazdaki GTİP izleme listesini ve kaydedilmiş ön değerlendirmeleri gösterir.
 

@@ -730,10 +730,10 @@ const visionFieldSelectors = [
 function setVisionState(status, message, provider = "") {
   state.customsVisionStatus = status;
   const labels = {
-    idle: "Bekliyor", analysing: "Analiz ediliyor", review: "Kullanıcı kontrolü", confirmed: "Onaylandı", error: "Elle doldurun",
+    idle: "Bekliyor", ready: "Analize hazır", analysing: "Analiz ediliyor", review: "Kullanıcı kontrolü", confirmed: "Onaylandı", error: "Elle doldurun",
   };
   const panel = $("#attributeReview");
-  if (panel) panel.hidden = !state.customsImageData;
+  if (panel) panel.hidden = !state.customsImageData || ["idle", "ready"].includes(status);
   const badge = $("#visionState");
   badge.dataset.state = status;
   badge.textContent = labels[status] || status;
@@ -744,7 +744,27 @@ function setVisionState(status, message, provider = "") {
   confirm.querySelector("span").textContent = status === "confirmed"
     ? "Evsaflar onaylandı · Değişiklikte tekrar onaylayın"
     : "Evsafları onayla ve araştırmaya hazırla";
+  updateVisionAnalyseButton(status);
   updateReadiness();
+}
+
+function updateVisionAnalyseButton(status) {
+  const button = $("#analyseImageButton");
+  const route = $("#visionRoute");
+  if (!button || !route) return;
+  const hasImage = Boolean(state.customsImageData);
+  button.hidden = !hasImage;
+  route.hidden = !hasImage;
+  button.disabled = status === "analysing";
+  button.setAttribute("aria-busy", status === "analysing" ? "true" : "false");
+  const labels = {
+    ready: "Ürünü Analiz Et",
+    analysing: "Fotoğraf Analiz Ediliyor…",
+    review: "Fotoğrafı Yeniden Analiz Et",
+    confirmed: "Fotoğrafı Yeniden Analiz Et",
+    error: "Analizi Tekrar Dene",
+  };
+  button.querySelector("span").textContent = labels[status] || "Ürünü Analiz Et";
 }
 
 function joinLines(values) {
@@ -823,7 +843,8 @@ async function setProductImage(file) {
     $("#uploadZone").classList.remove("has-image");
     $("#attributeReview").hidden = true;
     $("#uploadTitle").textContent = "Ürün fotoğrafı ekle";
-    $("#uploadHint").textContent = "Yüklenince görsel evsaf analizi otomatik başlar";
+    $("#uploadHint").textContent = "JPEG, PNG veya WebP · en fazla 8 MB";
+    updateVisionAnalyseButton("idle");
     updateReadiness();
     return;
   }
@@ -842,8 +863,12 @@ async function setProductImage(file) {
   $("#imagePreview").hidden = false;
   $("#uploadZone").classList.add("has-image");
   $("#uploadTitle").textContent = file.name;
-  $("#uploadHint").textContent = `${numberFormat.format(Math.ceil(file.size / 1024))} KB · sunucuda saklanmaz`;
-  await analyseProductImage();
+  $("#uploadHint").textContent = `${numberFormat.format(Math.ceil(file.size / 1024))} KB · analiz siz başlatmadan gönderilmez`;
+  state.customsVisionResult = null;
+  setVisionState(
+    "ready",
+    "Fotoğraf hazır. Ürünü Analiz Et düğmesine bastığınızda yalnızca görünür evsaflar çıkarılır.",
+  );
 }
 
 function customsRequestBody() {
@@ -883,6 +908,7 @@ function customsRequestBody() {
 }
 
 $("#productImage").addEventListener("change", (event) => setProductImage(event.target.files?.[0]).catch(() => showToast("Görsel okunamadı.")));
+$("#analyseImageButton").addEventListener("click", analyseProductImage);
 const uploadZone = $("#uploadZone");
 ["dragenter", "dragover"].forEach((name) => uploadZone.addEventListener(name, (event) => { event.preventDefault(); uploadZone.classList.add("dragging"); }));
 ["dragleave", "drop"].forEach((name) => uploadZone.addEventListener(name, (event) => { event.preventDefault(); uploadZone.classList.remove("dragging"); }));
@@ -918,8 +944,13 @@ $("#confirmAttributes").addEventListener("click", () => {
 $("#customsForm").addEventListener("submit", async (event) => {
   event.preventDefault();
   if (state.customsImageData && state.customsVisionStatus !== "confirmed") {
-    showToast("Önce fotoğraftan çıkarılan evsafları kontrol edip onaylayın.");
-    $("#attributeReview").scrollIntoView({ behavior: "smooth", block: "center" });
+    if (["idle", "ready"].includes(state.customsVisionStatus)) {
+      showToast("Önce Ürünü Analiz Et düğmesine basın.");
+      $("#analyseImageButton").scrollIntoView({ behavior: "smooth", block: "center" });
+    } else {
+      showToast("Önce fotoğraftan çıkarılan evsafları kontrol edip onaylayın.");
+      $("#attributeReview").scrollIntoView({ behavior: "smooth", block: "center" });
+    }
     return;
   }
   const button = $("#analyseButton");
