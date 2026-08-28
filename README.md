@@ -75,6 +75,10 @@ Yeni araçlar:
 
 Uzak MCP adresi: `https://mevzuat-mcp.seymata.com/mcp`
 
+Web araştırma arayüzü: `https://mevzuat-mcp.seymata.com/`
+
+Arayüzde Ticaret Bakanlığının yedi bilgi katmanı canlı kayıt sayılarıyla ayrı gösterilir; kaynak, belge türü, yıl ve mülga durumu filtrelenebilir. Seçilen kaydın resmî kaynak zinciri, tam metni ve kopyalanabilir atfı aynı ekranda açılır. **Genel mevzuat** görünümü Bedesten resmî servisine bağlı ayrı arama alanıdır.
+
 > Bu Coolify dağıtımı v1.1.0 sağlık ve MCP araç taramasıyla doğrulanmıştır.
 
 ChatGPT'de geliştirici modu açıkken **Ayarlar → Uygulamalar → Oluştur** ekranında bu adresi endpoint olarak verin, kimlik doğrulamayı **Yok** seçin ve **Araçları tara** ile 31 aracı yükleyin. Codex için:
