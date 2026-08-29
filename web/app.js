@@ -62,7 +62,7 @@ const sourceLabels = {
   urun_kurallari: "Ürün kuralları",
   istatistikler_veri: "İstatistikler",
   musavirlik_pazar: "Müşavirlik ve pazar bilgileri",
-  musavirlik_blog_guncel: "Güncel müşavirlik raporları",
+  musavirlik_blog_guncel: "Müşavirlik güncel bilgileri",
   yurtdisi_teskilati: "Yurt dışı teşkilatı",
   musavirlik_iletisim: "Müşavirlik iletişim",
   bakanlik_yayinlari: "Bakanlık yayınları",
@@ -273,8 +273,33 @@ function runSearch(args = {}) {
 }
 
 function citationRows(rows) {
-  $("#citationSpine").innerHTML = rows.map(([label, value, warning]) => `
-    <div class="citation-line${warning ? " warning" : ""}"><span>${escapeHtml(label)}</span><b>${escapeHtml(value || "—")}</b></div>`).join("");
+  $("#citationSpine").innerHTML = rows.map(([label, value, warning, url]) => {
+    const renderedValue = url
+      ? `<a href="${safeUrl(url)}" target="_blank" rel="noreferrer">${escapeHtml(value || "Resmî sayfayı aç")}<span aria-hidden="true">↗</span></a>`
+      : `<b>${escapeHtml(value || "—")}</b>`;
+    return `<div class="citation-line${warning ? " warning" : ""}"><span>${escapeHtml(label)}</span>${renderedValue}</div>`;
+  }).join("");
+}
+
+function renderOfficialLinks(doc, resolvedUrl = "") {
+  const candidates = [
+    [doc.document_url, doc.file_type && doc.file_type !== "html" && doc.file_type !== "link" ? `Belgeyi aç · ${String(doc.file_type).toUpperCase()}` : "Belge sayfasını aç", "Seçilen kayıt"],
+    [doc.source_page_url, "Yayımlandığı sayfayı aç", sourceLabels[doc.source_id] || "Resmî kaynak"],
+    [resolvedUrl, "Okunan resmî adresi aç", "Tam metnin alındığı adres"],
+  ];
+  const seen = new Set();
+  const links = candidates.filter(([url]) => {
+    if (!url) return false;
+    const href = safeUrl(url || "");
+    if (href === "#" || seen.has(href)) return false;
+    seen.add(href);
+    return true;
+  });
+  $("#readerLinks").innerHTML = links.map(([url, title, description]) => `
+    <a href="${safeUrl(url)}" target="_blank" rel="noreferrer">
+      <span><b>${escapeHtml(title)}</b><small>${escapeHtml(description)}</small></span><i aria-hidden="true">↗</i>
+    </a>`).join("");
+  $(".reader-links").hidden = links.length === 0;
 }
 
 function showReader(documentData, trigger) {
@@ -416,12 +441,13 @@ async function openTicaretDocument(doc, trigger) {
   $("#readerKind").textContent = `${kindLabels[doc.content_kind] || "Belge"} · ${String(doc.file_type || "web").toUpperCase()}`;
   $("#readerTitle").textContent = doc.title;
   $("#officialLink").href = safeUrl(doc.document_url || doc.source_page_url);
+  renderOfficialLinks(doc);
   citationRows([
     ["Katman", kindLabels[doc.content_kind]],
-    ["Kaynak", sourceLabels[doc.source_id] || doc.source_id],
-    ["Bölüm", doc.section],
-    ["Tür / no", [doc.document_type, doc.number].filter(Boolean).join(" · ")],
-    ["Tarih", doc.publication_date || doc.page_updated_at],
+    ["Kaynak", sourceLabels[doc.source_id] || doc.source_id, false, doc.source_page_url],
+    ["Bölüm", doc.section, false, doc.source_page_url],
+    ["Tür / no", [doc.document_type, doc.number].filter(Boolean).join(" · "), false, doc.document_url],
+    ["Tarih", doc.publication_date || doc.page_updated_at, false, doc.source_page_url],
     ["Yürürlük", doc.is_repealed ? "Mülga / yürürlükten kaldırılmış" : "Kaynağından doğrulayın", doc.is_repealed],
   ]);
   readerContent.textContent = "Belge metni resmî kaynaktan çıkarılıyor…";
@@ -429,6 +455,7 @@ async function openTicaretDocument(doc, trigger) {
   try {
     const data = await fetchJson(`/api/ticaret/document/${encodeURIComponent(doc.id)}`);
     setReaderContent(data.content);
+    renderOfficialLinks(doc, data.resolved_url);
     state.currentOffset = data.offset + data.returned_characters;
     loadMoreContent.hidden = !data.truncated;
     if (data.warnings?.length) {
@@ -446,9 +473,16 @@ async function openGeneralDocument(doc, trigger) {
   $("#readerKind").textContent = "Genel mevzuat";
   $("#readerTitle").textContent = doc.title;
   $("#officialLink").href = safeUrl(doc.source_url || "https://www.mevzuat.gov.tr");
+  renderOfficialLinks({
+    ...doc,
+    document_url: doc.source_url || "https://www.mevzuat.gov.tr",
+    source_page_url: doc.source_url || "https://www.mevzuat.gov.tr",
+    source_id: "genel_mevzuat",
+    file_type: "html",
+  });
   citationRows([
-    ["Katman", "Genel mevzuat"], ["Tür", doc.type_label], ["Mevzuat no", doc.number],
-    ["Resmî Gazete", [doc.gazette_date && formatDate(doc.gazette_date), doc.gazette_number && `Sayı ${doc.gazette_number}`].filter(Boolean).join(" · ")],
+    ["Katman", "Genel mevzuat"], ["Tür", doc.type_label, false, doc.source_url], ["Mevzuat no", doc.number, false, doc.source_url],
+    ["Resmî Gazete", [doc.gazette_date && formatDate(doc.gazette_date), doc.gazette_number && `Sayı ${doc.gazette_number}`].filter(Boolean).join(" · "), false, doc.source_url],
   ]);
   readerContent.textContent = "Mevzuat metni resmî kaynaktan alınıyor…";
   $("#readerLength").textContent = "bekleniyor";

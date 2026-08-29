@@ -977,6 +977,110 @@ class TicaretApiClient:
             score += 3
         return score
 
+    @staticmethod
+    def _is_report_document(document: TicaretDocument) -> bool:
+        """Separate actual reports from navigation/contact pages in broad sources."""
+        if document.source_id not in {
+            "musavirlik_pazar",
+            "musavirlik_blog_guncel",
+            "yurtdisi_teskilati",
+        }:
+            return False
+        haystack = _search_key(
+            " ".join(
+                filter(
+                    None,
+                    [
+                        document.title,
+                        document.section,
+                        document.subsection,
+                        document.document_type,
+                        document.document_url,
+                        document.source_page_url,
+                    ],
+                )
+            )
+        )
+        return any(
+            marker in haystack
+            for marker in (
+                "rapor",
+                "pazar arastirmasi",
+                "sektorel arastirma",
+                "bulten",
+                "/raporlar/",
+                "/raporlar",
+            )
+        )
+
+    @staticmethod
+    def _country_path_parts(document: TicaretDocument) -> list[str]:
+        parts = [part for part in urlsplit(document.document_url).path.strip("/").split("/") if part]
+        try:
+            root_index = [_search_key(part) for part in parts].index("yurtdisi-teskilati")
+        except ValueError:
+            return []
+        return parts[root_index + 1:]
+
+    @classmethod
+    def _is_country_information_document(cls, document: TicaretDocument) -> bool:
+        """Keep country/profile records; remove region and organisation navigation pages."""
+        if document.source_id != "yurtdisi_teskilati":
+            return False
+        parts = cls._country_path_parts(document)
+        if len(parts) < 2:
+            return False
+        if _search_key(parts[0]) in {
+            "yurt-disi-temsilciliklerimiz",
+            "uluslararasi-kuruluslar-nezdinde-daimi-temsilciliklerimiz",
+        }:
+            return False
+        # Country report documents belong in the dedicated Reports view.
+        if any("rapor" in _search_key(part) for part in parts[2:]):
+            return False
+        return True
+
+    @classmethod
+    def _matches_content_kinds(cls, document: TicaretDocument, kind_keys: set[str]) -> bool:
+        if not kind_keys:
+            return True
+        for kind in kind_keys:
+            if kind == "rapor" and cls._is_report_document(document):
+                return True
+            if kind == "ulke_bilgisi" and cls._is_country_information_document(document):
+                return True
+            if kind not in {"rapor", "ulke_bilgisi"} and _search_key(document.content_kind) == kind:
+                return True
+        return False
+
+    @classmethod
+    def _browse_priority(cls, document: TicaretDocument, kind_keys: set[str]) -> int:
+        """Put useful leaf records before broad landing pages when browsing."""
+        if "rapor" in kind_keys and cls._is_report_document(document):
+            title = _search_key(document.title)
+            priority = 40
+            if "rapor" in title or "pazar arastirmasi" in title:
+                priority += 45
+            if document.file_type in {"pdf", "doc", "docx", "xls", "xlsx"}:
+                priority += 35
+            if not document.is_page:
+                priority += 15
+            return priority
+        if "ulke_bilgisi" in kind_keys and cls._is_country_information_document(document):
+            parts = cls._country_path_parts(document)
+            last = _search_key(parts[-1]) if parts else ""
+            if len(parts) == 2:
+                return 130
+            return {
+                "genel-bilgiler": 120,
+                "ulke-profili": 110,
+                "pazar-bilgileri": 100,
+                "potansiyel-urun-matrisleri": 85,
+                "ikili-anlasmalar": 60,
+                "faydali-linkler": 45,
+            }.get(last, 35 if document.file_type == "pdf" else 20)
+        return 0
+
     async def search(
         self,
         *,
@@ -997,7 +1101,7 @@ class TicaretApiClient:
         scored: list[tuple[int, TicaretDocument]] = []
 
         for document in catalog.documents:
-            if kind_keys and _search_key(document.content_kind) not in kind_keys:
+            if not self._matches_content_kinds(document, kind_keys):
                 continue
             if source_keys and _search_key(document.source_id) not in source_keys:
                 continue
@@ -1012,7 +1116,7 @@ class TicaretApiClient:
                 continue
             score = self._score_document(document, query)
             if score:
-                scored.append((score, document))
+                scored.append((score + self._browse_priority(document, kind_keys), document))
 
         scored.sort(
             key=lambda pair: (
@@ -1025,6 +1129,12 @@ class TicaretApiClient:
         )
         total = len(scored)
         selected = [document for _, document in scored[offset: offset + limit]]
+        # Special views collect records from more than one official source
+        # tree. Label them with the selected view without mutating the stored
+        # catalogue record used for full-text retrieval.
+        if len(kind_keys) == 1 and next(iter(kind_keys)) in {"rapor", "ulke_bilgisi"}:
+            display_kind = next(iter(kind_keys))
+            selected = [document.model_copy(update={"content_kind": display_kind}) for document in selected]
         return TicaretSearchResult(
             documents=selected,
             total_results=total,
@@ -1138,11 +1248,23 @@ class TicaretApiClient:
                 chunks.append(chunk)
             return b"".join(chunks), response.headers.get("content-type", ""), resolved
 
-    def _html_to_text(self, data: bytes) -> str:
+    def _html_to_text(self, data: bytes, base_url: str = "") -> str:
         soup = BeautifulSoup(data, "lxml")
         for node in soup.select("script, style, noscript, nav, header, footer"):
             node.decompose()
         content = self._content_container(soup)
+        # Plain-text conversion normally discards every href. Preserve the
+        # official evidence chain so the reader can render document and annex
+        # links as real actions instead of inert labels.
+        for anchor in content.select("a[href]"):
+            raw_href = (anchor.get("href") or "").strip()
+            if not raw_href or raw_href.startswith(("#", "javascript:", "mailto:", "tel:")):
+                continue
+            resolved_link = urljoin(base_url, raw_href) if base_url else raw_href
+            if urlsplit(resolved_link).scheme not in {"http", "https"}:
+                continue
+            label = _clean_text(anchor.get_text(" ", strip=True)) or "Resmî bağlantı"
+            anchor.replace_with(f"{label} — {resolved_link}")
         # Preserve table rows and paragraph boundaries for legal/data analysis.
         for br in content.find_all("br"):
             br.replace_with("\n")
@@ -1281,7 +1403,7 @@ class TicaretApiClient:
             # retaining the requested file suffix.
             extension = ".html"
         if "html" in lowered_type or extension in {".htm", ".html"}:
-            text = self._html_to_text(data)
+            text = self._html_to_text(data, resolved_url)
             warnings: list[str] = []
         elif extension in {".txt", ".csv", ".json", ".xml"}:
             text = data.decode("utf-8", errors="replace")
@@ -1452,11 +1574,18 @@ class TicaretApiClient:
             if document.is_page:
                 pages[document.source_id] = pages.get(document.source_id, 0) + 1
         layers: dict[str, dict[str, int]] = {}
-        for source in catalog.sources:
-            layer = layers.setdefault(source.content_kind, {"sources": 0, "documents": 0, "pages": 0})
-            layer["sources"] += 1
-            layer["documents"] += counts.get(source.id, 0)
-            layer["pages"] += pages.get(source.id, 0)
+        content_kinds = sorted({source.content_kind for source in catalog.sources})
+        for kind in content_kinds:
+            matching = [
+                document
+                for document in catalog.documents
+                if self._matches_content_kinds(document, {_search_key(kind)})
+            ]
+            layers[kind] = {
+                "sources": len({document.source_id for document in matching}),
+                "documents": len(matching),
+                "pages": sum(1 for document in matching if document.is_page),
+            }
         return {
             "catalog_synced_at": catalog.synced_at,
             "layers": layers,
@@ -1468,6 +1597,6 @@ class TicaretApiClient:
                 }
                 for source in catalog.sources
             ],
-            "content_kinds": sorted({source.content_kind for source in catalog.sources}),
+            "content_kinds": content_kinds,
             "errors": catalog.errors[:20],
         }

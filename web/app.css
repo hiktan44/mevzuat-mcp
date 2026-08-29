@@ -9,6 +9,7 @@
   --teal: #006678;
   --teal-dark: #004c5c;
   --teal-soft: #e7f3f5;
+  --orange: #e96512;
   --danger: #bb2428;
   --danger-soft: #fff1f1;
   --line: #d6dee8;
@@ -33,6 +34,7 @@
   --teal: #55bdc7;
   --teal-dark: #83d4da;
   --teal-soft: #16343d;
+  --orange: #ff934f;
   --danger: #ff777a;
   --danger-soft: #382126;
   --line: #293c50;
@@ -217,8 +219,22 @@ svg { display: block; fill: none; stroke: currentColor; stroke-width: 1.8; strok
 .citation-line::before { content: ""; position: absolute; left: -25px; top: 13px; width: 12px; height: 12px; border: 1px solid var(--teal); background: var(--surface); }
 .citation-line:first-child::before { background: var(--teal); }
 .citation-line span { color: var(--ink-3); font-family: var(--mono); font-size: .55rem; letter-spacing: .04em; text-transform: uppercase; }
-.citation-line b { overflow-wrap: anywhere; font-size: .65rem; font-weight: 600; }
+.citation-line b, .citation-line > a { overflow-wrap: anywhere; font-size: .65rem; font-weight: 600; }
+.citation-line > a { display: inline-flex; align-items: center; gap: 5px; color: var(--teal); text-decoration: underline; text-decoration-thickness: 1px; text-underline-offset: 3px; }
+.citation-line > a span { color: currentColor; font-family: inherit; font-size: .72rem; letter-spacing: 0; text-transform: none; }
 .citation-line.warning b { color: var(--danger); }
+.reader-links { margin: 0 0 8px; padding: 12px; border: 1px solid color-mix(in srgb, var(--orange) 48%, var(--line)); background: color-mix(in srgb, var(--orange) 7%, var(--surface)); }
+.reader-links > div { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; margin-bottom: 8px; }
+.reader-links h3 { margin: 0; font-family: var(--display); font-size: .78rem; }
+.reader-links > div small { color: var(--ink-3); font-size: .55rem; }
+#readerLinks { display: grid; gap: 6px; }
+#readerLinks a { min-height: 46px; display: grid; grid-template-columns: minmax(0,1fr) 18px; align-items: center; gap: 9px; padding: 8px 10px; border: 1px solid var(--line); background: var(--surface); color: var(--ink); text-decoration: none; }
+#readerLinks a:hover, #readerLinks a:focus-visible { border-color: var(--orange); color: var(--orange); }
+#readerLinks a span { min-width: 0; }
+#readerLinks a b, #readerLinks a small { display: block; }
+#readerLinks a b { font-size: .65rem; }
+#readerLinks a small { margin-top: 2px; overflow: hidden; color: var(--ink-3); font-size: .54rem; text-overflow: ellipsis; white-space: nowrap; }
+#readerLinks a i { font-style: normal; font-size: .82rem; }
 .panel-actions { display: grid; grid-template-columns: 1fr 1fr; gap: 9px; padding: 14px 0; border-top: 1px solid var(--line); }
 .panel-actions a, .panel-actions button { min-height: 44px; display: flex; align-items: center; justify-content: center; gap: 8px; border: 1px solid var(--line-strong); background: var(--surface); color: var(--ink); text-decoration: none; font-size: .64rem; font-weight: 700; }
 .panel-actions a { border-color: var(--teal); background: var(--teal); color: #fff; }

@@ -166,6 +166,15 @@ class TicaretClientParsingTests(unittest.TestCase):
             ".html",
         )
 
+    def test_html_reader_preserves_official_links(self) -> None:
+        html = """<html><body><main><h1>Almanya</h1>
+        <p><a href="/data/rapor.pdf">Pazar raporu</a></p>
+        <footer><a href="/iletisim">Footer</a></footer></main></body></html>""".encode()
+        text = self.client._html_to_text(html, "https://ticaret.gov.tr/yurtdisi-teskilati/avrupa/almanya")
+        self.assertIn("Pazar raporu", text)
+        self.assertIn("https://ticaret.gov.tr/data/rapor.pdf", text)
+        self.assertNotIn("Footer", text)
+
     def test_legacy_word_uses_bounded_external_text_extractor(self) -> None:
         completed = subprocess.CompletedProcess(
             args=["antiword"], returncode=0, stdout="Gümrük belgesi\n\n\nMadde 1".encode(), stderr=b""
@@ -238,6 +247,77 @@ class TicaretClientParsingTests(unittest.TestCase):
         country = next(item for item in documents if item.document_url == country_url)
         self.assertEqual(country.title, "Ruanda")
         self.assertTrue(country.metadata.get("lazy_country_record"))
+
+    def test_reports_view_rejects_contact_navigation_and_accepts_real_report(self) -> None:
+        common = {
+            "source_id": "musavirlik_pazar",
+            "content_kind": "rapor",
+            "section": "Ticaret Müşavirlikleri ve Pazar Bilgileri",
+            "source_page_url": "https://ticaret.gov.tr/ticaret-musavirlikleri-ve-pazar-bilgileri",
+            "file_type": "pdf",
+        }
+        contact = TicaretDocument(
+            id="ticaret_" + "b" * 24,
+            title="İtalya Ticaret Müşavirlik ve Ataşeliklerinin Sorumlu Oldukları Şehirler",
+            document_url="https://ticaret.gov.tr/data/italya-sehirler.pdf",
+            **common,
+        )
+        report = contact.model_copy(
+            update={
+                "id": "ticaret_" + "c" * 24,
+                "title": "İtalya Mobilya Sektörü Pazar Araştırması Raporu (2026)",
+                "document_url": "https://ticaret.gov.tr/data/italya-mobilya-raporu.pdf",
+            }
+        )
+        self.assertFalse(self.client._is_report_document(contact))
+        self.assertTrue(self.client._is_report_document(report))
+        self.assertGreater(
+            self.client._browse_priority(report, {"rapor"}),
+            self.client._browse_priority(contact, {"rapor"}),
+        )
+        support_form = report.model_copy(
+            update={
+                "id": "ticaret_" + "1" * 24,
+                "source_id": "destekler",
+                "content_kind": "destek",
+                "title": "Program Sonuç Raporu Başvuru Eki",
+            }
+        )
+        self.assertFalse(self.client._is_report_document(support_form))
+
+    def test_country_view_keeps_country_records_but_rejects_regions_and_report_tabs(self) -> None:
+        common = {
+            "source_id": "yurtdisi_teskilati",
+            "content_kind": "ulke_bilgisi",
+            "section": "Avrupa",
+            "file_type": "html",
+            "is_page": True,
+        }
+        country = TicaretDocument(
+            id="ticaret_" + "d" * 24,
+            title="Almanya",
+            document_url="https://ticaret.gov.tr/yurtdisi-teskilati/avrupa/almanya",
+            source_page_url="https://ticaret.gov.tr/yurtdisi-teskilati/avrupa",
+            **common,
+        )
+        region = country.model_copy(
+            update={
+                "id": "ticaret_" + "e" * 24,
+                "title": "Avrupa",
+                "document_url": "https://ticaret.gov.tr/yurtdisi-teskilati/avrupa",
+            }
+        )
+        report_tab = country.model_copy(
+            update={
+                "id": "ticaret_" + "f" * 24,
+                "title": "Raporlar",
+                "document_url": "https://ticaret.gov.tr/yurtdisi-teskilati/avrupa/almanya/raporlar",
+            }
+        )
+        self.assertTrue(self.client._is_country_information_document(country))
+        self.assertFalse(self.client._is_country_information_document(region))
+        self.assertFalse(self.client._is_country_information_document(report_tab))
+        self.assertTrue(self.client._is_report_document(report_tab))
 
 
 if __name__ == "__main__":
