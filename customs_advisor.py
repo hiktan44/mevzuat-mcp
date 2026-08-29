@@ -69,6 +69,11 @@ def _official_host(url: str) -> bool:
     return any(host == allowed or host.endswith(f".{allowed}") for allowed in _ALLOWED_SOURCE_HOSTS)
 
 
+class ClassificationAnswer(BaseModel):
+    question: str = Field(..., min_length=3, max_length=500)
+    answer: str = Field(..., min_length=1, max_length=1000)
+
+
 class CustomsInquiry(BaseModel):
     question: str = Field(..., min_length=3, max_length=1500)
     product_description: str = Field("", max_length=2000)
@@ -76,6 +81,8 @@ class CustomsInquiry(BaseModel):
     origin_country: str | None = Field(None, max_length=100)
     dispatch_country: str | None = Field(None, max_length=100)
     intended_use: str | None = Field(None, max_length=300)
+    target_user: str | None = Field(None, max_length=300)
+    declared_product_type: str | None = Field(None, max_length=300)
     composition: str | None = Field(None, max_length=500)
     product_category: str | None = Field(None, max_length=200)
     brand_model: str | None = Field(None, max_length=300)
@@ -89,6 +96,7 @@ class CustomsInquiry(BaseModel):
     visible_features: str | None = Field(None, max_length=2000)
     inferred_features: str | None = Field(None, max_length=1500)
     classification_questions: str | None = Field(None, max_length=1500)
+    classification_answers: list[ClassificationAnswer] = Field(default_factory=list, max_length=12)
     required_user_inputs: str | None = Field(None, max_length=1800)
     condition: Literal["new", "used", "unknown"] = "unknown"
     invoice_value: float | None = Field(None, gt=0, le=1_000_000_000)
@@ -179,6 +187,8 @@ class ProductClassificationRequest(BaseModel):
     product_category: str = Field("", max_length=200)
     composition: str = Field("", max_length=500)
     intended_use: str = Field("", max_length=300)
+    target_user: str = Field("", max_length=300)
+    declared_product_type: str = Field("", max_length=300)
     construction_form: str = Field("", max_length=1000)
     function_mechanism: str = Field("", max_length=1000)
     components_accessories: str = Field("", max_length=1000)
@@ -186,6 +196,7 @@ class ProductClassificationRequest(BaseModel):
     visible_features: str = Field("", max_length=2000)
     inferred_features: str = Field("", max_length=1500)
     classification_questions: str = Field("", max_length=1500)
+    classification_answers: list[ClassificationAnswer] = Field(default_factory=list, max_length=12)
     origin_country: str = Field("", max_length=100)
 
 

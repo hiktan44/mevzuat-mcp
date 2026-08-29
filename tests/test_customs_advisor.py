@@ -12,6 +12,7 @@ from PIL import Image
 
 from customs_advisor import (
     CandidateGtip,
+    ClassificationAnswer,
     CustomsAdvisor,
     CustomsInquiry,
     CustomsModelResult,
@@ -35,6 +36,22 @@ from customs_advisor import (
 
 
 class CustomsAdvisorSafetyTests(unittest.TestCase):
+    def test_user_answers_and_textile_context_are_preserved_for_classification(self) -> None:
+        answer = ClassificationAnswer(
+            question="Kumaşın net elyaf kompozisyonu nedir?",
+            answer="%60 pamuk, %40 polyester",
+        )
+        request = ProductClassificationRequest(
+            product_description="Örme kumaştan iki parçalı çocuk giyim takımı",
+            target_user="Kız çocuk, 8-12 yaş",
+            declared_product_type="Pijama takımı",
+            classification_answers=[answer],
+        )
+        payload = json.loads(request.model_dump_json())
+        self.assertEqual(payload["target_user"], "Kız çocuk, 8-12 yaş")
+        self.assertEqual(payload["declared_product_type"], "Pijama takımı")
+        self.assertEqual(payload["classification_answers"][0]["answer"], "%60 pamuk, %40 polyester")
+
     def test_gtip_is_normalised_but_not_invented(self) -> None:
         inquiry = CustomsInquiry(
             question="Bu ürünün ithalat koşulları nedir?",

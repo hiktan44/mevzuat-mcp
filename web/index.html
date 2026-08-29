@@ -192,7 +192,7 @@
                   <div id="gtipSuggestionList"></div>
                   <p>Bir adaya tıklayın; kod yukarıdaki kutuya yerleşir. Kod ve oranlar bağlayıcı değildir.</p>
                 </section>
-                <label class="field"><span>Malzeme / bileşim</span><input id="composition" maxlength="500" placeholder="Örn. %95 pamuk, %5 elastan; paslanmaz çelik 304"></label>
+                <label class="field"><span>Malzeme / elyaf bileşimi ve oranı</span><input id="composition" maxlength="500" placeholder="Örn. %60 pamuk, %40 polyester; paslanmaz çelik 304"></label>
                 <p class="product-file-status" id="productFileStatus" data-state="waiting">Görsel analizi tamamlandığında temel evsaflar önce bu ürün dosyasına işlenir.</p>
               </div>
             </div>
@@ -217,6 +217,17 @@
                 <label class="field attribute-wide"><span>Kesin görülen özellikler</span><textarea id="visibleFeatures" maxlength="2000" placeholder="Her satıra bir görünür özellik"></textarea></label>
                 <label class="field attribute-wide uncertain-field"><span>Görüntüden kesinleşmeyen tahminler</span><textarea id="inferredFeatures" maxlength="1500" placeholder="Bunları teknik belge veya ürün etiketiyle doğrulayın"></textarea></label>
                 <label class="field attribute-wide"><span>Sınıflandırma için cevaplanması gereken sorular</span><textarea id="classificationQuestions" maxlength="1500" placeholder="Malzeme oranı, kullanım amacı, çalışma şekli…"></textarea></label>
+                <section class="classification-answer-panel" id="classificationAnswerPanel" hidden aria-labelledby="classificationAnswerTitle">
+                  <header>
+                    <div><span class="eyebrow">Eksik bilgileri burada cevaplayın</span><h4 id="classificationAnswerTitle">Sınıflandırmayı netleştirin</h4></div>
+                    <span id="classificationAnswerProgress">0 / 0 cevap</span>
+                  </header>
+                  <div class="classification-answer-list" id="classificationAnswerList"></div>
+                  <div class="classification-cost-route">
+                    <p><b>Fatura, döviz, Incoterm, navlun ve sigorta</b> bilgilerini aşağıdaki açık maliyet ve sevkiyat alanlarına yazın; vergi hesabında yalnızca o sayısal alanlar kullanılır.</p>
+                    <button id="goToCostFields" type="button">Maliyet alanlarına git</button>
+                  </div>
+                </section>
                 <label class="field attribute-wide required-field"><span>Kullanıcının tamamlaması gereken bilgiler</span><textarea id="requiredUserInputs" maxlength="1800" placeholder="Görselden belirlenemeyen menşe, teknik belge ve maliyet bilgileri"></textarea></label>
               </div>
               <div class="attribute-actions">
@@ -225,10 +236,12 @@
               </div>
             </section>
 
-            <details class="advanced-fields">
-              <summary><span>Ürün ve sevkiyat ayrıntıları</span><small>TAREKS, kimyasal ve KKDF riskini netleştirir</small></summary>
+            <details class="advanced-fields" id="shipmentDetails" open>
+              <summary><span>Ürün ve sevkiyat ayrıntıları</span><small>Hedef kullanıcı · beyan türü · Incoterm · ödeme</small></summary>
               <div class="advanced-grid">
                 <label class="field"><span>Kullanım amacı</span><input id="intendedUse" maxlength="300" placeholder="Tüketici, sanayi girdisi, çocuk kullanımı…"></label>
+                <label class="field"><span>Hedef kullanıcı (cinsiyet / yaş)</span><input id="targetUser" maxlength="300" placeholder="Örn. kız çocuk, 8–12 yaş"></label>
+                <label class="field"><span>İthalatta beyan edilecek ürün türü</span><input id="declaredProductType" maxlength="300" placeholder="Örn. pijama takımı veya günlük giyim takımı"></label>
                 <label class="field"><span>Sevk ülkesi</span><input id="dispatchCountry" maxlength="100" placeholder="Menşeden farklıysa"></label>
                 <label class="field"><span>Ürün durumu</span><select id="productCondition"><option value="unknown">Belirtilmedi</option><option value="new">Yeni</option><option value="used">Kullanılmış</option></select></label>
                 <label class="field"><span>Teslim şekli</span><input id="incoterm" maxlength="20" placeholder="EXW, FOB, CIF…"></label>
@@ -236,8 +249,8 @@
               </div>
             </details>
 
-            <details class="advanced-fields cost-fields">
-              <summary><span>Maliyet hesabı</span><small>Oranlar doğrulanmadan kesin toplam gösterilmez</small></summary>
+            <details class="advanced-fields cost-fields" id="costDetails" open>
+              <summary><span>Maliyet hesabı</span><small>Fatura · döviz · navlun · sigorta</small></summary>
               <div class="advanced-grid cost-grid">
                 <label class="field"><span>Fatura bedeli</span><input id="invoiceValue" type="number" min="0" step="0.01" placeholder="0,00"></label>
                 <label class="field"><span>Navlun</span><input id="freight" type="number" min="0" step="0.01" placeholder="0,00"></label>

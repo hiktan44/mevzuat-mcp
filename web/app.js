@@ -15,6 +15,7 @@ const state = {
   customsVisionResult: null,
   customsClassificationResult: null,
   customsAutoGtip: null,
+  customsClassificationAnswers: {},
 };
 
 const $ = (selector) => document.querySelector(selector);
@@ -724,6 +725,7 @@ function updateReadiness() {
 
 const visionFieldSelectors = [
   "#productDescription", "#composition", "#intendedUse", "#productCategory", "#brandModel",
+  "#targetUser", "#declaredProductType",
   "#dimensions", "#labelText", "#dominantColors", "#constructionForm", "#componentsAccessories",
   "#functionMechanism", "#packaging", "#visibleFeatures", "#inferredFeatures",
   "#classificationQuestions", "#requiredUserInputs", "#productCondition",
@@ -780,6 +782,54 @@ function setVisionValue(selector, value, { preserveWhenEmpty = false } = {}) {
   input.classList.toggle("vision-filled", Boolean(value));
 }
 
+function parseClassificationQuestions(value) {
+  const seen = new Set();
+  return String(value || "")
+    .split(/\r?\n/)
+    .map((line) => line.replace(/^\s*(?:[-•*]|\d+[.)])\s*/, "").trim())
+    .filter((question) => {
+      const key = question.toLocaleLowerCase("tr-TR");
+      if (question.length < 3 || seen.has(key)) return false;
+      seen.add(key);
+      return true;
+    })
+    .slice(0, 12);
+}
+
+function collectClassificationAnswers() {
+  return parseClassificationQuestions($("#classificationQuestions").value).flatMap((question, index) => {
+    const answer = $(`[data-classification-answer="${index}"]`)?.value?.trim()
+      || state.customsClassificationAnswers[question]?.trim()
+      || "";
+    if (!answer) return [];
+    return [{ question, answer }];
+  });
+}
+
+function updateClassificationAnswerProgress() {
+  const questions = parseClassificationQuestions($("#classificationQuestions").value);
+  const answered = collectClassificationAnswers().length;
+  $("#classificationAnswerProgress").textContent = `${answered} / ${questions.length} cevap`;
+}
+
+function renderClassificationAnswerFields({ clear = false } = {}) {
+  const panel = $("#classificationAnswerPanel");
+  const list = $("#classificationAnswerList");
+  const questions = parseClassificationQuestions($("#classificationQuestions").value);
+  if (clear) state.customsClassificationAnswers = {};
+  panel.hidden = questions.length === 0;
+  if (!questions.length) {
+    list.replaceChildren();
+    updateClassificationAnswerProgress();
+    return;
+  }
+  list.innerHTML = questions.map((question, index) => `<label class="classification-answer-row">
+    <span><b>${index + 1}</b>${escapeHtml(question)}</span>
+    <textarea data-classification-answer="${index}" maxlength="1000" placeholder="Cevabınızı buraya yazın; kullanıcı istediği zaman düzeltebilir.">${escapeHtml(state.customsClassificationAnswers[question] || "")}</textarea>
+  </label>`).join("");
+  updateClassificationAnswerProgress();
+}
+
 function applyVisionAttributes(data) {
   const description = data.product_description || [data.product_name, data.product_category].filter(Boolean).join(" — ");
   setVisionValue("#productDescription", description);
@@ -797,6 +847,7 @@ function applyVisionAttributes(data) {
   setVisionValue("#visibleFeatures", joinLines(data.visible_features));
   setVisionValue("#inferredFeatures", joinLines(data.inferred_features));
   setVisionValue("#classificationQuestions", joinLines(data.classification_questions));
+  renderClassificationAnswerFields({ clear: true });
   setVisionValue("#requiredUserInputs", joinLines(data.required_user_inputs));
   setVisionValue("#originCountry", data.visible_origin_country, { preserveWhenEmpty: true });
   if (["new", "used"].includes(data.condition)) setVisionValue("#productCondition", data.condition);
@@ -815,6 +866,8 @@ function classificationRequestBody() {
     product_category: $("#productCategory").value.trim(),
     composition: $("#composition").value.trim(),
     intended_use: $("#intendedUse").value.trim(),
+    target_user: $("#targetUser").value.trim(),
+    declared_product_type: $("#declaredProductType").value.trim(),
     construction_form: $("#constructionForm").value.trim(),
     function_mechanism: $("#functionMechanism").value.trim(),
     components_accessories: $("#componentsAccessories").value.trim(),
@@ -822,6 +875,7 @@ function classificationRequestBody() {
     visible_features: $("#visibleFeatures").value.trim(),
     inferred_features: $("#inferredFeatures").value.trim(),
     classification_questions: $("#classificationQuestions").value.trim(),
+    classification_answers: collectClassificationAnswers(),
     origin_country: $("#originCountry").value.trim(),
   };
 }
@@ -964,6 +1018,8 @@ async function setProductImage(file) {
   if (!file) {
     state.customsImageData = null;
     state.customsVisionResult = null;
+    state.customsClassificationAnswers = {};
+    renderClassificationAnswerFields({ clear: true });
     state.customsVisionStatus = "idle";
     resetGtipSuggestions({ clearAutoCode: true });
     $("#imagePreview").hidden = true;
@@ -994,6 +1050,8 @@ async function setProductImage(file) {
   $("#uploadTitle").textContent = file.name;
   $("#uploadHint").textContent = `${numberFormat.format(Math.ceil(file.size / 1024))} KB · analiz siz başlatmadan gönderilmez`;
   state.customsVisionResult = null;
+  state.customsClassificationAnswers = {};
+  renderClassificationAnswerFields({ clear: true });
   resetGtipSuggestions({ clearAutoCode: true });
   $("#productFileStatus").dataset.state = "waiting";
   $("#productFileStatus").textContent = "Fotoğraf hazır. Analiz sonucu önce bu ürün dosyasına işlenecek.";
@@ -1011,6 +1069,8 @@ function customsRequestBody() {
     origin_country: $("#originCountry").value.trim() || null,
     dispatch_country: $("#dispatchCountry").value.trim() || null,
     intended_use: $("#intendedUse").value.trim() || null,
+    target_user: $("#targetUser").value.trim() || null,
+    declared_product_type: $("#declaredProductType").value.trim() || null,
     composition: $("#composition").value.trim() || null,
     product_category: $("#productCategory").value.trim() || null,
     brand_model: $("#brandModel").value.trim() || null,
@@ -1024,6 +1084,7 @@ function customsRequestBody() {
     visible_features: $("#visibleFeatures").value.trim() || null,
     inferred_features: $("#inferredFeatures").value.trim() || null,
     classification_questions: $("#classificationQuestions").value.trim() || null,
+    classification_answers: collectClassificationAnswers(),
     required_user_inputs: $("#requiredUserInputs").value.trim() || null,
     condition: $("#productCondition").value,
     invoice_value: nullableNumber("#invoiceValue"),
@@ -1056,6 +1117,27 @@ visionFieldSelectors.forEach((selector) => $(selector)?.addEventListener("input"
     );
   }
 }));
+
+$("#classificationQuestions").addEventListener("input", () => renderClassificationAnswerFields());
+$("#classificationAnswerList").addEventListener("input", (event) => {
+  const input = event.target.closest("[data-classification-answer]");
+  if (!input) return;
+  const questions = parseClassificationQuestions($("#classificationQuestions").value);
+  const question = questions[Number(input.dataset.classificationAnswer)];
+  if (question) state.customsClassificationAnswers[question] = input.value;
+  updateClassificationAnswerProgress();
+  updateReadiness();
+  if (state.customsImageData && state.customsVisionStatus === "confirmed") {
+    resetGtipSuggestions({ clearAutoCode: true });
+    setVisionState("review", "Eksik bilgi cevabı değişti. Güncel cevaplarla aday GTİP'i yeniden bulun.", "Kullanıcı tarafından tamamlanan evsaf");
+  }
+});
+$("#goToCostFields").addEventListener("click", () => {
+  $("#shipmentDetails").open = true;
+  $("#costDetails").open = true;
+  $("#costDetails").scrollIntoView({ behavior: "smooth", block: "start" });
+  window.setTimeout(() => $("#invoiceValue").focus({ preventScroll: true }), 450);
+});
 
 let originRateTimer = null;
 $("#originCountry").addEventListener("input", () => {

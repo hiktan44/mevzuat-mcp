@@ -26,6 +26,7 @@ from ticaret_models import (
     TicaretSearchResult,
 )
 from customs_advisor import (
+    ClassificationAnswer,
     CustomsAdvisor,
     CustomsEvidencePack,
     CustomsInquiry,
@@ -2429,6 +2430,8 @@ async def suggest_candidate_tariff_codes(
     product_category: str = Field("", max_length=200),
     composition: str = Field("", max_length=500),
     intended_use: str = Field("", max_length=300),
+    target_user: str = Field("", max_length=300),
+    declared_product_type: str = Field("", max_length=300),
     construction_form: str = Field("", max_length=1000),
     function_mechanism: str = Field("", max_length=1000),
     components_accessories: str = Field("", max_length=1000),
@@ -2436,6 +2439,10 @@ async def suggest_candidate_tariff_codes(
     visible_features: str = Field("", max_length=2000),
     inferred_features: str = Field("", max_length=1500),
     classification_questions: str = Field("", max_length=1500),
+    classification_answers: Optional[list[ClassificationAnswer]] = Field(
+        None,
+        description="Görsel analizinin sorduğu eksik bilgi sorularına kullanıcının verdiği cevaplar.",
+    ),
     origin_country: str = Field("", max_length=100),
 ) -> ProductClassificationResult:
     """Return up to three non-binding HS6/CN8 candidates from approved product attributes.
@@ -2450,6 +2457,8 @@ async def suggest_candidate_tariff_codes(
             product_category=product_category,
             composition=composition,
             intended_use=intended_use,
+            target_user=target_user,
+            declared_product_type=declared_product_type,
             construction_form=construction_form,
             function_mechanism=function_mechanism,
             components_accessories=components_accessories,
@@ -2457,6 +2466,7 @@ async def suggest_candidate_tariff_codes(
             visible_features=visible_features,
             inferred_features=inferred_features,
             classification_questions=classification_questions,
+            classification_answers=classification_answers or [],
             origin_country=origin_country,
         )
     )
@@ -2661,6 +2671,12 @@ async def prepare_customs_precheck(
     origin_country: Optional[str] = Field(None, max_length=100, description="Menşe ülke; sevk ülkesinden ayrıdır."),
     dispatch_country: Optional[str] = Field(None, max_length=100, description="Varsa sevk/çıkış ülkesi."),
     intended_use: Optional[str] = Field(None, max_length=300, description="Ürünün kullanım amacı ve hedef kullanıcısı."),
+    target_user: Optional[str] = Field(None, max_length=300, description="Hedef kullanıcının cinsiyet ve yaş grubu."),
+    declared_product_type: Optional[str] = Field(None, max_length=300, description="İthalatta beyan edilmesi düşünülen ürün türü."),
+    classification_answers: Optional[list[ClassificationAnswer]] = Field(
+        None,
+        description="Sınıflandırmayı netleştiren kullanıcı soru-cevapları.",
+    ),
     composition: Optional[str] = Field(None, max_length=500, description="Malzeme, kimyasal bileşim veya tekstil elyaf oranları."),
     condition: Literal["new", "used", "unknown"] = Field("unknown", description="Ürünün yeni/kullanılmış durumu."),
     invoice_value: Optional[float] = Field(None, gt=0, le=1_000_000_000),
@@ -2699,6 +2715,9 @@ async def prepare_customs_precheck(
         origin_country=origin_country,
         dispatch_country=dispatch_country,
         intended_use=intended_use,
+        target_user=target_user,
+        declared_product_type=declared_product_type,
+        classification_answers=classification_answers or [],
         composition=composition,
         condition=condition,
         invoice_value=invoice_value,

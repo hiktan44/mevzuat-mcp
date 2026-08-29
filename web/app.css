@@ -348,6 +348,20 @@ svg { display: block; fill: none; stroke: currentColor; stroke-width: 1.8; strok
 .uncertain-field textarea { border-color: color-mix(in srgb, var(--danger) 38%, var(--line)); }
 .required-field textarea { border-color: color-mix(in srgb, #b47b13 45%, var(--line)); background: #fffaf0; }
 .field input.vision-filled, .field textarea.vision-filled, .field select.vision-filled { border-left: 3px solid var(--teal); background: color-mix(in srgb, var(--teal-soft) 35%, var(--surface)); }
+.classification-answer-panel { grid-column: 1 / -1; border: 1px solid var(--teal); background: var(--surface); }
+.classification-answer-panel > header { display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: 15px 16px; border-bottom: 1px solid var(--line); background: var(--teal-soft); }
+.classification-answer-panel h4 { margin: 4px 0 0; font-family: var(--display); font-size: 1rem; }
+.classification-answer-panel > header > span { flex: 0 0 auto; padding: 6px 8px; border: 1px solid var(--teal); color: var(--teal-dark); font-family: var(--mono); font-size: .6rem; }
+.classification-answer-list { display: grid; gap: 0; }
+.classification-answer-row { display: grid; grid-template-columns: minmax(240px,.8fr) minmax(0,1.2fr); gap: 16px; align-items: center; padding: 14px 16px; border-bottom: 1px solid var(--line); }
+.classification-answer-row > span { display: grid; grid-template-columns: 28px minmax(0,1fr); gap: 10px; align-items: start; color: var(--ink-2); font-size: .68rem; font-weight: 700; line-height: 1.55; }
+.classification-answer-row > span b { width: 27px; height: 27px; display: grid; place-items: center; background: var(--ink); color: var(--surface); font-family: var(--mono); font-size: .58rem; }
+.classification-answer-row textarea { min-height: 70px; resize: vertical; padding: 11px 12px; border: 1px solid var(--line-strong); background: var(--canvas); color: var(--ink); font: inherit; font-size: .68rem; line-height: 1.55; }
+.classification-answer-row textarea:focus { outline: 2px solid color-mix(in srgb, var(--teal) 35%, transparent); border-color: var(--teal); background: var(--surface); }
+.classification-cost-route { display: grid; grid-template-columns: minmax(0,1fr) auto; gap: 16px; align-items: center; padding: 13px 16px; background: #fffaf0; }
+.classification-cost-route p { margin: 0; color: var(--ink-2); font-size: .65rem; line-height: 1.55; }
+.classification-cost-route button { min-height: 38px; padding: 0 13px; border: 1px solid var(--ink); background: var(--surface); color: var(--ink); font-size: .62rem; font-weight: 700; cursor: pointer; }
+.classification-cost-route button:hover { background: var(--ink); color: var(--surface); }
 .attribute-actions { display: grid; grid-template-columns: minmax(0,1fr) auto; align-items: center; gap: 16px; padding: 14px 18px; border-top: 1px solid var(--line); background: var(--surface); }
 .attribute-actions p { margin: 0; color: var(--ink-3); font-family: var(--mono); font-size: .52rem; line-height: 1.5; }
 .attribute-actions button { min-height: 42px; padding: 0 16px; border: 0; background: var(--ink); color: var(--surface); font-size: .62rem; font-weight: 700; }
@@ -556,6 +570,7 @@ svg { display: block; fill: none; stroke: currentColor; stroke-width: 1.8; strok
   .product-input-grid { grid-template-columns: 190px minmax(0,1fr); }
   .attribute-actions { grid-template-columns: 1fr; }
   .attribute-actions button { width: 100%; }
+  .classification-answer-row { grid-template-columns: 1fr; gap: 9px; }
   .advanced-grid, .cost-grid { grid-template-columns: 1fr 1fr; }
   .tool-form { grid-template-columns: 1fr 1fr; }
   .tool-panel-head { grid-template-columns: 1fr; }
@@ -580,6 +595,10 @@ svg { display: block; fill: none; stroke: currentColor; stroke-width: 1.8; strok
   .gtip-candidate-rates { justify-content: flex-start; max-width: none; }
   .field-row, .advanced-grid, .cost-grid, .candidate-grid, .finding-grid, .source-ledger, .attribute-grid { grid-template-columns: 1fr; }
   .attribute-wide { grid-column: auto; }
+  .classification-answer-panel { grid-column: auto; }
+  .classification-answer-panel > header, .classification-cost-route { grid-template-columns: 1fr; }
+  .classification-answer-panel > header { align-items: start; }
+  .classification-cost-route button { width: 100%; }
   .readiness-card ul { grid-template-columns: 1fr; }
   .answer-head { grid-template-columns: 1fr; }
   .followup-box { grid-template-columns: 1fr; }
