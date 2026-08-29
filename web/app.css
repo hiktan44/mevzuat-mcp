@@ -162,17 +162,17 @@ svg { display: block; fill: none; stroke: currentColor; stroke-width: 1.8; strok
 .official-domain b { display: block; margin-top: 2px; font-family: var(--mono); font-size: .62rem; font-weight: 500; }
 
 .main-workspace { min-width: 0; padding: 34px clamp(24px, 3vw, 46px) 24px; }
-.quick-routes { max-width: 980px; margin: 0 auto 22px; border: 1px solid var(--line-strong); background: var(--surface); box-shadow: 0 10px 32px color-mix(in srgb, var(--ink) 5%, transparent); }
-.quick-routes > header { display: flex; align-items: center; gap: 16px; padding: 15px 17px; border-bottom: 1px solid var(--line); background: linear-gradient(96deg, color-mix(in srgb, var(--orange) 9%, var(--surface)), var(--surface) 42%, color-mix(in srgb, var(--teal) 7%, var(--surface))); }
+.quick-routes { max-width: 980px; margin: 0 auto 16px; border: 1px solid var(--line-strong); background: var(--surface); box-shadow: 0 7px 22px color-mix(in srgb, var(--ink) 4%, transparent); }
+.quick-routes > header { display: flex; align-items: center; gap: 14px; padding: 11px 14px; border-bottom: 1px solid var(--line); background: linear-gradient(96deg, color-mix(in srgb, var(--orange) 6%, var(--surface)), var(--surface) 45%, color-mix(in srgb, var(--teal) 4%, var(--surface))); }
 .route-kicker { flex: 0 0 auto; padding: 5px 8px; background: var(--orange); color: var(--surface); font-family: var(--mono); font-size: .52rem; font-weight: 500; letter-spacing: .06em; text-transform: uppercase; }
 .quick-routes h2 { margin: 0; font-family: var(--display); font-size: 1rem; line-height: 1.1; }
 .quick-routes header p { margin: 3px 0 0; color: var(--ink-3); font-size: .59rem; }
 .quick-route-grid { display: grid; grid-template-columns: repeat(4,minmax(0,1fr)); }
-.quick-route { --route-accent: var(--teal); position: relative; display: grid; grid-template-columns: 38px minmax(0,1fr); gap: 10px; align-items: center; min-height: 92px; padding: 14px 13px; overflow: hidden; border: 0; border-right: 1px solid var(--line); background: transparent; color: var(--ink); text-align: left; transition: background .16s ease, transform .16s ease; animation: routeEnter .32s both; }
+.quick-route { --route-accent: var(--teal); position: relative; display: grid; grid-template-columns: 34px minmax(0,1fr); gap: 9px; align-items: center; min-height: 76px; padding: 11px 12px; overflow: hidden; border: 0; border-right: 1px solid var(--line); background: transparent; color: var(--ink); text-align: left; transition: background .16s ease, transform .16s ease; animation: routeEnter .32s both; }
 .quick-route:nth-child(2) { animation-delay: .04s; }
 .quick-route:nth-child(3) { animation-delay: .08s; }
 .quick-route:nth-child(4) { animation-delay: .12s; border-right: 0; }
-.quick-route::after { content: ""; position: absolute; left: 0; right: 0; bottom: 0; height: 4px; background: var(--route-accent); transform: scaleX(.24); transform-origin: left; transition: transform .18s ease; }
+.quick-route::after { content: ""; position: absolute; left: 0; right: 0; bottom: 0; height: 3px; background: var(--route-accent); transform: scaleX(.2); transform-origin: left; transition: transform .18s ease; }
 .quick-route:hover { z-index: 1; background: color-mix(in srgb, var(--route-accent) 8%, var(--surface)); }
 .quick-route:hover::after, .quick-route.active::after { transform: scaleX(1); }
 .quick-route:active { transform: translateY(1px); }
@@ -180,11 +180,10 @@ svg { display: block; fill: none; stroke: currentColor; stroke-width: 1.8; strok
 .route-law { --route-accent: var(--blue); }
 .route-support { --route-accent: var(--violet); }
 .route-market { --route-accent: var(--mint); }
-.route-icon { width: 38px; height: 38px; display: grid; place-items: center; border: 1px solid color-mix(in srgb, var(--route-accent) 38%, var(--line)); background: color-mix(in srgb, var(--route-accent) 10%, var(--surface)); color: var(--route-accent); }
-.route-icon svg { width: 20px; height: 20px; }
-.quick-route b { display: block; font-family: var(--display); font-size: .78rem; line-height: 1.1; }
-.quick-route small { display: block; margin-top: 5px; color: var(--ink-3); font-size: .51rem; line-height: 1.35; }
-.quick-route > i { position: absolute; top: 8px; right: 8px; color: color-mix(in srgb, var(--route-accent) 30%, transparent); font: normal .5rem var(--mono); }
+.route-icon { width: 34px; height: 34px; display: grid; place-items: center; border: 1px solid color-mix(in srgb, var(--route-accent) 38%, var(--line)); background: color-mix(in srgb, var(--route-accent) 8%, var(--surface)); color: var(--route-accent); }
+.route-icon svg { width: 18px; height: 18px; }
+.quick-route b { display: block; font-family: var(--display); font-size: .75rem; line-height: 1.12; text-wrap: balance; }
+.quick-route small { display: block; margin-top: 4px; color: var(--ink-3); font-size: .49rem; line-height: 1.3; }
 @keyframes routeEnter { from { opacity: 0; transform: translateY(5px); } }
 .search-area { max-width: 980px; margin: 0 auto; }
 .search-box { display: grid; grid-template-columns: 50px minmax(0,1fr) 124px; height: 64px; border: 1px solid var(--line-strong); background: var(--surface); }
@@ -576,10 +575,6 @@ svg { display: block; fill: none; stroke: currentColor; stroke-width: 1.8; strok
   .document-panel.open { transform: translateX(0); }
   .panel-backdrop { position: fixed; inset: var(--header-h) 0 0; z-index: 65; width: 100%; height: auto; border: 0; background: rgba(5,16,33,.46); opacity: 0; pointer-events: none; }
   body.reader-open .panel-backdrop { display: block; opacity: 1; pointer-events: auto; }
-  .quick-route-grid { grid-template-columns: repeat(2,minmax(0,1fr)); }
-  .quick-route { border-bottom: 1px solid var(--line); }
-  .quick-route:nth-child(2) { border-right: 0; }
-  .quick-route:nth-child(3), .quick-route:nth-child(4) { border-bottom: 0; }
 }
 
 @media (max-width: 840px) {
@@ -604,7 +599,10 @@ svg { display: block; fill: none; stroke: currentColor; stroke-width: 1.8; strok
   .quick-routes { margin-bottom: 14px; }
   .quick-routes > header { align-items: flex-start; padding: 12px; }
   .quick-routes header p { display: none; }
-  .quick-route { min-height: 80px; padding: 11px; }
+  .quick-route-grid { grid-template-columns: repeat(2,minmax(0,1fr)); }
+  .quick-route { min-height: 78px; padding: 11px; border-bottom: 1px solid var(--line); }
+  .quick-route:nth-child(2) { border-right: 0; }
+  .quick-route:nth-child(3), .quick-route:nth-child(4) { border-bottom: 0; }
   .quick-route small { -webkit-line-clamp: 2; display: -webkit-box; -webkit-box-orient: vertical; overflow: hidden; }
   .search-box { grid-template-columns: 42px minmax(0,1fr) 74px; height: 58px; }
   .search-box input { font-size: .84rem; }
@@ -661,10 +659,12 @@ svg { display: block; fill: none; stroke: currentColor; stroke-width: 1.8; strok
 @media (max-width: 500px) {
   .quick-routes > header { display: grid; grid-template-columns: auto minmax(0,1fr); }
   .quick-routes h2 { font-size: .88rem; }
-  .quick-route-grid { grid-template-columns: 1fr; }
-  .quick-route, .quick-route:nth-child(2), .quick-route:nth-child(3) { min-height: 70px; border-right: 0; border-bottom: 1px solid var(--line); }
-  .quick-route:nth-child(4) { border-bottom: 0; }
-  .quick-route small { margin-top: 3px; }
+  .quick-route { min-height: 74px; grid-template-columns: 30px minmax(0,1fr); gap: 7px; padding: 9px; }
+  .quick-route:nth-child(3) { border-right: 1px solid var(--line); }
+  .quick-route:nth-child(4) { border-right: 0; }
+  .route-icon { width: 30px; height: 30px; }
+  .route-icon svg { width: 16px; height: 16px; }
+  .quick-route small { display: none; }
   .filter-bar { grid-template-columns: 1fr; }
   .repealed-filter { min-height: 52px; }
   .general-filters { grid-template-columns: 1fr; }
