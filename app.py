@@ -203,6 +203,16 @@ async def web_application(request: Request):
     return FileResponse(WEB_DIR / "index.html", media_type="text/html")
 
 
+@mcp.custom_route("/gizlilik", methods=["GET"])
+async def web_privacy(request: Request):
+    return FileResponse(WEB_DIR / "privacy.html", media_type="text/html")
+
+
+@mcp.custom_route("/kullanim-kosullari", methods=["GET"])
+async def web_terms(request: Request):
+    return FileResponse(WEB_DIR / "terms.html", media_type="text/html")
+
+
 @mcp.custom_route("/assets/app.css", methods=["GET"])
 async def web_css(request: Request):
     return FileResponse(WEB_DIR / "app.css", media_type="text/css")
@@ -276,6 +286,10 @@ async def web_sitemap(request: Request):
         '<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">'
         f"<url><loc>{PUBLIC_BASE_URL}/</loc><lastmod>2026-08-29</lastmod>"
         "<changefreq>daily</changefreq><priority>1.0</priority></url>"
+        f"<url><loc>{PUBLIC_BASE_URL}/gizlilik</loc><lastmod>2026-08-29</lastmod>"
+        "<changefreq>monthly</changefreq><priority>0.3</priority></url>"
+        f"<url><loc>{PUBLIC_BASE_URL}/kullanim-kosullari</loc><lastmod>2026-08-29</lastmod>"
+        "<changefreq>monthly</changefreq><priority>0.3</priority></url>"
         "</urlset>"
     )
     return Response(
