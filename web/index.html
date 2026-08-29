@@ -4,9 +4,12 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="description" content="Ticaret Bakanlığı mevzuatı, devlet destekleri, dış ticaret raporları ve resmî veri kaynaklarında araştırma.">
+  <meta name="robots" content="noindex,follow">
   <meta name="theme-color" content="#ffffff">
   <title>Ticaret Bilgi Masası</title>
-  <script>if(location.protocol==='file:')location.replace('https://mevzuat-mcp.seymata.com/')</script>
+  <script>if(location.protocol==='file:')location.replace('https://mevzuat-mcp.seymata.com/app')</script>
+  <link rel="canonical" href="https://mevzuat-mcp.seymata.com/app">
+  <link rel="icon" href="/favicon.svg" type="image/svg+xml">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&amp;family=IBM+Plex+Sans+Condensed:wght@500;600;700&amp;family=Manrope:wght@400;500;600;700&amp;display=swap" rel="stylesheet">
@@ -30,6 +33,8 @@
 
     <div class="topbar-tools">
       <span class="live-state" id="liveState"><i aria-hidden="true"></i><span>Bağlanıyor</span></span>
+      <a class="app-login" id="appLogin" href="/auth/google">Google ile giriş</a>
+      <form class="app-account" id="appAccountForm" action="/auth/logout" method="post" hidden><button id="appAccountButton" type="submit" title="Çıkış yapmak için tıklayın">Hesabım</button></form>
       <button class="mcp-button" id="copyMcp" type="button" title="MCP adresini kopyala"><span>MCP</span><code>/mcp</code></button>
       <button class="icon-button" id="themeToggle" type="button" aria-label="Renk temasını değiştir">
         <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3a9 9 0 1 0 0 18V3Z"/><circle cx="12" cy="12" r="9"/></svg>

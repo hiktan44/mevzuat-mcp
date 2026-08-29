@@ -519,6 +519,21 @@ async function loadCatalogStatus() {
   }
 }
 
+async function loadAuthState() {
+  try {
+    const response = await fetch("/api/auth/me", { headers: { Accept: "application/json" } });
+    if (!response.ok) return;
+    const auth = await response.json();
+    if (!auth.authenticated || !auth.user) return;
+    const firstName = String(auth.user.name || auth.user.email || "Hesabım").split(" ")[0];
+    $("#appLogin").hidden = true;
+    $("#appAccountForm").hidden = false;
+    $("#appAccountButton").textContent = `${firstName} · Çıkış`;
+  } catch (_) {
+    // The application remains usable as a guest if account state is unavailable.
+  }
+}
+
 function switchScope(scope) {
   if (scope === state.scope) return;
   state.scope = scope;
@@ -1440,4 +1455,5 @@ $("#themeToggle").addEventListener("click", () => {
 });
 
 loadCatalogStatus();
+loadAuthState();
 runTicaretSearch({ offset: 0 });

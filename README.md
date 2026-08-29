@@ -106,11 +106,35 @@ Her çağrı katı JSON şeması ve `require_parameters=true` kullanır; bu nede
 
 Uzak MCP adresi: `https://mevzuat-mcp.seymata.com/mcp`
 
-Web araştırma arayüzü: `https://mevzuat-mcp.seymata.com/`
+Tanıtım ve fiyatlandırma sayfası: `https://mevzuat-mcp.seymata.com/`
+
+Web araştırma uygulaması: `https://mevzuat-mcp.seymata.com/app`
 
 Arayüzde Ticaret Bakanlığının yedi bilgi katmanı canlı kayıt sayılarıyla ayrı gösterilir; kaynak, belge türü, yıl ve mülga durumu filtrelenebilir. Seçilen kaydın resmî kaynak zinciri, tam metni ve kopyalanabilir atfı aynı ekranda açılır. **Genel mevzuat** görünümü Bedesten resmî servisine bağlı ayrı arama alanıdır.
 
 > Coolify dağıtımı v1.5.0 sağlık, web arayüzü ve MCP araç taramasıyla doğrulanır. Snapshot verilerini kalıcı tutmak için uygulamada `/data` hedefine persistent volume bağlayın; imaj `MEVZUAT_DATA_DIR=/data` ile hazır gelir.
+
+### Google ile giriş ve SEO
+
+Google OAuth istemcisinde **Web application** türü seçilir ve yetkili yönlendirme adresi olarak yalnızca şu tam adres eklenir:
+
+```text
+https://mevzuat-mcp.seymata.com/auth/google/callback
+```
+
+Coolify ortam değişkenleri:
+
+```text
+PUBLIC_BASE_URL=https://mevzuat-mcp.seymata.com
+GOOGLE_CLIENT_ID=<Google OAuth web client ID>
+GOOGLE_CLIENT_SECRET=<Google OAuth client secret>
+AUTH_SESSION_SECRET=<en az 32 karakter kriptografik rastgele değer>
+GOOGLE_SITE_VERIFICATION=<Search Console doğrulama kodu, isteğe bağlı>
+```
+
+`GOOGLE_CLIENT_SECRET` ve `AUTH_SESSION_SECRET` hiçbir zaman tarayıcıya gönderilmez. OAuth access/refresh tokenları saklanmaz; yalnız doğrulanmış profil alanları ve imzalı birinci taraf oturum çerezi kullanılır. Anahtarlar eklenmediyse Google düğmesi kurulum uyarısı gösterir ve misafir erişimi çalışmaya devam eder.
+
+Landing page; canonical, Open Graph/Twitter kartları, `SoftwareApplication` ve `FAQPage` yapılandırılmış verisi, `/robots.txt`, `/sitemap.xml`, manifest ve indekslenmeyen `/app` çalışma alanıyla hazırdır. Google Search Console tarafında alan adı doğrulandıktan sonra `https://mevzuat-mcp.seymata.com/sitemap.xml` gönderilmelidir; indeks kararı ve sıralama Google'a aittir.
 
 ChatGPT'de geliştirici modu açıkken **Ayarlar → Uygulamalar → Oluştur** ekranında bu adresi endpoint olarak verin, kimlik doğrulamayı **Yok** seçin ve **Araçları tara** ile 39 aracı yükleyin. Tarife, maliyet, ithalat kontrolü ve Gümrükçe araçları MCP Apps yapılandırılmış sonuç görünümünü destekler. Codex için:
 

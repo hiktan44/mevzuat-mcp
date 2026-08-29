@@ -3,18 +3,23 @@
 from __future__ import annotations
 
 import base64
+import html
+import hmac
 import json
 import logging
+import os
 import re
 import threading
 import time
 from pathlib import Path
 from typing import Any
 
+import httpx
 from pydantic import ValidationError
 from starlette.requests import Request
-from starlette.responses import FileResponse, JSONResponse
+from starlette.responses import FileResponse, HTMLResponse, JSONResponse, PlainTextResponse, RedirectResponse, Response
 
+from auth_service import AuthError, GoogleAuthService
 from customs_advisor import CustomsInquiry, ProductClassificationRequest
 from mevzuat_mcp_server import (
     _BED_VALID_TYPES,
@@ -31,6 +36,8 @@ from tariff_engine import LandedCostInput
 
 logger = logging.getLogger(__name__)
 WEB_DIR = Path(__file__).resolve().parent / "web"
+PUBLIC_BASE_URL = os.environ.get("PUBLIC_BASE_URL", "https://mevzuat-mcp.seymata.com").rstrip("/")
+google_auth = GoogleAuthService()
 
 
 class FixedWindowRateLimiter:
@@ -181,6 +188,18 @@ def _ticaret_document_json(document: Any) -> dict[str, Any]:
 
 @mcp.custom_route("/", methods=["GET"])
 async def web_index(request: Request):
+    landing = (WEB_DIR / "landing.html").read_text(encoding="utf-8")
+    verification = html.escape(os.environ.get("GOOGLE_SITE_VERIFICATION", ""), quote=True)
+    landing = landing.replace("{{GOOGLE_SITE_VERIFICATION}}", verification)
+    return HTMLResponse(
+        landing,
+        headers={"Cache-Control": "public, max-age=300", "Vary": "Accept-Encoding"},
+    )
+
+
+@mcp.custom_route("/app", methods=["GET"])
+@mcp.custom_route("/app/", methods=["GET"])
+async def web_application(request: Request):
     return FileResponse(WEB_DIR / "index.html", media_type="text/html")
 
 
@@ -192,6 +211,191 @@ async def web_css(request: Request):
 @mcp.custom_route("/assets/app.js", methods=["GET"])
 async def web_js(request: Request):
     return FileResponse(WEB_DIR / "app.js", media_type="text/javascript")
+
+
+@mcp.custom_route("/assets/landing.css", methods=["GET"])
+async def web_landing_css(request: Request):
+    return FileResponse(WEB_DIR / "landing.css", media_type="text/css")
+
+
+@mcp.custom_route("/assets/landing.js", methods=["GET"])
+async def web_landing_js(request: Request):
+    return FileResponse(WEB_DIR / "landing.js", media_type="text/javascript")
+
+
+@mcp.custom_route("/favicon.svg", methods=["GET"])
+async def web_favicon(request: Request):
+    return FileResponse(WEB_DIR / "favicon.svg", media_type="image/svg+xml")
+
+
+@mcp.custom_route("/assets/og-image.svg", methods=["GET"])
+async def web_og_image(request: Request):
+    return FileResponse(WEB_DIR / "og-image.svg", media_type="image/svg+xml")
+
+
+@mcp.custom_route("/assets/og-image.png", methods=["GET"])
+async def web_og_image_png(request: Request):
+    return FileResponse(
+        WEB_DIR / "og-image.png",
+        media_type="image/png",
+        headers={"Cache-Control": "public, max-age=86400"},
+    )
+
+
+@mcp.custom_route("/site.webmanifest", methods=["GET"])
+async def web_manifest(request: Request):
+    return JSONResponse(
+        {
+            "name": "Ticaret Bilgi Masası",
+            "short_name": "Ticaret Masası",
+            "description": "Türkiye gümrük ve dış ticaret mevzuatı için resmî kaynaklı araştırma ve ön değerlendirme.",
+            "start_url": "/",
+            "display": "standalone",
+            "background_color": "#eef6fa",
+            "theme_color": "#08233d",
+            "icons": [{"src": "/favicon.svg", "sizes": "any", "type": "image/svg+xml"}],
+        },
+        media_type="application/manifest+json",
+        headers={"Cache-Control": "public, max-age=86400"},
+    )
+
+
+@mcp.custom_route("/robots.txt", methods=["GET"])
+async def web_robots(request: Request):
+    return PlainTextResponse(
+        "User-agent: *\nAllow: /\nDisallow: /api/\nDisallow: /auth/\nDisallow: /mcp\n"
+        f"Sitemap: {PUBLIC_BASE_URL}/sitemap.xml\n",
+        headers={"Cache-Control": "public, max-age=3600"},
+    )
+
+
+@mcp.custom_route("/sitemap.xml", methods=["GET"])
+async def web_sitemap(request: Request):
+    xml = (
+        '<?xml version="1.0" encoding="UTF-8"?>'
+        '<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">'
+        f"<url><loc>{PUBLIC_BASE_URL}/</loc><lastmod>2026-08-29</lastmod>"
+        "<changefreq>daily</changefreq><priority>1.0</priority></url>"
+        "</urlset>"
+    )
+    return Response(
+        xml,
+        media_type="application/xml",
+        headers={"Cache-Control": "public, max-age=3600"},
+    )
+
+
+def _google_redirect_uri() -> str:
+    return f"{PUBLIC_BASE_URL}/auth/google/callback"
+
+
+def _secure_cookie() -> bool:
+    return PUBLIC_BASE_URL.startswith("https://")
+
+
+@mcp.custom_route("/api/auth/me", methods=["GET"])
+async def web_auth_me(request: Request):
+    token = request.cookies.get(google_auth.session_cookie, "")
+    session: dict[str, Any] | None = None
+    if token:
+        try:
+            session = google_auth.parse_session(token)
+        except AuthError:
+            session = None
+    response = JSONResponse(
+        {
+            "authenticated": session is not None,
+            "google_enabled": google_auth.configured,
+            "user": (
+                {
+                    "email": session.get("email", ""),
+                    "name": session.get("name", ""),
+                    "picture": session.get("picture", ""),
+                }
+                if session
+                else None
+            ),
+        }
+    )
+    response.headers["Cache-Control"] = "no-store"
+    return response
+
+
+@mcp.custom_route("/auth/google", methods=["GET"])
+async def web_google_login(request: Request):
+    limited = _rate_limit_response(request, "auth-login", limit=10, window_seconds=900)
+    if limited:
+        return limited
+    if not google_auth.configured:
+        return RedirectResponse("/?auth=google-setup#login", status_code=303)
+    state, nonce = google_auth.create_oauth_state()
+    response = RedirectResponse(
+        google_auth.authorization_url(
+            redirect_uri=_google_redirect_uri(), state=state, nonce=nonce
+        ),
+        status_code=303,
+    )
+    response.set_cookie(
+        google_auth.state_cookie,
+        state,
+        max_age=600,
+        httponly=True,
+        secure=_secure_cookie(),
+        samesite="lax",
+        path="/auth",
+    )
+    return response
+
+
+@mcp.custom_route("/auth/google/callback", methods=["GET"])
+async def web_google_callback(request: Request):
+    limited = _rate_limit_response(request, "auth-callback", limit=10, window_seconds=900)
+    if limited:
+        return limited
+    state = request.query_params.get("state", "")
+    state_cookie = request.cookies.get(google_auth.state_cookie, "")
+    code = request.query_params.get("code", "")
+    if request.query_params.get("error"):
+        return RedirectResponse("/?auth=cancelled#login", status_code=303)
+    try:
+        if not state or not state_cookie or not hmac.compare_digest(state, state_cookie):
+            raise AuthError("Google giriş isteği eşleşmedi.")
+        state_payload = google_auth.verify_oauth_state(state_cookie)
+        profile = await google_auth.exchange_code(
+            code=code,
+            redirect_uri=_google_redirect_uri(),
+            expected_nonce=str(state_payload.get("nonce", "")),
+        )
+        google_auth.upsert_user(profile)
+        session_token = google_auth.create_session(profile)
+    except (AuthError, httpx.HTTPError):
+        logger.warning("Google login callback could not be verified", exc_info=True)
+        response = RedirectResponse("/?auth=failed#login", status_code=303)
+        response.delete_cookie(google_auth.state_cookie, path="/auth")
+        return response
+
+    response = RedirectResponse("/app", status_code=303)
+    response.set_cookie(
+        google_auth.session_cookie,
+        session_token,
+        max_age=google_auth.session_ttl_seconds,
+        httponly=True,
+        secure=_secure_cookie(),
+        samesite="lax",
+        path="/",
+    )
+    response.delete_cookie(google_auth.state_cookie, path="/auth")
+    return response
+
+
+@mcp.custom_route("/auth/logout", methods=["POST"])
+async def web_logout(request: Request):
+    limited = _rate_limit_response(request, "auth-logout", limit=10, window_seconds=900)
+    if limited:
+        return limited
+    response = RedirectResponse("/", status_code=303)
+    response.delete_cookie(google_auth.session_cookie, path="/")
+    return response
 
 
 @mcp.custom_route("/api/search", methods=["POST"])
