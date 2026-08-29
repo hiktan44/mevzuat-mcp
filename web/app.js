@@ -47,9 +47,11 @@ const kindLabels = {
 };
 
 const sourceLabels = {
+  resmi_gazete_guncel: "Resmî Gazete / güncel mevzuat",
   gumruk: "Gümrük işlemleri",
   ihracat: "İhracat",
   ithalat: "İthalat",
+  ithalat_duyurular: "İthalat Genel Müdürlüğü duyuruları",
   destekler: "Devlet destekleri",
   ic_ticaret: "İç ticaret",
   tuketici: "Tüketici",
@@ -483,7 +485,12 @@ async function loadCatalogStatus() {
     $("#sourceCount").textContent = numberFormat.format(status.source_count);
     $("#pageCount").textContent = numberFormat.format(status.pages_scanned);
     $("#documentCount").textContent = numberFormat.format(status.document_count);
-    $("#refreshCadence").textContent = `${Math.round(status.sync_interval_seconds / 3600)} sa.`;
+    const priorityHours = Math.max(1, Math.round(status.sync_interval_seconds / 3600));
+    const fullHours = Math.max(priorityHours, Math.round((status.full_sync_interval_seconds || status.sync_interval_seconds) / 3600));
+    $("#refreshCadence").textContent = `${priorityHours} sa. / tam ${fullHours} sa.`;
+    $("#latestGazetteDate").textContent = status.latest_official_gazette_date
+      ? formatDate(status.latest_official_gazette_date)
+      : "—";
     $("#lastSynced").textContent = status.last_synced_at ? `Son eşitleme: ${formatDate(status.last_synced_at, true)}` : "İlk eşitleme sürüyor.";
     $("#allCount").textContent = `${numberFormat.format(status.document_count)} canlı kayıt`;
 

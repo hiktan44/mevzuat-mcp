@@ -8,6 +8,7 @@ All endpoints use the wrapper format:
 Responses use:
   {"data": ..., "metadata": {"FMTY": "SUCCESS"|"ERROR", ...}}
 """
+import asyncio
 import base64
 from datetime import datetime, timedelta
 import html
@@ -168,6 +169,9 @@ class BedestenClient:
             sort_field: RESMI_GAZETE_TARIHI, MEVZUAT_ADI, MEVZUAT_NO, etc.
             sort_direction: asc or desc
         """
+        # The official service rejects values above 20 even though older
+        # consumers exposed a wider range.
+        page_size = max(1, min(page_size, 20))
         inner: Dict[str, Any] = {
             "pageSize": page_size,
             "pageNumber": page,
@@ -194,7 +198,18 @@ class BedestenClient:
             inner["resmiGazeteSayisi"] = resmi_gazete_sayisi
 
         try:
-            resp = await self._client.post("/searchDocuments", json=_wrap_paging(inner))
+            resp = None
+            for attempt in range(3):
+                resp = await self._client.post("/searchDocuments", json=_wrap_paging(inner))
+                if resp.status_code not in {429, 500, 502, 503, 504} or attempt == 2:
+                    break
+                retry_after = resp.headers.get("retry-after", "")
+                try:
+                    delay = min(max(float(retry_after), 0.5), 4.0)
+                except ValueError:
+                    delay = 0.75 * (attempt + 1)
+                await asyncio.sleep(delay)
+            assert resp is not None
             resp.raise_for_status()
             body = resp.json()
 

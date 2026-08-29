@@ -1,5 +1,5 @@
 {
-  "sync_interval_seconds": 21600,
+  "sync_interval_seconds": 10800,
   "valid_from": "2026-01-01",
   "official_gazette_date": "31/12/2025",
   "official_gazette_number": "33124",

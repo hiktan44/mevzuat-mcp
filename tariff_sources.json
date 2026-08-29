@@ -1,5 +1,5 @@
 {
-  "sync_interval_seconds": 21600,
+  "sync_interval_seconds": 3600,
   "sources": [
     {
       "id": "import_regime",

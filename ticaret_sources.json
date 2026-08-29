@@ -1,6 +1,14 @@
 {
   "sync_interval_seconds": 21600,
+  "priority_sync_interval_seconds": 3600,
   "sources": [
+    {
+      "id": "resmi_gazete_guncel",
+      "url": "https://bedesten.adalet.gov.tr/mevzuat",
+      "content_kind": "mevzuat",
+      "follow_prefixes": [],
+      "max_pages": 0
+    },
     {
       "id": "gumruk",
       "url": "https://ticaret.gov.tr/gumruk-islemleri/mevzuat",
@@ -21,6 +29,13 @@
       "content_kind": "mevzuat",
       "follow_prefixes": ["/ithalat/ithalat-mevzuati"],
       "max_pages": 220
+    },
+    {
+      "id": "ithalat_duyurular",
+      "url": "https://ithalat.ticaret.gov.tr/duyurular",
+      "content_kind": "mevzuat",
+      "follow_prefixes": ["/duyurular"],
+      "max_pages": 180
     },
     {
       "id": "destekler",

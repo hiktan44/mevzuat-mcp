@@ -49,7 +49,7 @@ Bu proje; Adalet Bakanlığı Mevzuat Bilgi Sistemi, Bedesten Mevzuat servisi ve
 
 ## Ticaret Bakanlığı bilgi katmanları
 
-Kaynak listesi `ticaret_sources.json` dosyasında ayrı ve elle düzenlenebilir tutulur; başlıklar, sektörler, ülke adları ve belge bilgileri canlı sayfalardan dinamik olarak çıkarılır. Katalog varsayılan olarak altı saatte bir tamamen yenilenir. `TICARET_SYNC_INTERVAL_SECONDS`, `TICARET_SOURCES_FILE` ve `TICARET_EXTRA_SOURCES_JSON` değişkenleriyle dağıtım yeniden kod yazmadan özelleştirilebilir.
+Kaynak listesi `ticaret_sources.json` dosyasında ayrı ve elle düzenlenebilir tutulur; başlıklar, sektörler, ülke adları ve belge bilgileri canlı sayfalardan dinamik olarak çıkarılır. Gümrük, ithalat, ihracat, destekler ve İthalat Genel Müdürlüğü duyuruları saatlik; bütün katalog altı saatte bir yenilenir. Ayrıca Adalet Bakanlığı Bedesten resmî mevzuat servisindeki son 45 günlük Resmî Gazete kayıtları her saat taranarak Bakanlık sayfalarındaki yayımlama gecikmesi kapatılır. `TICARET_PRIORITY_SYNC_INTERVAL_SECONDS`, `TICARET_SYNC_INTERVAL_SECONDS`, `TICARET_SOURCES_FILE` ve `TICARET_EXTRA_SOURCES_JSON` değişkenleriyle dağıtım yeniden kod yazmadan özelleştirilebilir.
 
 | Katman | `content_kind` | Kapsam |
 |---|---|---|

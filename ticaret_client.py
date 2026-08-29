@@ -207,6 +207,15 @@ class TicaretApiClient:
             os.environ.get("TICARET_SYNC_INTERVAL_SECONDS", config.get("sync_interval_seconds", 21600))
         )
         self.sync_interval_seconds = max(300, configured_interval)
+        self.priority_sync_interval_seconds = max(
+            300,
+            int(
+                os.environ.get(
+                    "TICARET_PRIORITY_SYNC_INTERVAL_SECONDS",
+                    config.get("priority_sync_interval_seconds", 3600),
+                )
+            ),
+        )
         self.max_download_bytes = max_download_bytes
         self._http = httpx.AsyncClient(
             headers={
@@ -222,6 +231,7 @@ class TicaretApiClient:
         self._request_semaphore = asyncio.Semaphore(8)
         self._catalog: TicaretCatalog | None = None
         self._catalog_monotonic: float = 0.0
+        self._last_full_sync_monotonic: float = 0.0
         self._sync_lock = asyncio.Lock()
         self._syncing = False
         self._next_sync_at: datetime | None = None
@@ -670,6 +680,111 @@ class TicaretApiClient:
                 )
         return len(seen), documents, errors
 
+    async def _crawl_recent_trade_legislation(
+        self,
+        source: TicaretSource,
+    ) -> tuple[int, list[TicaretDocument], list[str]]:
+        """Index recent trade legislation from the official Justice service.
+
+        Ministry landing pages can be updated after an Official Gazette issue.
+        This independent official layer closes that gap without inventing
+        titles, dates, document numbers or source links.
+        """
+        end_date = _utc_now()
+        start_date = end_date - timedelta(days=45)
+        title_markers = tuple(
+            _search_key(value)
+            for value in (
+                "ithalat", "ihracat", "gümrük", "ticaret", "gözetim",
+                "damping", "haksız rekabet", "korunma önlemi", "serbest bölge",
+                "dahilde işleme", "hariçte işleme", "ürün güvenliği", "teknik düzenleme",
+                "tüketici", "elektronik ticaret", "perakende", "ticari reklam",
+                "kooperatif", "esnaf", "lisanslı depo", "hal hakem", "devlet yardımı",
+                "ilave gümrük vergisi", "ek mali yükümlülük", "tarife kontenjanı",
+                "gümrük tarife", "tarife cetveli", "tarife pozisyonu", "sübvansiyon",
+            )
+        )
+        type_labels = {
+            "TEBLIGLER": "Tebliğ",
+            "CB_KARAR": "Cumhurbaşkanı Kararı",
+            "CB_YONETMELIK": "Cumhurbaşkanlığı Yönetmeliği",
+            "YONETMELIK": "Yönetmelik",
+            "KKY": "Kurum Yönetmeliği",
+        }
+        documents_by_id: dict[str, TicaretDocument] = {}
+        errors: list[str] = []
+        page = 1
+        pages_scanned = 0
+        max_pages = 10
+
+        while page <= max_pages:
+            result = await self._bedesten.search_documents(
+                mevzuat_tur_list=list(type_labels),
+                resmi_gazete_tarihi_start=start_date.strftime("%d/%m/%Y"),
+                resmi_gazete_tarihi_end=end_date.strftime("%d/%m/%Y"),
+                page=page,
+                page_size=20,
+                sort_field="RESMI_GAZETE_TARIHI",
+                sort_direction="desc",
+            )
+            if result.error_message:
+                errors.append(f"{source.id}: {result.error_message}")
+                break
+            pages_scanned += 1
+            for item in result.documents:
+                title = _clean_text(item.mevzuat_adi)
+                if not title or not any(marker in _search_key(title) for marker in title_markers):
+                    continue
+                type_info = item.mevzuat_tur if isinstance(item.mevzuat_tur, dict) else {}
+                type_name = str(type_info.get("name") or item.mevzuat_tur or "").upper()
+                publication_date = item.resmi_gazete_tarihi
+                gazette_url = "https://resmigazete.gov.tr/"
+                if publication_date:
+                    try:
+                        date_value = datetime.fromisoformat(publication_date.replace("Z", "+00:00"))
+                        gazette_url = f"https://resmigazete.gov.tr/{date_value.strftime('%d.%m.%Y')}"
+                    except ValueError:
+                        pass
+                document_url = item.url or (
+                    "https://www.mevzuat.gov.tr/mevzuat?"
+                    f"MevzuatNo={item.mevzuat_no}&MevzuatTur=9&MevzuatTertip={item.mevzuat_tertip or 5}"
+                )
+                document = TicaretDocument(
+                    id=_stable_id(source.id, str(item.mevzuat_id)),
+                    title=title[:500],
+                    source_id=source.id,
+                    content_kind=source.content_kind,
+                    section="Resmî Gazete / Güncel Ticaret Mevzuatı",
+                    document_type=type_labels.get(type_name, "Mevzuat"),
+                    number=str(item.mevzuat_no),
+                    publication_date=publication_date,
+                    official_gazette=item.resmi_gazete_sayisi,
+                    document_url=_canonical_document_url(document_url),
+                    source_page_url=gazette_url,
+                    file_type="html",
+                    is_page=False,
+                    context=(
+                        f"Resmî Gazete sayı {item.resmi_gazete_sayisi or 'belirtilmedi'}; "
+                        "başlık, tarih ve numara Adalet Bakanlığı Bedesten resmî mevzuat servisinden alınmıştır."
+                    ),
+                    metadata={
+                        "bedesten_mevzuat_id": item.mevzuat_id,
+                        "official_source": "bedesten.adalet.gov.tr/mevzuat",
+                        "rolling_window_days": 45,
+                    },
+                )
+                documents_by_id[document.id] = document
+
+            total_pages = max(1, (result.total_results + 19) // 20)
+            if page >= total_pages:
+                break
+            page += 1
+            await asyncio.sleep(0.2)
+
+        if page >= max_pages and result.total_results > max_pages * 20:
+            errors.append(f"{source.id}: son 45 günlük mevzuat {max_pages * 20} kayıtlık güvenlik sınırını aştı")
+        return pages_scanned, list(documents_by_id.values()), errors
+
     async def refresh_catalog(self, *, core_only: bool = False) -> TicaretCatalog:
         """Rebuild the complete catalogue from live official pages."""
         async with self._sync_lock:
@@ -682,7 +797,10 @@ class TicaretApiClient:
             try:
                 selected_sources = self.sources
                 if core_only:
-                    core_ids = {"gumruk", "ihracat", "ithalat", "destekler"}
+                    core_ids = {
+                        "resmi_gazete_guncel", "gumruk", "ihracat", "ithalat",
+                        "ithalat_duyurular", "destekler",
+                    }
                     selected_sources = [
                         source.model_copy(update={"max_pages": min(source.max_pages, 40)})
                         for source in self.sources
@@ -691,6 +809,10 @@ class TicaretApiClient:
 
                 async def crawl(source: TicaretSource):
                     try:
+                        if source.id == "resmi_gazete_guncel":
+                            return source, await asyncio.wait_for(
+                                self._crawl_recent_trade_legislation(source), timeout=90
+                            )
                         return source, await asyncio.wait_for(self._crawl_source(source), timeout=240)
                     except asyncio.TimeoutError:
                         return source, (0, [], [f"{source.id}: kaynak taraması 240 saniyelik süre sınırını aştı"])
@@ -741,7 +863,9 @@ class TicaretApiClient:
                 )
                 self._catalog = catalog
                 self._catalog_monotonic = time.monotonic()
-                self._next_sync_at = _utc_now() + timedelta(seconds=self.sync_interval_seconds)
+                if not core_only:
+                    self._last_full_sync_monotonic = self._catalog_monotonic
+                self._next_sync_at = _utc_now() + timedelta(seconds=self.priority_sync_interval_seconds)
                 logger.info(
                     "Ticaret catalogue synced: %s pages, %s documents, %s errors",
                     page_count,
@@ -755,36 +879,51 @@ class TicaretApiClient:
     async def get_catalog(self, *, force_refresh: bool = False) -> TicaretCatalog:
         if self._catalog is None:
             # A first user request must not wait for every country report page.
-            # The four operationally critical trees are small and provide an
+            # The operationally critical trees are small and provide an
             # immediately useful catalogue while the scheduled full refresh
             # continues in the background.
             return await self.refresh_catalog(core_only=True)
-        age = time.monotonic() - self._catalog_monotonic
-        if force_refresh or age >= self.sync_interval_seconds:
+        full_age = time.monotonic() - self._last_full_sync_monotonic
+        if force_refresh or full_age >= self.sync_interval_seconds:
             return await self.refresh_catalog()
         return self._catalog
 
     async def periodic_refresh_loop(self) -> None:
-        """Refresh immediately at startup and then on the configured cadence."""
+        """Refresh priority sources hourly and the complete catalogue less often."""
         while True:
             try:
                 if self._catalog is None:
                     await self.refresh_catalog(core_only=True)
-                await self.refresh_catalog()
+                full_sync_due = (
+                    self._last_full_sync_monotonic == 0
+                    or time.monotonic() - self._last_full_sync_monotonic >= self.sync_interval_seconds
+                )
+                await self.refresh_catalog(core_only=not full_sync_due)
             except asyncio.CancelledError:
                 raise
             except Exception:
                 logger.exception("Scheduled Ticaret catalogue refresh failed")
-            await asyncio.sleep(self.sync_interval_seconds)
+            await asyncio.sleep(self.priority_sync_interval_seconds)
 
     def status(self) -> TicaretCatalogStatus:
         catalog = self._catalog
+        recent_documents = [
+            document for document in (catalog.documents if catalog else [])
+            if document.source_id == "resmi_gazete_guncel"
+        ]
+        latest_gazette_date = max(
+            (document.publication_date or "" for document in recent_documents),
+            default="",
+        ) or None
         return TicaretCatalogStatus(
             ready=catalog is not None,
             syncing=self._syncing,
             last_synced_at=catalog.synced_at if catalog else None,
             next_scheduled_sync_at=self._next_sync_at.isoformat() if self._next_sync_at else None,
-            sync_interval_seconds=self.sync_interval_seconds,
+            sync_interval_seconds=self.priority_sync_interval_seconds,
+            full_sync_interval_seconds=self.sync_interval_seconds,
+            latest_official_gazette_date=latest_gazette_date,
+            latest_official_gazette_documents=len(recent_documents),
             source_count=len(catalog.sources) if catalog else len(self.sources),
             pages_scanned=catalog.pages_scanned if catalog else 0,
             document_count=len(catalog.documents) if catalog else 0,

@@ -113,6 +113,9 @@ class TicaretCatalogStatus(BaseModel):
     last_synced_at: Optional[str] = None
     next_scheduled_sync_at: Optional[str] = None
     sync_interval_seconds: int
+    full_sync_interval_seconds: int | None = None
+    latest_official_gazette_date: Optional[str] = None
+    latest_official_gazette_documents: int = 0
     source_count: int = 0
     pages_scanned: int = 0
     document_count: int = 0

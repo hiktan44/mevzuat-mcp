@@ -3,8 +3,9 @@ from __future__ import annotations
 import asyncio
 import subprocess
 import unittest
-from unittest.mock import patch
+from unittest.mock import AsyncMock, patch
 
+from bedesten_models import BedMevzuatDocument, BedSearchResult
 from ticaret_client import TicaretApiClient, _sniff_document_extension
 from ticaret_models import TicaretDocument, TicaretSource
 
@@ -26,6 +27,44 @@ class TicaretClientParsingTests(unittest.TestCase):
     def test_source_config_has_separate_information_layers(self) -> None:
         kinds = {source.content_kind for source in self.client.sources}
         self.assertTrue({"mevzuat", "destek", "veri", "rapor", "ulke_bilgisi", "iletisim", "yayin"} <= kinds)
+        source_ids = {source.id for source in self.client.sources}
+        self.assertTrue({"resmi_gazete_guncel", "ithalat_duyurular"} <= source_ids)
+
+    def test_recent_official_trade_legislation_uses_exact_gazette_metadata(self) -> None:
+        source = next(item for item in self.client.sources if item.id == "resmi_gazete_guncel")
+        relevant = BedMevzuatDocument.model_validate(
+            {
+                "mevzuatId": "august-30",
+                "mevzuatNo": "46256",
+                "mevzuatAdi": "İTHALATTA HAKSIZ REKABETİN ÖNLENMESİNE İLİŞKİN TEBLİĞ (TEBLİĞ NO: 2026/30)",
+                "mevzuatTur": {"id": 9, "name": "TEBLIGLER"},
+                "mevzuatTertip": 5,
+                "resmiGazeteTarihi": "2026-08-21T00:00:00Z",
+                "resmiGazeteSayisi": "33347",
+            }
+        )
+        unrelated = relevant.model_copy(
+            update={
+                "mevzuat_id": "unrelated",
+                "mevzuat_adi": "BİR ÜNİVERSİTE EĞİTİM YÖNETMELİĞİ",
+            }
+        )
+        self.client._bedesten.search_documents = AsyncMock(
+            return_value=BedSearchResult(documents=[relevant, unrelated], total_results=2)
+        )
+
+        pages, documents, errors = asyncio.run(self.client._crawl_recent_trade_legislation(source))
+
+        self.assertEqual(pages, 1)
+        self.assertEqual(errors, [])
+        self.assertEqual(len(documents), 1)
+        document = documents[0]
+        self.assertEqual(document.source_id, "resmi_gazete_guncel")
+        self.assertEqual(document.publication_date, "2026-08-21T00:00:00Z")
+        self.assertEqual(document.official_gazette, "33347")
+        self.assertEqual(document.number, "46256")
+        self.assertIn("MevzuatNo=46256", document.document_url)
+        self.assertEqual(document.source_page_url, "https://resmigazete.gov.tr/21.08.2026")
 
     def test_parses_table_metadata_and_official_download(self) -> None:
         html = """

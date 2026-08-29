@@ -2093,7 +2093,7 @@ async def search_mevzuat(
         description="Official Gazette issue number filter. E.g., '28513'.",
     ),
     page: int = Field(1, ge=1, description="Page number (1-based, default: 1)"),
-    page_size: int = Field(25, ge=1, le=100, description="Results per page (1-100, default: 25)"),
+    page_size: int = Field(20, ge=1, le=20, description="Results per page (1-20, default: 20)"),
 ) -> str:
     """
     Search or browse all Turkish legislation on bedesten.adalet.gov.tr.
@@ -2918,7 +2918,8 @@ async def get_ticaret_catalog_status(
         False,
         description=(
             "When true, wait for a full live rescan before returning. This can take several minutes; "
-            "normally leave false because automatic six-hour refresh is enabled."
+            "normally leave false because priority legislation is refreshed hourly and the complete "
+            "catalogue is refreshed every six hours."
         ),
     ),
 ) -> TicaretCatalogStatus:
