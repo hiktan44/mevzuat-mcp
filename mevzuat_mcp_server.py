@@ -25,7 +25,13 @@ from ticaret_models import (
     TicaretDocumentContent,
     TicaretSearchResult,
 )
-from customs_advisor import CustomsAdvisor, CustomsEvidencePack, CustomsInquiry
+from customs_advisor import (
+    CustomsAdvisor,
+    CustomsEvidencePack,
+    CustomsInquiry,
+    ProductClassificationRequest,
+    ProductClassificationResult,
+)
 from tariff_engine import (
     LandedCostInput,
     TariffEngine,
@@ -115,7 +121,7 @@ app = FastMCP(
     "Solr operators: \"exact\", +required, -prohibited, wildcard*, fuzzy~, \"proximity\"~N, boost^N. "
     "NOTE: AND/OR/NOT do NOT work in search_mevzuat - use +term1 +term2 instead. "
     "\n\n"
-    "== Ticaret Bakanlığı, Gümrükçe, resmî tarife ve ithalat kontrolü tools (13 tools) ==\n"
+    "== Ticaret Bakanlığı, Gümrükçe, resmî tarife ve ithalat kontrolü tools (14 tools) ==\n"
     "Use list_ticaret_sources to see source coverage and content kinds. Use search_ticaret_catalog for current "
     "Ministry metadata, get_ticaret_document for bounded full text, search_ticaret_content for bounded multi-document "
     "full-text search, and get_ticaret_catalog_status for freshness. Results always include official source URLs. "
@@ -2406,6 +2412,54 @@ async def sync_official_tariff_data(
     the CAPTCHA-protected tariff search engine and never imports third-party rates.
     """
     return await tariff_engine.sync(force=force_refresh)
+
+
+@app.tool(
+    app=True,
+    annotations={
+        "title": "Ürün evsafından en yakın üç tarife adayını getir",
+        "readOnlyHint": True,
+        "destructiveHint": False,
+        "idempotentHint": False,
+        "openWorldHint": True,
+    },
+)
+async def suggest_candidate_tariff_codes(
+    product_description: str = Field(..., min_length=12, max_length=2000),
+    product_category: str = Field("", max_length=200),
+    composition: str = Field("", max_length=500),
+    intended_use: str = Field("", max_length=300),
+    construction_form: str = Field("", max_length=1000),
+    function_mechanism: str = Field("", max_length=1000),
+    components_accessories: str = Field("", max_length=1000),
+    label_text: str = Field("", max_length=1000),
+    visible_features: str = Field("", max_length=2000),
+    inferred_features: str = Field("", max_length=1500),
+    classification_questions: str = Field("", max_length=1500),
+    origin_country: str = Field("", max_length=100),
+) -> ProductClassificationResult:
+    """Return up to three non-binding HS6/CN8 candidates from approved product attributes.
+
+    Every candidate is checked for existence in the active official Turkish tariff
+    snapshot. When origin is supplied, customs duty and additional-duty rates are
+    returned only if every matching 12-digit subline has one unambiguous rate.
+    """
+    return await customs_advisor_service.classify_product(
+        ProductClassificationRequest(
+            product_description=product_description,
+            product_category=product_category,
+            composition=composition,
+            intended_use=intended_use,
+            construction_form=construction_form,
+            function_mechanism=function_mechanism,
+            components_accessories=components_accessories,
+            label_text=label_text,
+            visible_features=visible_features,
+            inferred_features=inferred_features,
+            classification_questions=classification_questions,
+            origin_country=origin_country,
+        )
+    )
 
 
 @app.tool(

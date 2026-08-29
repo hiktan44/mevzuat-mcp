@@ -1,20 +1,24 @@
 from __future__ import annotations
 
 import io
+import json
 import os
 import unittest
-from unittest.mock import patch
+from types import SimpleNamespace
+from unittest.mock import AsyncMock, patch
 
 import httpx
 from PIL import Image
 
 from customs_advisor import (
     CandidateGtip,
+    CustomsAdvisor,
     CustomsInquiry,
     CustomsModelResult,
     Finding,
     OfficialSourceRegistry,
     ProductAttributeAnalysis,
+    ProductClassificationRequest,
     TaxFinding,
     _deterministic_cost,
     _missing_information,
@@ -212,6 +216,102 @@ class OfficialSourceRegistryTests(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(result.access_mode, "manual_only")
         self.assertEqual(result.excerpt, "")
         self.assertIn("manuel", result.fetch_warning)
+
+
+class TariffClassificationTests(unittest.IsolatedAsyncioTestCase):
+    async def test_candidates_are_verified_and_receive_origin_rates(self) -> None:
+        class FakeTariffEngine:
+            async def lookup(self, code, **kwargs):
+                if code == "999999":
+                    return SimpleNamespace(matched_gtip_count=0)
+                rates = {"customs_duty": 12.0, "additional_duty": 39.0}
+                return SimpleNamespace(
+                    matched_gtip_count=3,
+                    unambiguous_rates=rates,
+                    ambiguous_measure_types=[],
+                    rate_variants={key: [value] for key, value in rates.items()},
+                )
+
+        model_result = {
+            "candidates": [
+                {
+                    "code": "691110",
+                    "explanation": "Porselenden sofra eşyası adayı.",
+                    "confidence": "medium",
+                    "decisive_missing_information": ["Malzemenin porselen olup olmadığı"],
+                },
+                {
+                    "code": "691200",
+                    "explanation": "Porselen dışındaki seramik sofra eşyası adayı.",
+                    "confidence": "medium",
+                    "decisive_missing_information": ["Seramik türü"],
+                },
+                {
+                    "code": "999999",
+                    "explanation": "Resmî cetvelde bulunmayan uydurma kod.",
+                    "confidence": "low",
+                    "decisive_missing_information": [],
+                },
+            ],
+            "missing_information": ["Kesin seramik türü"],
+            "summary": "İki malzeme alternatifi var.",
+        }
+        advisor = CustomsAdvisor(tariff_engine=FakeTariffEngine())
+        try:
+            with patch.dict(os.environ, {"OPENROUTER_API_KEY": "test-key"}), patch(
+                "customs_advisor._openrouter_chat",
+                new=AsyncMock(return_value=(json.dumps(model_result), "google/gemini-test")),
+            ):
+                result = await advisor.classify_product(
+                    ProductClassificationRequest(
+                        product_description="Dört parçalı seramik veya porselen kahve fincanı takımı",
+                        composition="Seramik veya porselen",
+                        origin_country="Çin",
+                    )
+                )
+        finally:
+            await advisor.close()
+        self.assertEqual([item.code for item in result.candidates], ["691110", "691200"])
+        self.assertTrue(all(item.verified_in_official_tariff for item in result.candidates))
+        self.assertEqual(result.candidates[0].customs_duty_rate, 12.0)
+        self.assertEqual(result.candidates[0].additional_duty_rate, 39.0)
+        self.assertEqual(result.candidates[0].rate_status, "unambiguous")
+
+    async def test_rates_wait_for_origin_country(self) -> None:
+        class FakeTariffEngine:
+            async def lookup(self, code, **kwargs):
+                return SimpleNamespace(
+                    matched_gtip_count=1,
+                    unambiguous_rates={},
+                    ambiguous_measure_types=[],
+                    rate_variants={},
+                )
+
+        model_result = {
+            "candidates": [{
+                "code": "691110",
+                "explanation": "Porselen fincan adayı.",
+                "confidence": "low",
+                "decisive_missing_information": ["Menşe ülke", "Malzeme"],
+            }],
+            "missing_information": ["Menşe ülke"],
+            "summary": "Menşe oran için gereklidir.",
+        }
+        advisor = CustomsAdvisor(tariff_engine=FakeTariffEngine())
+        try:
+            with patch.dict(os.environ, {"OPENROUTER_API_KEY": "test-key"}), patch(
+                "customs_advisor._openrouter_chat",
+                new=AsyncMock(return_value=(json.dumps(model_result), "google/gemini-test")),
+            ):
+                result = await advisor.classify_product(
+                    ProductClassificationRequest(
+                        product_description="Porselen olabilecek kahve fincanı ve tabak takımı",
+                    )
+                )
+        finally:
+            await advisor.close()
+        self.assertEqual(result.candidates[0].rate_status, "origin_required")
+        self.assertIsNone(result.candidates[0].customs_duty_rate)
 
 
 if __name__ == "__main__":

@@ -172,6 +172,61 @@ class ProductAttributeAnalysis(BaseModel):
     )
 
 
+class ProductClassificationRequest(BaseModel):
+    """User-approved textual attributes used for non-binding tariff candidates."""
+
+    product_description: str = Field(..., min_length=12, max_length=2000)
+    product_category: str = Field("", max_length=200)
+    composition: str = Field("", max_length=500)
+    intended_use: str = Field("", max_length=300)
+    construction_form: str = Field("", max_length=1000)
+    function_mechanism: str = Field("", max_length=1000)
+    components_accessories: str = Field("", max_length=1000)
+    label_text: str = Field("", max_length=1000)
+    visible_features: str = Field("", max_length=2000)
+    inferred_features: str = Field("", max_length=1500)
+    classification_questions: str = Field("", max_length=1500)
+    origin_country: str = Field("", max_length=100)
+
+
+class TariffCandidateDraft(BaseModel):
+    code: str = Field(..., max_length=20)
+    explanation: str = Field(..., max_length=1200)
+    confidence: Literal["low", "medium", "high"] = "low"
+    decisive_missing_information: list[str] = Field(default_factory=list, max_length=8)
+
+
+class TariffClassificationModelResult(BaseModel):
+    candidates: list[TariffCandidateDraft] = Field(default_factory=list, max_length=3)
+    missing_information: list[str] = Field(default_factory=list, max_length=12)
+    summary: str = Field("", max_length=1200)
+
+
+class VerifiedTariffCandidate(TariffCandidateDraft):
+    code: str
+    level: Literal["HS6", "CN8"]
+    matched_gtip_count: int = Field(..., ge=1)
+    verified_in_official_tariff: bool = True
+    customs_duty_rate: float | None = None
+    additional_duty_rate: float | None = None
+    additional_financial_liability_rate: float | None = None
+    rate_variants: dict[str, list[float]] = Field(default_factory=dict)
+    rate_status: Literal["unambiguous", "ambiguous", "origin_required"] = "origin_required"
+
+
+class ProductClassificationResult(BaseModel):
+    status: Literal["candidates_found", "insufficient_information"]
+    model: str
+    candidates: list[VerifiedTariffCandidate] = Field(default_factory=list)
+    missing_information: list[str] = Field(default_factory=list)
+    summary: str
+    as_of: str
+    warning: str = (
+        "Bunlar bağlayıcı GTİP değildir. Kodun güncel resmî tarife cetvelinde bulunması doğrulanmıştır; "
+        "ürünün bu kodda sınıflandırılması teknik belge, eşyanın gerçek evsafı ve gerektiğinde BTB ile teyit edilmelidir."
+    )
+
+
 class CandidateGtip(BaseModel):
     code: str
     explanation: str
@@ -640,6 +695,29 @@ _VISION_RESPONSE_SCHEMA: dict[str, Any] = {
 }
 
 
+_CLASSIFICATION_PROMPT = """
+Sen Türkiye ithalatı için yalnızca BAĞLAYICI OLMAYAN TARİFE ADAYI üreten kıdemli bir
+tarife sınıflandırma ön inceleme uzmanısın. Kullanıcının onayladığı metinsel ürün evsaflarını
+incele ve yalnızca JSON döndür.
+
+Kurallar:
+- Yalnızca 6 haneli HS veya güvenilir olduğunda 8 haneli CN düzeyinde aday üret.
+- 10/12 haneli Türk GTİP, vergi oranı, TAREKS/TSE sonucu veya kesin hukuki hüküm üretme.
+- Kod yalnız rakamlardan oluşmalı ve tam olarak 6 ya da 8 haneli olmalı.
+- En olası adayı ilk sıraya koy; en fazla 3 aday ver.
+- Malzeme, kullanım amacı, üretim biçimi veya teknik özellik kesin değilse alternatif kodları
+  ayrı adaylar olarak göster ve confidence değerini düşür.
+- Fotoğraftan çıkarıldığı söylenen tahminleri kesin gerçek kabul etme.
+- Her adayın explanation alanında kodu değiştiren somut evsafı açıkla.
+- decisive_missing_information alanına yalnız o adayın seçimini kesinleştirecek eksik bilgileri yaz.
+- Yeterli ürün tanımı varsa en az bir HS6 adayı üret. Gerçekten sınıflandırılamıyorsa adayları boş bırak.
+- confidence yalnızca low, medium veya high olabilir.
+
+JSON anahtarları: candidates, missing_information, summary.
+Her candidates öğesi: code, explanation, confidence, decisive_missing_information.
+""".strip()
+
+
 async def _request_openrouter_vision_analysis(
     models: list[str],
     api_key: str,
@@ -928,6 +1006,80 @@ class CustomsAdvisor:
         raw.pop("warning", None)
         return ProductAttributeAnalysis.model_validate(
             {**raw, "provider": "openrouter", "model": resolved_model}
+        )
+
+    async def classify_product(
+        self,
+        request: ProductClassificationRequest,
+    ) -> ProductClassificationResult:
+        """Suggest up to three HS6/CN8 candidates and verify them in the official tariff snapshot."""
+        if not self.tariff_engine:
+            raise RuntimeError("Resmî tarife motoru kullanıma hazır değil.")
+        response_text, resolved_model = await _openrouter_chat(
+            api_key=_openrouter_api_key(),
+            models=_openrouter_models("OPENROUTER_CUSTOMS_MODELS"),
+            messages=[
+                {"role": "system", "content": _CLASSIFICATION_PROMPT},
+                {
+                    "role": "user",
+                    "content": request.model_dump_json(
+                        indent=2,
+                        exclude={"origin_country"},
+                    ),
+                },
+            ],
+            response_schema=TariffClassificationModelResult.model_json_schema(),
+            schema_name="tariff_candidate_suggestions",
+            max_tokens=3000,
+        )
+        parsed = TariffClassificationModelResult.model_validate_json(response_text)
+        candidates: list[VerifiedTariffCandidate] = []
+        seen: set[str] = set()
+        for draft in parsed.candidates:
+            code = _normalise_gtip(draft.code) or ""
+            if len(code) not in {6, 8} or code in seen:
+                continue
+            seen.add(code)
+            lookup = await self.tariff_engine.lookup(
+                code,
+                origin_country=request.origin_country or None,
+                auto_sync=True,
+            )
+            if lookup.matched_gtip_count < 1:
+                continue
+            safe = lookup.unambiguous_rates
+            if not request.origin_country:
+                rate_status: Literal["unambiguous", "ambiguous", "origin_required"] = "origin_required"
+            elif lookup.ambiguous_measure_types or "customs_duty" not in safe:
+                rate_status = "ambiguous"
+            else:
+                rate_status = "unambiguous"
+            candidates.append(
+                VerifiedTariffCandidate(
+                    **draft.model_dump(exclude={"code"}),
+                    code=code,
+                    level="HS6" if len(code) == 6 else "CN8",
+                    matched_gtip_count=lookup.matched_gtip_count,
+                    customs_duty_rate=safe.get("customs_duty"),
+                    additional_duty_rate=safe.get("additional_duty"),
+                    additional_financial_liability_rate=safe.get("additional_financial_liability"),
+                    rate_variants=lookup.rate_variants,
+                    rate_status=rate_status,
+                )
+            )
+            if len(candidates) == 3:
+                break
+        return ProductClassificationResult(
+            status="candidates_found" if candidates else "insufficient_information",
+            model=resolved_model,
+            candidates=candidates,
+            missing_information=parsed.missing_information,
+            summary=(
+                parsed.summary
+                if candidates
+                else "Onaylanan evsaflarla resmî tarife cetvelinde doğrulanabilen bir HS6/CN8 adayı üretilemedi."
+            ),
+            as_of=datetime.now().astimezone().isoformat(timespec="seconds"),
         )
 
     async def analyse(

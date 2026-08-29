@@ -15,7 +15,7 @@ from pydantic import ValidationError
 from starlette.requests import Request
 from starlette.responses import FileResponse, JSONResponse
 
-from customs_advisor import CustomsInquiry
+from customs_advisor import CustomsInquiry, ProductClassificationRequest
 from mevzuat_mcp_server import (
     _BED_VALID_TYPES,
     bedesten_client,
@@ -448,6 +448,34 @@ async def web_customs_describe_image(request: Request):
             status_code=502,
         )
     return JSONResponse(result.model_dump(mode="json"))
+
+
+@mcp.custom_route("/api/customs/classify-product", methods=["POST"])
+async def web_customs_classify_product(request: Request):
+    """Suggest editable HS6/CN8 candidates from approved attributes and verify tariff existence."""
+    limited = _rate_limit_response(request, "customs-classification", limit=20, window_seconds=60)
+    if limited:
+        return limited
+    try:
+        body = await request.json()
+        if not isinstance(body, dict):
+            raise ValueError("Sınıflandırma isteği bir nesne olmalıdır.")
+        classification = ProductClassificationRequest.model_validate(body)
+        result = await customs_advisor_service.classify_product(classification)
+        return JSONResponse(result.model_dump(mode="json"))
+    except ValidationError as exc:
+        message = exc.errors(include_url=False)[0].get("msg", "Ürün evsaflarını kontrol edin.")
+        return JSONResponse({"error": f"Evsaflar doğrulanamadı: {message}"}, status_code=422)
+    except ValueError as exc:
+        return JSONResponse({"error": str(exc)}, status_code=422)
+    except RuntimeError as exc:
+        return JSONResponse({"error": str(exc)}, status_code=503)
+    except Exception:
+        logger.exception("Product tariff classification failed")
+        return JSONResponse(
+            {"error": "Aday tarife kodları şu anda üretilemedi. Alanları kontrol edip yeniden deneyin."},
+            status_code=502,
+        )
 
 
 @mcp.custom_route("/api/customs/precheck", methods=["POST"])

@@ -187,6 +187,11 @@
                   <label class="field"><span>Aday HS / CN / GTİP</span><input id="candidateGtip" maxlength="30" inputmode="numeric" placeholder="6, 8, 10 veya 12 hane"></label>
                   <label class="field"><span>Menşe ülke <b>*</b></span><input id="originCountry" maxlength="100" required placeholder="Örn. Çin"></label>
                 </div>
+                <section class="gtip-suggestions" id="gtipSuggestions" hidden aria-live="polite">
+                  <header><b>En yakın tarife adayları</b><small id="gtipSuggestionStatus">Evsaf onayından sonra hazırlanır.</small></header>
+                  <div id="gtipSuggestionList"></div>
+                  <p>Bir adaya tıklayın; kod yukarıdaki kutuya yerleşir. Kod ve oranlar bağlayıcı değildir.</p>
+                </section>
                 <label class="field"><span>Malzeme / bileşim</span><input id="composition" maxlength="500" placeholder="Örn. %95 pamuk, %5 elastan; paslanmaz çelik 304"></label>
                 <p class="product-file-status" id="productFileStatus" data-state="waiting">Görsel analizi tamamlandığında temel evsaflar önce bu ürün dosyasına işlenir.</p>
               </div>
@@ -216,7 +221,7 @@
               </div>
               <div class="attribute-actions">
                 <p id="visionProvider">Model bilgisi analizden sonra gösterilir.</p>
-                <button id="confirmAttributes" type="button"><span>Evsafları onayla ve araştırmaya hazırla</span></button>
+                <button id="confirmAttributes" type="button"><span>Evsafları onayla ve aday GTİP bul</span></button>
               </div>
             </section>
 

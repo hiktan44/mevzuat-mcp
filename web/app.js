@@ -13,6 +13,8 @@ const state = {
   customsImageData: null,
   customsVisionStatus: "idle",
   customsVisionResult: null,
+  customsClassificationResult: null,
+  customsAutoGtip: null,
 };
 
 const $ = (selector) => document.querySelector(selector);
@@ -724,7 +726,7 @@ const visionFieldSelectors = [
   "#productDescription", "#composition", "#intendedUse", "#productCategory", "#brandModel",
   "#dimensions", "#labelText", "#dominantColors", "#constructionForm", "#componentsAccessories",
   "#functionMechanism", "#packaging", "#visibleFeatures", "#inferredFeatures",
-  "#classificationQuestions", "#requiredUserInputs", "#originCountry", "#productCondition",
+  "#classificationQuestions", "#requiredUserInputs", "#productCondition",
 ];
 
 function setVisionState(status, message, provider = "") {
@@ -742,8 +744,8 @@ function setVisionState(status, message, provider = "") {
   const confirm = $("#confirmAttributes");
   confirm.disabled = status === "analysing";
   confirm.querySelector("span").textContent = status === "confirmed"
-    ? "Evsaflar onaylandı · Değişiklikte tekrar onaylayın"
-    : "Evsafları onayla ve araştırmaya hazırla";
+    ? "Evsaflar onaylandı · Adayları yeniden bul"
+    : "Evsafları onayla ve aday GTİP bul";
   updateVisionAnalyseButton(status);
   updateReadiness();
 }
@@ -807,6 +809,125 @@ function applyVisionAttributes(data) {
   updateReadiness();
 }
 
+function classificationRequestBody() {
+  return {
+    product_description: $("#productDescription").value.trim(),
+    product_category: $("#productCategory").value.trim(),
+    composition: $("#composition").value.trim(),
+    intended_use: $("#intendedUse").value.trim(),
+    construction_form: $("#constructionForm").value.trim(),
+    function_mechanism: $("#functionMechanism").value.trim(),
+    components_accessories: $("#componentsAccessories").value.trim(),
+    label_text: $("#labelText").value.trim(),
+    visible_features: $("#visibleFeatures").value.trim(),
+    inferred_features: $("#inferredFeatures").value.trim(),
+    classification_questions: $("#classificationQuestions").value.trim(),
+    origin_country: $("#originCountry").value.trim(),
+  };
+}
+
+function candidateRates(candidate) {
+  if (candidate.rate_status === "origin_required") {
+    return '<em>Vergi oranı için menşe ülke girin</em>';
+  }
+  if (candidate.rate_status === "ambiguous") {
+    const customsVariants = candidate.rate_variants?.customs_duty || [];
+    const additionalVariants = candidate.rate_variants?.additional_duty || [];
+    const parts = [];
+    if (customsVariants.length) parts.push(`GV ${customsVariants.map((rate) => `%${numberFormat.format(rate)}`).join("/")}`);
+    if (additionalVariants.length) parts.push(`İGV ${additionalVariants.map((rate) => `%${numberFormat.format(rate)}`).join("/")}`);
+    return `<em>${escapeHtml(parts.join(" · ") || "Oran alt GTİP’e göre değişiyor")} · alt kod seçilmeli</em>`;
+  }
+  const parts = [];
+  if (candidate.customs_duty_rate != null) parts.push(`<b>GV %${escapeHtml(numberFormat.format(candidate.customs_duty_rate))}</b>`);
+  if (candidate.additional_duty_rate != null) parts.push(`<b>İGV %${escapeHtml(numberFormat.format(candidate.additional_duty_rate))}</b>`);
+  if (candidate.additional_financial_liability_rate != null) parts.push(`<b>EMY %${escapeHtml(numberFormat.format(candidate.additional_financial_liability_rate))}</b>`);
+  return parts.join("") || '<em>Bu seviyede tek oran doğrulanamadı</em>';
+}
+
+function renderGtipSuggestions(data) {
+  const panel = $("#gtipSuggestions");
+  const list = $("#gtipSuggestionList");
+  panel.hidden = false;
+  $("#gtipSuggestionStatus").textContent = data.candidates?.length
+    ? `${data.candidates.length} aday · ${data.model}`
+    : "Aday bulunamadı";
+  if (!data.candidates?.length) {
+    list.innerHTML = `<div class="answer-error"><p>${escapeHtml(data.summary || "Aday kod üretilemedi.")}</p></div>`;
+    return;
+  }
+  list.innerHTML = data.candidates.map((candidate, index) => `<button class="gtip-candidate-button${candidate.code === $("#candidateGtip").value.replace(/\D/g, "") ? " selected" : ""}" type="button" data-candidate-index="${index}">
+    <code>${escapeHtml(candidate.code)}<small>${escapeHtml(candidate.level)} · ${escapeHtml(candidate.confidence)} güven · ${escapeHtml(candidate.matched_gtip_count)} alt GTİP</small></code>
+    <span>${escapeHtml(candidate.explanation)}</span>
+    <span class="gtip-candidate-rates">${candidateRates(candidate)}</span>
+  </button>`).join("");
+  $$('[data-candidate-index]').forEach((button) => button.addEventListener("click", () => {
+    const candidate = data.candidates[Number(button.dataset.candidateIndex)];
+    $("#candidateGtip").value = candidate.code;
+    state.customsAutoGtip = candidate.code;
+    $$('[data-candidate-index]').forEach((item) => item.classList.toggle("selected", item === button));
+    $("#candidateGtip").dispatchEvent(new Event("input", { bubbles: true }));
+    showToast(`${candidate.code} aday kod olarak seçildi; kutudan değiştirebilirsiniz.`);
+  }));
+}
+
+function resetGtipSuggestions({ clearAutoCode = false } = {}) {
+  if (clearAutoCode && state.customsAutoGtip && $("#candidateGtip").value.replace(/\D/g, "") === state.customsAutoGtip) {
+    $("#candidateGtip").value = "";
+  }
+  state.customsClassificationResult = null;
+  state.customsAutoGtip = null;
+  $("#gtipSuggestions").hidden = true;
+  $("#gtipSuggestionList").innerHTML = "";
+  $("#gtipSuggestionStatus").textContent = "Evsaf onayından sonra hazırlanır.";
+  updateReadiness();
+}
+
+async function classifyApprovedProduct() {
+  const panel = $("#gtipSuggestions");
+  panel.hidden = false;
+  $("#gtipSuggestionStatus").textContent = "Aday kodlar ve oranlar hazırlanıyor…";
+  $("#gtipSuggestionList").innerHTML = '<div class="analysis-loading"><i></i><div><b>En yakın üç tarife aranıyor</b><span>Model adayları resmî tarife cetvelinde doğrulanıyor…</span></div></div>';
+  const data = await fetchJson("/api/customs/classify-product", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(classificationRequestBody()),
+  });
+  state.customsClassificationResult = data;
+  const current = $("#candidateGtip").value.replace(/\D/g, "");
+  if (data.candidates?.length && (!current || current === state.customsAutoGtip)) {
+    state.customsAutoGtip = data.candidates[0].code;
+    $("#candidateGtip").value = state.customsAutoGtip;
+    $("#candidateGtip").dispatchEvent(new Event("input", { bubbles: true }));
+  }
+  renderGtipSuggestions(data);
+  return data;
+}
+
+async function refreshCandidateRates() {
+  const data = state.customsClassificationResult;
+  const origin = $("#originCountry").value.trim();
+  if (!data?.candidates?.length || !origin) return;
+  const updated = await Promise.all(data.candidates.map(async (candidate) => {
+    const tariff = await fetchJson("/api/tariff/lookup", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ gtip: candidate.code, origin_country: origin }),
+    });
+    const safe = tariff.unambiguous_rates || {};
+    return {
+      ...candidate,
+      customs_duty_rate: safe.customs_duty ?? null,
+      additional_duty_rate: safe.additional_duty ?? null,
+      additional_financial_liability_rate: safe.additional_financial_liability ?? null,
+      rate_variants: tariff.rate_variants || {},
+      rate_status: tariff.ambiguous_measure_types?.length || safe.customs_duty == null ? "ambiguous" : "unambiguous",
+    };
+  }));
+  state.customsClassificationResult = { ...data, candidates: updated };
+  renderGtipSuggestions(state.customsClassificationResult);
+}
+
 async function analyseProductImage() {
   if (!state.customsImageData) return;
   setVisionState(
@@ -844,6 +965,7 @@ async function setProductImage(file) {
     state.customsImageData = null;
     state.customsVisionResult = null;
     state.customsVisionStatus = "idle";
+    resetGtipSuggestions({ clearAutoCode: true });
     $("#imagePreview").hidden = true;
     $("#uploadZone").classList.remove("has-image");
     $("#attributeReview").hidden = true;
@@ -872,6 +994,7 @@ async function setProductImage(file) {
   $("#uploadTitle").textContent = file.name;
   $("#uploadHint").textContent = `${numberFormat.format(Math.ceil(file.size / 1024))} KB · analiz siz başlatmadan gönderilmez`;
   state.customsVisionResult = null;
+  resetGtipSuggestions({ clearAutoCode: true });
   $("#productFileStatus").dataset.state = "waiting";
   $("#productFileStatus").textContent = "Fotoğraf hazır. Analiz sonucu önce bu ürün dosyasına işlenecek.";
   setVisionState(
@@ -925,6 +1048,7 @@ uploadZone.addEventListener("drop", (event) => setProductImage(event.dataTransfe
 $$('#customsForm input, #customsForm textarea, #customsForm select').forEach((input) => input.addEventListener("input", updateReadiness));
 visionFieldSelectors.forEach((selector) => $(selector)?.addEventListener("input", () => {
   if (state.customsImageData && state.customsVisionStatus === "confirmed") {
+    resetGtipSuggestions({ clearAutoCode: true });
     setVisionState(
       "review",
       "Onaydan sonra evsaf değişti. Güncel alanları yeniden onaylamadan resmî araştırma başlatılamaz.",
@@ -933,7 +1057,34 @@ visionFieldSelectors.forEach((selector) => $(selector)?.addEventListener("input"
   }
 }));
 
-$("#confirmAttributes").addEventListener("click", () => {
+let originRateTimer = null;
+$("#originCountry").addEventListener("input", () => {
+  window.clearTimeout(originRateTimer);
+  if (!state.customsClassificationResult?.candidates?.length) return;
+  if (!$("#originCountry").value.trim()) {
+    state.customsClassificationResult.candidates = state.customsClassificationResult.candidates.map((candidate) => ({
+      ...candidate,
+      customs_duty_rate: null,
+      additional_duty_rate: null,
+      additional_financial_liability_rate: null,
+      rate_status: "origin_required",
+    }));
+    renderGtipSuggestions(state.customsClassificationResult);
+    return;
+  }
+  originRateTimer = window.setTimeout(() => refreshCandidateRates().catch((error) => showToast(error.message || "Aday oranları yenilenemedi.")), 650);
+});
+
+$("#candidateGtip").addEventListener("input", () => {
+  const current = $("#candidateGtip").value.replace(/\D/g, "");
+  if (state.customsAutoGtip && current !== state.customsAutoGtip) state.customsAutoGtip = null;
+  $$('[data-candidate-index]').forEach((button) => {
+    const candidate = state.customsClassificationResult?.candidates?.[Number(button.dataset.candidateIndex)];
+    button.classList.toggle("selected", candidate?.code === current);
+  });
+});
+
+$("#confirmAttributes").addEventListener("click", async () => {
   if (state.customsVisionStatus === "analysing") return;
   if ($("#productDescription").value.trim().length < 12) {
     showToast("Onaylamadan önce teknik ürün tanımını tamamlayın.");
@@ -942,12 +1093,37 @@ $("#confirmAttributes").addEventListener("click", () => {
   }
   setVisionState(
     "confirmed",
-    "Evsaflar kullanıcı tarafından onaylandı. GTİP, e-vergi ve TAREKS araştırması artık başlatılabilir.",
+    "Evsaflar onaylandı. En yakın üç HS/CN adayı resmî tarife cetvelinde doğrulanıyor.",
     state.customsVisionResult
       ? `Görsel model: ${state.customsVisionResult.provider} · ${state.customsVisionResult.model} · kullanıcı onaylı`
       : "Elle girilen evsaf · kullanıcı onaylı",
   );
-  showToast("Ürün evsafları onaylandı.");
+  const confirm = $("#confirmAttributes");
+  confirm.disabled = true;
+  confirm.querySelector("span").textContent = "Aday GTİP’ler bulunuyor…";
+  try {
+    const classification = await classifyApprovedProduct();
+    if (classification.candidates?.length) {
+      setVisionState(
+        "confirmed",
+        `${classification.candidates.length} aday kod bulundu. En güçlü aday kutuya yazıldı; alternatiflerden birini seçebilir veya kutuyu elle değiştirebilirsiniz.`,
+        state.customsVisionResult
+          ? `Görsel model: ${state.customsVisionResult.provider} · ${state.customsVisionResult.model} · sınıflandırma: ${classification.model}`
+          : `Sınıflandırma modeli: ${classification.model}`,
+      );
+      showToast(`${classification.candidates.length} aday tarife kodu bulundu.`);
+    } else {
+      setVisionState("confirmed", classification.summary, `Sınıflandırma modeli: ${classification.model}`);
+      showToast("Aday kod için ürün evsafı yetersiz kaldı.");
+    }
+  } catch (error) {
+    $("#gtipSuggestions").hidden = false;
+    $("#gtipSuggestionStatus").textContent = "Adaylar alınamadı";
+    $("#gtipSuggestionList").innerHTML = `<div class="answer-error"><p>${escapeHtml(error.message || "Aday kodlar üretilemedi.")}</p></div>`;
+    setVisionState("confirmed", "Evsaflar onaylandı ancak aday GTİP üretilemedi. Tekrar deneyebilir veya kodu elle girebilirsiniz.");
+  } finally {
+    confirm.disabled = false;
+  }
 });
 
 $("#customsForm").addEventListener("submit", async (event) => {

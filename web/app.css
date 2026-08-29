@@ -318,6 +318,20 @@ svg { display: block; fill: none; stroke: currentColor; stroke-width: 1.8; strok
 .product-file-status { margin: 0; padding: 10px 12px; border: 1px solid var(--line); color: var(--ink-3); font-size: .57rem; line-height: 1.5; }
 .product-file-status[data-state="filled"] { border-color: var(--teal); background: var(--teal-soft); color: var(--teal-dark); }
 .product-file-status[data-state="error"] { border-color: var(--danger); background: var(--danger-soft); color: var(--danger); }
+.gtip-suggestions { border: 1px solid var(--teal); background: var(--surface); }
+.gtip-suggestions > header { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 11px 12px; border-bottom: 1px solid var(--line); background: var(--teal-soft); }
+.gtip-suggestions > header b { color: var(--teal-dark); font-size: .7rem; }
+.gtip-suggestions > header small { color: var(--ink-3); font-size: .58rem; text-align: right; }
+#gtipSuggestionList { display: grid; gap: 8px; padding: 10px; }
+.gtip-candidate-button { display: grid; grid-template-columns: 112px minmax(0,1fr) auto; gap: 12px; align-items: center; width: 100%; padding: 11px 12px; border: 1px solid var(--line); background: var(--canvas); color: var(--ink); text-align: left; cursor: pointer; }
+.gtip-candidate-button:hover, .gtip-candidate-button.selected { border-color: var(--teal); background: var(--teal-soft); }
+.gtip-candidate-button code { color: var(--teal-dark); font-family: var(--mono); font-size: .86rem; font-weight: 700; }
+.gtip-candidate-button code small { display: block; margin-top: 3px; color: var(--ink-3); font-size: .5rem; font-weight: 500; }
+.gtip-candidate-button > span { min-width: 0; color: var(--ink-2); font-size: .6rem; line-height: 1.45; }
+.gtip-candidate-rates { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 5px; max-width: 210px; }
+.gtip-candidate-rates b { padding: 5px 7px; border: 1px solid var(--line-strong); background: var(--surface); color: var(--ink); font-family: var(--mono); font-size: .53rem; white-space: nowrap; }
+.gtip-candidate-rates em { color: var(--danger); font-size: .54rem; font-style: normal; text-align: right; }
+.gtip-suggestions > p { margin: 0; padding: 0 12px 11px; color: var(--danger); font-size: .55rem; line-height: 1.45; }
 .field-row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
 .attribute-review { margin-top: 20px; border: 1px solid var(--teal); background: var(--canvas); }
 .attribute-review > header { display: flex; align-items: start; justify-content: space-between; gap: 18px; padding: 18px; border-bottom: 1px solid var(--line); background: var(--surface); }
@@ -562,6 +576,8 @@ svg { display: block; fill: none; stroke: currentColor; stroke-width: 1.8; strok
   .customs-flow { overflow-x: auto; }
   .product-input-grid { grid-template-columns: 1fr; }
   .upload-zone { min-height: 190px; }
+  .gtip-candidate-button { grid-template-columns: 1fr; }
+  .gtip-candidate-rates { justify-content: flex-start; max-width: none; }
   .field-row, .advanced-grid, .cost-grid, .candidate-grid, .finding-grid, .source-ledger, .attribute-grid { grid-template-columns: 1fr; }
   .attribute-wide { grid-column: auto; }
   .readiness-card ul { grid-template-columns: 1fr; }
