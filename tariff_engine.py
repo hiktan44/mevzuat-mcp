@@ -29,6 +29,7 @@ import xlrd
 from bs4 import BeautifulSoup
 from openpyxl import load_workbook
 from pydantic import BaseModel, Field, field_validator
+from security_firewall import validate_outbound_url
 
 _GTIP_RE = re.compile(r"^\d{4}(?:\d{2}){0,4}$")
 _RATE_RE = re.compile(r"^-?\d+(?:[.,]\d+)?$")
@@ -253,7 +254,7 @@ class TariffEngine:
         root.mkdir(parents=True, exist_ok=True)
         self.db_path = root / "tariff.sqlite3"
         self._http = httpx.AsyncClient(
-            follow_redirects=True,
+            follow_redirects=False,
             timeout=httpx.Timeout(60),
             headers={
                 "User-Agent": "Gumrukce/1.4 (+official-tariff-sync)",
@@ -305,10 +306,21 @@ class TariffEngine:
         last: Exception | None = None
         for attempt in range(3):
             try:
-                response = await self._http.get(url)
+                current_url = url
+                for _ in range(6):
+                    validate_outbound_url(current_url, allowed_hosts=_OFFICIAL_HOSTS)
+                    response = await self._http.get(current_url)
+                    if not response.is_redirect:
+                        break
+                    location = response.headers.get("location", "")
+                    if not location:
+                        raise ValueError("Resmî tarife yönlendirmesi hedefsiz")
+                    current_url = urljoin(str(response.url), location)
+                else:
+                    raise ValueError("Resmî tarife kaynağı çok fazla yönlendirme yaptı")
                 response.raise_for_status()
                 return response
-            except (httpx.HTTPError, httpx.TimeoutException) as exc:
+            except (httpx.HTTPError, httpx.TimeoutException, ValueError) as exc:
                 last = exc
                 await asyncio.sleep(0.5 * (attempt + 1))
         raise RuntimeError(f"Resmî kaynak alınamadı: {type(last).__name__}") from last

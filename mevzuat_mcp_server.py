@@ -40,6 +40,7 @@ from tariff_engine import (
     TariffSyncStatus,
 )
 from control_engine import ImportControlEngine, ImportControlLookupResult, ControlSyncStatus
+from security_firewall import guard_data, guard_text
 
 # Semantic search (optional, requires OPENROUTER_API_KEY)
 from semantic_search.embedder import is_openrouter_available
@@ -180,6 +181,7 @@ async def _semantic_search_within(
     resmi_gazete_tarihi: Optional[str] = None,
 ) -> str:
     """Shared helper for semantic search within any legislation type."""
+    query = guard_text(query, source="semantik mevzuat araması", max_chars=4_000)
     # 1. Get content with tertip fallback (already cached by mevzuat_client)
     content_result = await _get_content_with_tertip_fallback(
         mevzuat_no=mevzuat_no,
@@ -2451,25 +2453,25 @@ async def suggest_candidate_tariff_codes(
     snapshot. When origin is supplied, customs duty and additional-duty rates are
     returned only if every matching 12-digit subline has one unambiguous rate.
     """
-    return await customs_advisor_service.classify_product(
-        ProductClassificationRequest(
-            product_description=product_description,
-            product_category=product_category,
-            composition=composition,
-            intended_use=intended_use,
-            target_user=target_user,
-            declared_product_type=declared_product_type,
-            construction_form=construction_form,
-            function_mechanism=function_mechanism,
-            components_accessories=components_accessories,
-            label_text=label_text,
-            visible_features=visible_features,
-            inferred_features=inferred_features,
-            classification_questions=classification_questions,
-            classification_answers=classification_answers or [],
-            origin_country=origin_country,
-        )
+    request = ProductClassificationRequest(
+        product_description=product_description,
+        product_category=product_category,
+        composition=composition,
+        intended_use=intended_use,
+        target_user=target_user,
+        declared_product_type=declared_product_type,
+        construction_form=construction_form,
+        function_mechanism=function_mechanism,
+        components_accessories=components_accessories,
+        label_text=label_text,
+        visible_features=visible_features,
+        inferred_features=inferred_features,
+        classification_questions=classification_questions,
+        classification_answers=classification_answers or [],
+        origin_country=origin_country,
     )
+    guard_data(request.model_dump(mode="json"), path="MCP ürün evsafı")
+    return await customs_advisor_service.classify_product(request)
 
 
 @app.tool(
@@ -2739,6 +2741,7 @@ async def prepare_customs_precheck(
         surveillance_unit_value=surveillance_unit_value,
         has_surveillance_certificate=has_surveillance_certificate,
     )
+    guard_data(inquiry.model_dump(mode="json"), path="MCP gümrük sorusu")
     return await customs_advisor_service.evidence_pack(inquiry)
 
 

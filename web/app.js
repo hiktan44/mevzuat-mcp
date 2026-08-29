@@ -169,7 +169,8 @@ function renderTicaretResults(data) {
   data.documents.forEach((doc) => {
     const item = document.createElement("button");
     item.type = "button";
-    item.className = `result-item${doc.is_repealed ? " repealed" : ""}`;
+    item.className = `result-item kind-${escapeHtml(doc.content_kind || "other")}${doc.is_repealed ? " repealed" : ""}`;
+    item.dataset.kind = doc.content_kind || "other";
     const meta = [doc.document_type || kindLabels[doc.content_kind], doc.number ? `No ${doc.number}` : ""].filter(Boolean);
     item.innerHTML = `
       <span class="result-node" aria-hidden="true"></span>
@@ -591,16 +592,38 @@ function switchScope(scope) {
   runSearch(scope === "ticaret" ? { offset: 0 } : { page: 1 });
 }
 
+function selectSourceKind(kind, { run = true, focus = true } = {}) {
+  state.activeKind = kind;
+  const selected = $(`.source-link[data-kind="${kind}"]`) || $('.source-link[data-kind=""]');
+  $$('.source-link').forEach((item) => item.classList.toggle("active", item === selected));
+  $$('.quick-route').forEach((item) => {
+    const active = item.dataset.quickAction === kind;
+    item.classList.toggle("active", active);
+    item.setAttribute("aria-pressed", active ? "true" : "false");
+  });
+  $("#sourceFilter").value = "";
+  if (focus) queryInput.focus();
+  if (run) runTicaretSearch({ offset: 0 });
+}
+
+$$('.quick-route').forEach((button) => button.addEventListener("click", () => {
+  const action = button.dataset.quickAction;
+  if (action === "customs") {
+    switchScope("customs");
+    window.setTimeout(() => $("#productImage")?.focus(), 0);
+    return;
+  }
+  if (state.scope !== "ticaret") switchScope("ticaret");
+  selectSourceKind(action);
+}));
+
 form.addEventListener("submit", (event) => {
   event.preventDefault();
   runSearch(state.scope === "ticaret" ? { offset: 0 } : { page: 1 });
 });
 $$('[data-scope]').forEach((button) => button.addEventListener("click", () => switchScope(button.dataset.scope)));
 $$('.source-link').forEach((button) => button.addEventListener("click", () => {
-  state.activeKind = button.dataset.kind;
-  $$('.source-link').forEach((item) => item.classList.toggle("active", item === button));
-  $("#sourceFilter").value = "";
-  runTicaretSearch({ offset: 0 });
+  selectSourceKind(button.dataset.kind);
 }));
 prevPage.addEventListener("click", () => state.scope === "ticaret"
   ? runTicaretSearch({ offset: Math.max(0, state.offset - state.limit) })

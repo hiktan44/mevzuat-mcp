@@ -37,6 +37,7 @@ from pydantic import BaseModel, Field
 
 from bedesten_client import BedestenClient
 from trusted_certificates import GEOTRUST_TLS_RSA_CA_G1_PEM
+from security_firewall import validate_outbound_url
 
 _CODE_RE = re.compile(
     r"(?<!\d)(\d{4}(?:[.\t ]\d{2}){1,4}|\d{2}(?:[.\t ]\d{2}){1,5}|\d{4})(?!\d)"
@@ -371,7 +372,7 @@ class ImportControlEngine:
                 "User-Agent": "Mozilla/5.0 (compatible; MevzuatMCP/1.4; +https://mevzuat-mcp.seymata.com/)",
                 "Accept": "application/zip,application/octet-stream;q=0.9,*/*;q=0.8",
             },
-            follow_redirects=True,
+            follow_redirects=False,
             timeout=httpx.Timeout(75.0),
             trust_env=False,
         )
@@ -530,23 +531,30 @@ class ImportControlEngine:
         url = self._official_attachment_url(raw_html, document_attachments)
         if not url:
             raise RuntimeError("Resmî metindeki ek arşivi bağlantısı bulunamadı")
-        async with self._attachment_http.stream("GET", url) as response:
-            response.raise_for_status()
-            resolved = str(response.url)
-            parsed = urlsplit(resolved)
-            if parsed.scheme != "https" or parsed.hostname not in {"mevzuat.gov.tr", "www.mevzuat.gov.tr"}:
-                raise RuntimeError("Resmî ek arşivi izin verilen alan adı dışına yönlendirildi")
-            content_length = response.headers.get("content-length")
-            if content_length and int(content_length) > 50 * 1024 * 1024:
-                raise RuntimeError("Resmî ek arşivi 50 MB güvenlik sınırını aşıyor")
-            chunks: list[bytes] = []
-            total = 0
-            async for chunk in response.aiter_bytes():
-                total += len(chunk)
-                if total > 50 * 1024 * 1024:
+        current_url = url
+        for _ in range(6):
+            validate_outbound_url(current_url, allowed_hosts={"mevzuat.gov.tr"})
+            async with self._attachment_http.stream("GET", current_url) as response:
+                if response.is_redirect:
+                    location = response.headers.get("location", "")
+                    if not location:
+                        raise RuntimeError("Resmî ek arşivi yönlendirmesi hedefsiz")
+                    current_url = urljoin(str(response.url), location)
+                    continue
+                response.raise_for_status()
+                resolved = str(response.url)
+                content_length = response.headers.get("content-length")
+                if content_length and int(content_length) > 50 * 1024 * 1024:
                     raise RuntimeError("Resmî ek arşivi 50 MB güvenlik sınırını aşıyor")
-                chunks.append(chunk)
-        return b"".join(chunks), resolved
+                chunks: list[bytes] = []
+                total = 0
+                async for chunk in response.aiter_bytes():
+                    total += len(chunk)
+                    if total > 50 * 1024 * 1024:
+                        raise RuntimeError("Resmî ek arşivi 50 MB güvenlik sınırını aşıyor")
+                    chunks.append(chunk)
+                return b"".join(chunks), resolved
+        raise RuntimeError("Resmî ek arşivi çok fazla yönlendirme yaptı")
 
     async def sync(self, force: bool = False) -> ControlSyncStatus:
         async with self._sync_lock:

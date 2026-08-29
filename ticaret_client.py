@@ -34,6 +34,7 @@ from bs4 import BeautifulSoup, Tag
 from markitdown import MarkItDown
 
 from bedesten_client import BedestenClient
+from security_firewall import validate_outbound_url
 from ticaret_models import (
     TicaretCatalog,
     TicaretCatalogStatus,
@@ -222,7 +223,7 @@ class TicaretApiClient:
                 "User-Agent": "TicaretBilgiMCP/1.0 (+public-government-information-indexer)",
                 "Accept-Language": "tr-TR,tr;q=0.9,en;q=0.6",
             },
-            follow_redirects=True,
+            follow_redirects=False,
             timeout=httpx.Timeout(request_timeout),
             limits=httpx.Limits(max_connections=8, max_keepalive_connections=6),
         )
@@ -247,11 +248,22 @@ class TicaretApiClient:
         last_error: Exception | None = None
         for attempt in range(2):
             try:
-                async with self._request_semaphore:
-                    response = await self._http.get(url)
+                current_url = url
+                for _ in range(6):
+                    validate_outbound_url(current_url, allowed_hosts=_OFFICIAL_CONTENT_HOSTS)
+                    async with self._request_semaphore:
+                        response = await self._http.get(current_url)
+                    if not response.is_redirect:
+                        break
+                    location = response.headers.get("location", "")
+                    if not location:
+                        raise ValueError("Resmî kaynak yönlendirmesi hedefsiz")
+                    current_url = urljoin(str(response.url), location)
+                else:
+                    raise ValueError("Resmî kaynak çok fazla yönlendirme yaptı")
                 response.raise_for_status()
                 return response
-            except (httpx.HTTPError, httpx.TimeoutException) as exc:
+            except (httpx.HTTPError, httpx.TimeoutException, ValueError) as exc:
                 last_error = exc
                 if attempt < 1:
                     await asyncio.sleep(0.35 * (2 ** attempt))

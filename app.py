@@ -13,6 +13,7 @@ import threading
 import time
 from pathlib import Path
 from typing import Any
+from urllib.parse import urlsplit
 
 import httpx
 from pydantic import ValidationError
@@ -32,12 +33,14 @@ from mevzuat_mcp_server import (
 from mevzuat_mcp_server import (
     app as mcp,
 )
+from security_firewall import AgentTokenVerifier, SecurityViolation, guard_data, redact_data
 from tariff_engine import LandedCostInput
 
 logger = logging.getLogger(__name__)
 WEB_DIR = Path(__file__).resolve().parent / "web"
 PUBLIC_BASE_URL = os.environ.get("PUBLIC_BASE_URL", "https://mevzuat-mcp.seymata.com").rstrip("/")
 google_auth = GoogleAuthService()
+agent_identity = AgentTokenVerifier()
 
 
 class FixedWindowRateLimiter:
@@ -95,6 +98,38 @@ def _rate_limit_response(
         status_code=429,
         headers={"Retry-After": str(retry_after)},
     )
+
+
+def _security_response(exc: SecurityViolation) -> JSONResponse:
+    return JSONResponse({"error": str(exc), "code": exc.code}, status_code=403)
+
+
+def _trusted_request_origin(request: Request) -> None:
+    """Reject cross-site browser POSTs while preserving non-browser MCP/API clients."""
+    supplied = request.headers.get("origin") or ""
+    if not supplied:
+        return
+    expected = urlsplit(PUBLIC_BASE_URL)
+    actual = urlsplit(supplied)
+    if (actual.scheme, actual.hostname, actual.port) != (expected.scheme, expected.hostname, expected.port):
+        raise SecurityViolation("Bu istek güvenilir uygulama adresinden gelmiyor.", code="origin_denied")
+
+
+def _agent_or_browser_identity(request: Request) -> None:
+    """Optionally require a signed browser session or short-lived agent token."""
+    if os.environ.get("REQUIRE_AGENT_IDENTITY", "0") != "1":
+        return
+    session_token = request.cookies.get(google_auth.session_cookie, "")
+    if session_token:
+        try:
+            google_auth.parse_session(session_token)
+            return
+        except AuthError:
+            pass
+    authorization = request.headers.get("authorization", "")
+    if not authorization.startswith("Bearer "):
+        raise SecurityViolation("Bu işlem için doğrulanmış kullanıcı veya ajan kimliği gerekir.", code="identity_required")
+    agent_identity.verify(authorization.removeprefix("Bearer ").strip())
 
 
 _DATA_URL_RE = re.compile(r"^data:(image/(?:jpeg|png|webp));base64,([A-Za-z0-9+/=\r\n]+)$")
@@ -639,6 +674,11 @@ async def web_customs_describe_image(request: Request):
     if upload_limited:
         return upload_limited
     try:
+        _trusted_request_origin(request)
+        _agent_or_browser_identity(request)
+    except SecurityViolation as exc:
+        return _security_response(exc)
+    try:
         content_length = int(request.headers.get("content-length", "0") or 0)
     except ValueError:
         content_length = 0
@@ -665,7 +705,7 @@ async def web_customs_describe_image(request: Request):
             {"error": "Görsel analiz modeli şu anda yanıt vermedi. Alanları elle doldurup onaylayabilirsiniz."},
             status_code=502,
         )
-    return JSONResponse(result.model_dump(mode="json"))
+    return JSONResponse(redact_data(result.model_dump(mode="json"), contact_data=True))
 
 
 @mcp.custom_route("/api/customs/classify-product", methods=["POST"])
@@ -675,12 +715,17 @@ async def web_customs_classify_product(request: Request):
     if limited:
         return limited
     try:
+        _trusted_request_origin(request)
+        _agent_or_browser_identity(request)
         body = await request.json()
         if not isinstance(body, dict):
             raise ValueError("Sınıflandırma isteği bir nesne olmalıdır.")
+        guard_data(body, path="ürün evsafı")
         classification = ProductClassificationRequest.model_validate(body)
         result = await customs_advisor_service.classify_product(classification)
-        return JSONResponse(result.model_dump(mode="json"))
+        return JSONResponse(redact_data(result.model_dump(mode="json"), contact_data=True))
+    except SecurityViolation as exc:
+        return _security_response(exc)
     except ValidationError as exc:
         message = exc.errors(include_url=False)[0].get("msg", "Ürün evsaflarını kontrol edin.")
         return JSONResponse({"error": f"Evsaflar doğrulanamadı: {message}"}, status_code=422)
@@ -702,6 +747,11 @@ async def web_customs_precheck(request: Request):
     limited = _rate_limit_response(request, "customs-ai", limit=20, window_seconds=60)
     if limited:
         return limited
+    try:
+        _trusted_request_origin(request)
+        _agent_or_browser_identity(request)
+    except SecurityViolation as exc:
+        return _security_response(exc)
     try:
         content_length = int(request.headers.get("content-length", "0") or 0)
     except ValueError:
@@ -729,8 +779,11 @@ async def web_customs_precheck(request: Request):
         )
 
     try:
+        guard_data(body, path="gümrük sorusu")
         inquiry = CustomsInquiry.model_validate(body)
         result = await customs_advisor_service.analyse(inquiry)
+    except SecurityViolation as exc:
+        return _security_response(exc)
     except ValidationError as exc:
         message = exc.errors(include_url=False)[0].get("msg", "Alanları kontrol edin.")
         return JSONResponse({"error": f"İstek doğrulanamadı: {message}"}, status_code=422)
@@ -747,7 +800,7 @@ async def web_customs_precheck(request: Request):
             },
             status_code=502,
         )
-    return JSONResponse(result.model_dump(mode="json"))
+    return JSONResponse(redact_data(result.model_dump(mode="json"), contact_data=True))
 
 
 @mcp.custom_route("/api/tariff/status", methods=["GET"])

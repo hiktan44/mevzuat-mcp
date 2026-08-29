@@ -97,7 +97,7 @@ class MevzuatProcessor:
         chunks = []
 
         for i, chunk_text in enumerate(text_chunks):
-            chunk_hash = hashlib.md5(f"{doc_id}_c{i}".encode()).hexdigest()[:8]
+            chunk_hash = hashlib.sha256(f"{doc_id}_c{i}".encode()).hexdigest()[:12]
             chunk_id = f"{doc_id}_chunk_{i}_{chunk_hash}"
 
             chunks.append(DocumentChunk(

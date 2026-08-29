@@ -18,7 +18,7 @@ import unicodedata
 from datetime import datetime
 from pathlib import Path
 from typing import Any, Literal
-from urllib.parse import urlsplit
+from urllib.parse import urljoin, urlsplit
 
 import httpx
 from bs4 import BeautifulSoup
@@ -26,6 +26,11 @@ from PIL import Image, ImageOps, UnidentifiedImageError
 from pydantic import BaseModel, Field, field_validator
 
 from control_engine import ImportControlEngine, ImportControlLookupResult
+from security_firewall import (
+    redact_data,
+    sanitize_untrusted_context,
+    validate_outbound_url,
+)
 from tariff_engine import (
     LandedCostInput,
     TariffEngine,
@@ -315,7 +320,7 @@ class OfficialSourceRegistry:
         self.sources = list(config.get("sources", []))
         self._cache: dict[str, tuple[float, EvidenceSource]] = {}
         self._http = httpx.AsyncClient(
-            follow_redirects=True,
+            follow_redirects=False,
             timeout=httpx.Timeout(22),
             headers={
                 "User-Agent": "Gumrukce/1.0 (+official-source-precheck)",
@@ -380,17 +385,34 @@ class OfficialSourceRegistry:
         if not _official_host(url):
             return EvidenceSource(**source, excerpt="", retrieved_at=now, fetch_warning="Kaynak alan adı güvenlik listesinde değil.")
         try:
-            response = await self._http.get(url)
+            current_url = url
+            for _ in range(5):
+                validate_outbound_url(current_url, allowed_hosts=_ALLOWED_SOURCE_HOSTS)
+                response = await self._http.get(current_url)
+                if not response.is_redirect:
+                    break
+                location = response.headers.get("location", "")
+                if not location:
+                    raise ValueError("Kaynak yönlendirmesi hedefsiz")
+                current_url = urljoin(str(response.url), location)
+            else:
+                raise ValueError("Kaynak çok fazla yönlendirme yaptı")
             response.raise_for_status()
             content_type = response.headers.get("content-type", "").lower()
             if "html" not in content_type and "text" not in content_type:
                 raise ValueError("Kaynak metin tabanlı değil")
             text, updated = self._extract_text(response.text)
+            text, quarantined = sanitize_untrusted_context(text)
             full_item = EvidenceSource(
                 **source,
                 excerpt=text[:120_000],
                 retrieved_at=now,
                 source_updated_at=updated,
+                fetch_warning=(
+                    "Kaynak içindeki talimat benzeri bir bölüm modele gönderilmeden çıkarıldı."
+                    if quarantined
+                    else None
+                ),
             )
             self._cache[source_id] = (time.monotonic(), full_item)
             return full_item.model_copy(update={"excerpt": self._excerpt(text, terms)})
@@ -532,7 +554,9 @@ def _openrouter_payload(
     """Build the audited OpenRouter request shared by vision and legal analysis."""
     return {
         "models": models,
-        "messages": messages,
+        # User fields and retrieved source text leave our trust boundary here.
+        # Strip credentials and personal contact data before any provider sees it.
+        "messages": redact_data(messages, contact_data=True),
         "response_format": {
             "type": "json_schema",
             "json_schema": {
@@ -597,6 +621,10 @@ async def _openrouter_chat(
     max_tokens: int,
 ) -> tuple[str, str]:
     """Call OpenRouter with ordered model fallbacks and privacy-safe routing."""
+    validate_outbound_url(
+        "https://openrouter.ai/api/v1/chat/completions",
+        allowed_hosts={"openrouter.ai"},
+    )
     base_payload = _openrouter_payload(
         models=models,
         messages=messages,

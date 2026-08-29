@@ -5,6 +5,8 @@ import os
 from typing import List, Optional
 import numpy as np
 
+from security_firewall import guard_text, redact_text, sanitize_untrusted_context, validate_outbound_url
+
 logger = logging.getLogger(__name__)
 
 # Supported models and their dimensions
@@ -49,6 +51,7 @@ class OpenRouterEmbedder:
         except ImportError:
             raise ImportError("openai package is required. Install with: pip install openai")
 
+        validate_outbound_url("https://openrouter.ai/api/v1", allowed_hosts={"openrouter.ai"})
         self.client = OpenAI(
             base_url="https://openrouter.ai/api/v1",
             api_key=api_key,
@@ -73,7 +76,8 @@ class OpenRouterEmbedder:
 
     def encode_query(self, query: str) -> np.ndarray:
         """Encode a search query into an embedding vector."""
-        text = self._format_query(query)
+        guarded = guard_text(query, source="semantik arama", max_chars=4_000)
+        text = self._format_query(redact_text(guarded, contact_data=True))
 
         try:
             response = self.client.embeddings.create(
@@ -93,7 +97,7 @@ class OpenRouterEmbedder:
             if norm > 0:
                 embedding = embedding / norm
 
-            logger.debug(f"Encoded query: {query[:50]}... -> shape: {embedding.shape}")
+            logger.debug("Encoded redacted query (%d chars) -> shape: %s", len(query), embedding.shape)
             return embedding
 
         except Exception as e:
@@ -109,7 +113,13 @@ class OpenRouterEmbedder:
         texts = []
         for i, doc in enumerate(documents):
             title = titles[i] if titles and i < len(titles) else "none"
-            texts.append(self._format_document(doc, title))
+            safe_doc, _ = sanitize_untrusted_context(doc)
+            texts.append(
+                self._format_document(
+                    redact_text(safe_doc, contact_data=True),
+                    redact_text(title, contact_data=True),
+                )
+            )
 
         try:
             all_embeddings = []

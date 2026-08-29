@@ -49,7 +49,10 @@ class GoogleAuthService:
         self.session_secret = (
             session_secret if session_secret is not None else os.environ.get("AUTH_SESSION_SECRET", "")
         ).encode("utf-8")
-        default_data_dir = os.environ.get("MEVZUAT_DATA_DIR", "/tmp/mevzuat-mcp")
+        default_data_dir = os.environ.get(
+            "MEVZUAT_DATA_DIR",
+            str(Path(os.environ.get("XDG_CACHE_HOME", Path.home() / ".cache")) / "mevzuat-mcp"),
+        )
         self.data_dir = Path(data_dir or default_data_dir)
         self.session_ttl_seconds = session_ttl_seconds
 
@@ -179,7 +182,8 @@ class GoogleAuthService:
         return self._verify(token, purpose="web-session")
 
     def upsert_user(self, profile: dict[str, str]) -> None:
-        self.data_dir.mkdir(parents=True, exist_ok=True)
+        self.data_dir.mkdir(parents=True, exist_ok=True, mode=0o700)
+        self.data_dir.chmod(0o700)
         database_path = self.data_dir / "users.sqlite3"
         now = int(time.time())
         with sqlite3.connect(database_path, timeout=5.0) as connection:
@@ -211,3 +215,4 @@ class GoogleAuthService:
                     profile.get("picture", ""), now, now,
                 ),
             )
+        database_path.chmod(0o600)
