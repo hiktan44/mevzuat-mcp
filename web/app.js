@@ -1112,6 +1112,7 @@ $("#confirmAttributes").addEventListener("click", async () => {
           : `Sınıflandırma modeli: ${classification.model}`,
       );
       showToast(`${classification.candidates.length} aday tarife kodu bulundu.`);
+      $("#gtipSuggestions").scrollIntoView({ behavior: "smooth", block: "center" });
     } else {
       setVisionState("confirmed", classification.summary, `Sınıflandırma modeli: ${classification.model}`);
       showToast("Aday kod için ürün evsafı yetersiz kaldı.");
