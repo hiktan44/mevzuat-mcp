@@ -413,7 +413,7 @@
       <section class="account-panel" data-account-panel="summary">
         <div class="current-plan"><span>Etkin paket</span><strong id="currentPlanName">—</strong><small id="currentPlanStatus">—</small></div>
         <div class="quota-grid" id="quotaGrid"></div>
-        <div class="account-links"><a id="adminLink" href="/admin" hidden>Yönetim panelini aç</a><form action="/auth/logout" method="post"><button type="submit">Güvenli çıkış</button></form></div>
+        <div class="account-links"><button type="button" id="manageBilling" hidden>Aboneliği Stripe’da yönet</button><a id="adminLink" href="/admin" hidden>Yönetim panelini aç</a><form action="/auth/logout" method="post"><button type="submit">Güvenli çıkış</button></form></div>
       </section>
       <section class="account-panel" data-account-panel="dossiers" hidden>
         <header class="panel-section-head"><div><h3>Sunucudaki kanıt dosyalarınız</h3><p>Görseller saklanmaz. Sonuç, resmî URL ve arşiv hash’leri saklanır.</p></div><button type="button" id="refreshDossiers">Yenile</button></header>
@@ -421,23 +421,7 @@
       </section>
       <section class="account-panel" data-account-panel="plans" hidden>
         <div class="pricing-grid" id="pricingGrid"></div>
-        <form class="billing-details" id="billingForm" hidden>
-          <header><div><span class="eyebrow">iyzico güvenli ödeme</span><h3 id="billingTitle">Abonelik bilgileri</h3></div><button type="button" id="cancelBilling">Vazgeç</button></header>
-          <input id="billingPlan" type="hidden"><input id="billingCycle" type="hidden">
-          <div class="billing-grid">
-            <label class="field"><span>Ad</span><input id="billingName" maxlength="100" required autocomplete="given-name"></label>
-            <label class="field"><span>Soyad</span><input id="billingSurname" maxlength="100" required autocomplete="family-name"></label>
-            <label class="field"><span>Telefon</span><input id="billingPhone" maxlength="20" required autocomplete="tel" placeholder="+905…"></label>
-            <label class="field"><span>T.C. kimlik / vergi no</span><input id="billingIdentity" maxlength="20" required inputmode="numeric"></label>
-            <label class="field billing-wide"><span>Fatura adresi</span><input id="billingAddress" maxlength="500" required autocomplete="street-address"></label>
-            <label class="field"><span>Şehir</span><input id="billingCity" maxlength="100" required autocomplete="address-level1"></label>
-            <label class="field"><span>Posta kodu</span><input id="billingZip" maxlength="20" autocomplete="postal-code"></label>
-            <label class="field"><span>Ülke</span><input id="billingCountry" maxlength="100" required value="Türkiye" autocomplete="country-name"></label>
-          </div>
-          <p>Bu bilgiler ödeme oturumu için doğrudan iyzico’ya gönderilir; uygulama kart bilgisi toplamaz.</p>
-          <button class="analyse-button" type="submit"><span>Güvenli ödeme formunu aç</span></button>
-        </form>
-        <div class="checkout-frame-wrap" id="checkoutFrameWrap" hidden><div><b>iyzico güvenli ödeme</b><button type="button" id="closeCheckout">Kapat</button></div><iframe id="checkoutFrame" title="iyzico güvenli ödeme formu" sandbox="allow-scripts allow-forms allow-popups allow-top-navigation-by-user-activation"></iframe></div>
+        <p class="billing-note">Ödeme ve kart bilgileri Stripe’ın güvenli sayfasında alınır; uygulama kart verisini görmez veya saklamaz.</p>
       </section>
       <footer class="account-danger"><button type="button" id="deleteAccount">Hesabımı ve kayıtlı dosyalarımı sil</button><p>Silme işlemi geri alınamaz.</p></footer>
     </div>

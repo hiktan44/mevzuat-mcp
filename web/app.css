@@ -598,11 +598,7 @@ svg { display: block; fill: none; stroke: currentColor; stroke-width: 1.8; strok
 .price-card .price { margin: 12px 0; font-family: var(--display); font-size: 1.6rem; }.price-card .price small { color: var(--ink-3); font: 500 .55rem var(--font); }
 .price-card ul { flex: 1; margin: 0; padding: 0 0 0 17px; color: var(--ink-2); font-size: .59rem; line-height: 1.8; }
 .price-actions { display: grid; gap: 7px; }.price-actions button { min-height: 39px; border: 1px solid var(--ink); background: var(--ink); color: var(--surface); font-size: .58rem; font-weight: 700; }.price-actions button.yearly { background: var(--surface); color: var(--ink); }
-.billing-details { margin-top: 20px; padding: 22px; border: 2px solid var(--orange); background: var(--canvas); }
-.billing-details > header { display: flex; justify-content: space-between; align-items: start; }.billing-details h3 { margin: 4px 0 12px; font-family: var(--display); }.billing-details header button { border: 0; background: transparent; color: var(--danger); }
-.billing-grid { display: grid; grid-template-columns: repeat(4,1fr); gap: 10px; }.billing-wide { grid-column: span 2; }.billing-details > p { color: var(--ink-3); font-size: .57rem; }
-.checkout-frame-wrap { position: fixed; inset: 24px; z-index: 210; display: grid; grid-template-rows: 50px minmax(0,1fr); border: 1px solid var(--line); background: white; box-shadow: var(--shadow); }
-.checkout-frame-wrap > div { display: flex; justify-content: space-between; align-items: center; padding: 0 16px; background: var(--ink); color: white; }.checkout-frame-wrap button { border: 0; background: var(--orange); color: white; padding: 8px 12px; }.checkout-frame-wrap iframe { width: 100%; height: 100%; border: 0; background: white; }
+.billing-note { margin: 18px 0 0; padding: 14px 16px; border-left: 4px solid var(--orange); background: var(--canvas); color: var(--ink-3); font-size: .64rem; }
 .account-danger { display: flex; align-items: center; gap: 12px; margin: 0 30px 24px; padding-top: 18px; border-top: 1px solid var(--line); }.account-danger button { border: 0; background: transparent; color: var(--danger); font-size: .58rem; text-decoration: underline; }.account-danger p { margin: 0; color: var(--ink-3); font-size: .55rem; }
 .guide-grid { display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); gap: 12px; padding: clamp(22px,3vw,38px); }
 .guide-grid details { border: 1px solid var(--line); background: var(--canvas); }
@@ -698,7 +694,6 @@ svg { display: block; fill: none; stroke: currentColor; stroke-width: 1.8; strok
   .tool-panel-head > span { grid-row: auto; }
   .control-card dl { grid-template-columns: 1fr 1fr; }
   .quota-grid,.pricing-grid { grid-template-columns: 1fr 1fr; }
-  .billing-grid { grid-template-columns: 1fr 1fr; }
 }
 
 @media (max-width: 500px) {
@@ -739,9 +734,8 @@ svg { display: block; fill: none; stroke: currentColor; stroke-width: 1.8; strok
   .watch-item { grid-template-columns: 1fr auto; }
   .account-dialog { width: 100vw; max-width: none; max-height: 100vh; height: 100vh; border: 0; }
   .account-head,.account-panel { padding-left: 16px; padding-right: 16px; }
-  .quota-grid,.pricing-grid,.billing-grid { grid-template-columns: 1fr; }
-  .billing-wide { grid-column: auto; }.dossier-item { grid-template-columns: 1fr; }
-  .checkout-frame-wrap { inset: 0; }
+  .quota-grid,.pricing-grid { grid-template-columns: 1fr; }
+  .dossier-item { grid-template-columns: 1fr; }
 }
 
 @media (prefers-reduced-motion: reduce) {

@@ -14,7 +14,7 @@ import time
 from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
-from urllib.parse import parse_qs, urlsplit
+from urllib.parse import urlsplit
 
 import httpx
 from pydantic import ValidationError
@@ -22,8 +22,8 @@ from starlette.requests import Request
 from starlette.responses import FileResponse, HTMLResponse, JSONResponse, PlainTextResponse, RedirectResponse, Response
 
 from auth_service import AuthError, GoogleAuthService
-from account_service import AccountError, AccountService, QuotaExceeded
-from billing_service import BillingError, IyzicoBilling
+from account_service import PLANS, AccountError, AccountService, QuotaExceeded
+from billing_service import BillingError, StripeBilling
 from customs_advisor import CustomsInquiry, ProductClassificationRequest
 from mevzuat_mcp_server import (
     _BED_VALID_TYPES,
@@ -44,7 +44,7 @@ WEB_DIR = Path(__file__).resolve().parent / "web"
 PUBLIC_BASE_URL = os.environ.get("PUBLIC_BASE_URL", "https://mevzuat-mcp.seymata.com").rstrip("/")
 google_auth = GoogleAuthService()
 account_service = AccountService(google_auth.data_dir)
-iyzico_billing = IyzicoBilling()
+stripe_billing = StripeBilling()
 agent_identity = AgentTokenVerifier()
 
 
@@ -428,7 +428,9 @@ async def web_auth_me(request: Request):
                 else None
             ),
             "account": account,
-            "billing_enabled": iyzico_billing.configured,
+            "billing_enabled": stripe_billing.configured,
+            "billing_provider": "stripe",
+            "billing_mode": stripe_billing.mode,
         }
     )
     response.headers["Cache-Control"] = "no-store"
@@ -514,7 +516,14 @@ async def web_logout(request: Request):
 
 @mcp.custom_route("/api/plans", methods=["GET"])
 async def web_plans(request: Request):
-    return JSONResponse({"plans": account_service.public_plans(), "billing_enabled": iyzico_billing.configured})
+    return JSONResponse(
+        {
+            "plans": account_service.public_plans(),
+            "billing_enabled": stripe_billing.configured,
+            "billing_provider": "stripe",
+            "billing_mode": stripe_billing.mode,
+        }
+    )
 
 
 @mcp.custom_route("/api/account", methods=["GET"])
@@ -532,11 +541,13 @@ async def web_delete_account(request: Request):
         _trusted_request_origin(request)
         user = _required_user(request)
         subscription = account_service.subscription_for_user(user)
-        if subscription and subscription.get("provider") == "iyzico" and subscription.get("status") in {"active", "pending", "past_due"}:
+        if subscription and subscription.get("provider") and subscription.get("status") in {"active", "pending", "past_due"}:
             reference = str(subscription.get("provider_subscription_ref") or "")
             if not reference:
                 raise BillingError("Ücretli abonelik referansı bulunamadığı için hesap güvenle silinemedi.")
-            await iyzico_billing.cancel_subscription(reference)
+            if subscription.get("provider") != "stripe":
+                raise BillingError("Eski ödeme sağlayıcısındaki abonelik önce yönetici tarafından kapatılmalıdır.")
+            await stripe_billing.cancel_subscription(reference)
         account_service.delete_account(user)
         response = JSONResponse({"deleted": True})
         response.delete_cookie(google_auth.session_cookie, path="/")
@@ -657,65 +668,81 @@ async def web_billing_checkout(request: Request):
         plan_code = str(body.get("plan_code", ""))
         billing_cycle = str(body.get("billing_cycle", ""))
         payment = account_service.create_payment_session(user, plan_code, billing_cycle)
-        customer = body.get("customer")
-        if not isinstance(customer, dict):
-            raise BillingError("Abone bilgileri eksik.")
-        safe_customer = {key: str(value) for key, value in customer.items() if isinstance(key, str)}
-        safe_customer["email"] = str(user.get("email", ""))
-        checkout = await iyzico_billing.initialize_checkout(
+        subscription = account_service.subscription_for_user(user)
+        customer_reference = None
+        if subscription and subscription.get("provider") == "stripe":
+            customer_reference = str(subscription.get("provider_customer_ref") or "") or None
+        checkout = await stripe_billing.create_checkout(
             plan_code=plan_code,
             billing_cycle=billing_cycle,
-            conversation_id=payment["conversation_id"],
-            callback_url=f"{PUBLIC_BASE_URL}/api/billing/iyzico/callback",
-            customer=safe_customer,
+            payment_session_id=payment["id"],
+            google_sub=str(user["sub"]),
+            email=str(user.get("email", "")),
+            customer_reference=customer_reference,
+            public_base_url=PUBLIC_BASE_URL,
+            expected_amount_try=int(
+                PLANS[plan_code].monthly_price_try
+                if billing_cycle == "monthly"
+                else PLANS[plan_code].yearly_price_try
+            ),
         )
-        account_service.attach_payment_token(payment["id"], checkout["token"])
+        account_service.attach_payment_token(payment["id"], checkout["session_id"])
         return JSONResponse(checkout, headers={"Cache-Control": "no-store"})
     except SecurityViolation as exc:
         return _security_response(exc)
     except AuthError as exc:
         return _auth_error(exc)
     except (BillingError, AccountError) as exc:
-        return JSONResponse({"error": str(exc)}, status_code=503 if not iyzico_billing.configured else 422)
-    except httpx.HTTPError:
-        logger.exception("iyzico checkout initialization failed")
-        return JSONResponse({"error": "Ödeme sağlayıcısına şu anda ulaşılamıyor."}, status_code=502)
+        return JSONResponse({"error": str(exc)}, status_code=503 if not stripe_billing.configured else 422)
 
 
-async def _callback_token(request: Request) -> str:
-    token = request.query_params.get("token", "")
-    if token or request.method != "POST":
-        return token
-    raw = (await request.body())[:16_384].decode("utf-8", errors="replace")
-    return parse_qs(raw, keep_blank_values=False).get("token", [""])[0]
-
-
-@mcp.custom_route("/api/billing/iyzico/callback", methods=["GET", "POST"])
-async def web_billing_callback(request: Request):
+@mcp.custom_route("/api/billing/stripe/return", methods=["GET"])
+async def web_billing_stripe_return(request: Request):
     try:
-        token = await _callback_token(request)
-        payment = account_service.payment_session_by_token(token)
-        provider_data = await iyzico_billing.retrieve_checkout(token, str(payment["conversation_id"]))
-        account_service.complete_payment(token, provider_data)
+        session_id = request.query_params.get("session_id", "")
+        checkout = await stripe_billing.retrieve_checkout(session_id)
+        account_service.complete_stripe_checkout(checkout)
         return RedirectResponse("/app?payment=success&account=open", status_code=303)
-    except (BillingError, AccountError, httpx.HTTPError):
-        logger.warning("iyzico callback could not be confirmed", exc_info=True)
+    except (BillingError, AccountError):
+        logger.warning("Stripe checkout return could not be confirmed", exc_info=True)
         return RedirectResponse("/app?payment=failed&account=open", status_code=303)
 
 
-@mcp.custom_route("/api/billing/iyzico/webhook", methods=["POST"])
-async def web_billing_webhook(request: Request):
+@mcp.custom_route("/api/billing/stripe/webhook", methods=["POST"])
+async def web_billing_stripe_webhook(request: Request):
     try:
-        body = await request.json()
-        if not isinstance(body, dict):
-            raise BillingError("Geçersiz bildirim.")
-        signature = request.headers.get("x-iyz-signature-v3", "")
-        if not iyzico_billing.verify_subscription_webhook(body, signature):
-            return JSONResponse({"error": "Bildirim imzası doğrulanamadı."}, status_code=401)
-        account_service.process_webhook(body)
+        raw_body = await request.body()
+        signature = request.headers.get("stripe-signature", "")
+        event = stripe_billing.verify_webhook(raw_body, signature)
+        account_service.process_stripe_webhook(event, stripe_billing.price_lookup())
         return JSONResponse({"received": True})
-    except (BillingError, AccountError, ValueError) as exc:
+    except BillingError as exc:
+        return JSONResponse({"error": str(exc)}, status_code=400)
+    except AccountError as exc:
         return JSONResponse({"error": str(exc)}, status_code=422)
+
+
+@mcp.custom_route("/api/billing/portal", methods=["POST"])
+async def web_billing_portal(request: Request):
+    limited = _rate_limit_response(request, "billing-portal", limit=10, window_seconds=900)
+    if limited:
+        return limited
+    try:
+        _trusted_request_origin(request)
+        user = _required_user(request)
+        subscription = account_service.subscription_for_user(user)
+        if not subscription or subscription.get("provider") != "stripe":
+            raise BillingError("Yönetilebilecek bir Stripe aboneliği bulunamadı.")
+        url = await stripe_billing.create_portal(
+            str(subscription.get("provider_customer_ref") or ""), PUBLIC_BASE_URL
+        )
+        return JSONResponse({"portal_url": url}, headers={"Cache-Control": "no-store"})
+    except SecurityViolation as exc:
+        return _security_response(exc)
+    except AuthError as exc:
+        return _auth_error(exc)
+    except BillingError as exc:
+        return JSONResponse({"error": str(exc)}, status_code=503 if not stripe_billing.configured else 422)
 
 
 @mcp.custom_route("/api/admin/overview", methods=["GET"])
@@ -1233,7 +1260,7 @@ async def health_check(request):
     return JSONResponse({
         "status": "healthy",
         "service": "Mevzuat MCP Server",
-        "version": "1.5.0",
+        "version": "1.6.0",
         "tariff_ready": tariff_status.ready,
         "tariff_measures": tariff_status.measure_count,
         "controls_ready": control_status.ready,

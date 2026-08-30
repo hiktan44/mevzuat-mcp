@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "mevzuat-mcp"
-version = "1.5.0"
+version = "1.6.0"
 description = "Remote MCP for Turkish legislation and live Ministry of Trade laws, supports, data, reports and overseas contacts"
 readme = "README.md"
 requires-python = ">=3.11"
@@ -39,6 +39,7 @@ dependencies = [
     "numpy>=1.24.0",
     "openai>=1.0.0",
     "Pillow>=10.4.0",
+    "stripe>=13.0.0",
 ]
 
 [project.urls]

@@ -587,6 +587,10 @@ function renderAccount(auth) {
   $("#currentPlanName").textContent = account.plan.name;
   $("#currentPlanStatus").textContent = `${account.period} kullanım dönemi · ${account.subscription.status}`;
   $("#adminLink").hidden = !account.is_admin;
+  $("#manageBilling").hidden = !(
+    account.subscription.provider === "stripe"
+    && ["active", "pending", "past_due"].includes(account.subscription.status)
+  );
   $("#quotaGrid").innerHTML = Object.entries(account.quotas).map(([key, quota]) => {
     const percent = quota.limit == null ? 0 : Math.min(100, Math.round((quota.used / Math.max(1, quota.limit)) * 100));
     return `<article class="quota-card"><header><b>${escapeHtml(quotaLabels[key] || key)}</b><span>${quota.limit == null ? `${quota.used} / sınırsız` : `${quota.used} / ${quota.limit}`}</span></header><div class="quota-track"><i style="width:${percent}%"></i></div></article>`;
@@ -615,7 +619,7 @@ function renderPlans(plans, billingEnabled) {
   $("#pricingGrid").innerHTML = plans.map((plan) => {
     const monthly = plan.monthly_price_try == null ? "Teklif" : plan.monthly_price_try === 0 ? "Ücretsiz" : `${numberFormat.format(plan.monthly_price_try)} TL`;
     const purchasable = ["expert", "team"].includes(plan.code);
-    return `<article class="price-card${plan.code === "expert" ? " featured" : ""}"><span>${escapeHtml(plan.code)}</span><h3>${escapeHtml(plan.name)}</h3><div class="price">${escapeHtml(monthly)}${plan.monthly_price_try ? "<small> + KDV / ay</small>" : ""}</div><ul>${plan.features.map((item) => `<li>${escapeHtml(item)}</li>`).join("")}</ul><div class="price-actions">${purchasable ? `<button type="button" data-buy-plan="${escapeHtml(plan.code)}" data-buy-cycle="monthly" ${billingEnabled ? "" : "disabled"}>${billingEnabled ? "Aylık başlat" : "Ödeme ayarı bekleniyor"}</button><button class="yearly" type="button" data-buy-plan="${escapeHtml(plan.code)}" data-buy-cycle="yearly" ${billingEnabled ? "" : "disabled"}>Yıllık · ${numberFormat.format(plan.yearly_price_try)} TL + KDV</button>` : `<button type="button" disabled>${plan.code === "starter" ? "Mevcut ücretsiz paket" : "Satış ekibiyle görüşün"}</button>`}</div></article>`;
+    return `<article class="price-card${plan.code === "expert" ? " featured" : ""}"><span>${escapeHtml(plan.code)}</span><h3>${escapeHtml(plan.name)}</h3><div class="price">${escapeHtml(monthly)}${plan.monthly_price_try ? "<small> + KDV / ay</small>" : ""}</div><ul>${plan.features.map((item) => `<li>${escapeHtml(item)}</li>`).join("")}</ul><div class="price-actions">${purchasable ? `<button type="button" data-buy-plan="${escapeHtml(plan.code)}" data-buy-cycle="monthly" ${billingEnabled ? "" : "disabled"}>${billingEnabled ? "Stripe ile aylık başlat" : "Stripe ayarı bekleniyor"}</button><button class="yearly" type="button" data-buy-plan="${escapeHtml(plan.code)}" data-buy-cycle="yearly" ${billingEnabled ? "" : "disabled"}>Yıllık · ${numberFormat.format(plan.yearly_price_try)} TL + KDV</button>` : `<button type="button" disabled>${plan.code === "starter" ? "Mevcut ücretsiz paket" : "Satış ekibiyle görüşün"}</button>`}</div></article>`;
   }).join("");
 }
 
@@ -642,36 +646,29 @@ $("#dossierList").addEventListener("click", async (event) => {
   } catch (error) { showToast(error.message); }
 });
 
-$("#pricingGrid").addEventListener("click", (event) => {
+$("#pricingGrid").addEventListener("click", async (event) => {
   const button = event.target.closest("[data-buy-plan]");
   if (!button || button.disabled) return;
-  $("#billingPlan").value = button.dataset.buyPlan;
-  $("#billingCycle").value = button.dataset.buyCycle;
-  $("#billingTitle").textContent = `${button.dataset.buyPlan === "expert" ? "Uzman" : "Ekip"} · ${button.dataset.buyCycle === "yearly" ? "yıllık" : "aylık"} abonelik`;
-  const names = String(state.auth?.user?.name || "").trim().split(/\s+/);
-  $("#billingName").value ||= names.shift() || "";
-  $("#billingSurname").value ||= names.join(" ");
-  $("#billingForm").hidden = false;
-  $("#billingForm").scrollIntoView({ behavior: "smooth", block: "start" });
-});
-$("#cancelBilling").addEventListener("click", () => { $("#billingForm").hidden = true; });
-$("#billingForm").addEventListener("submit", async (event) => {
-  event.preventDefault();
-  const submit = event.currentTarget.querySelector("button[type=submit]");
-  submit.disabled = true;
+  button.disabled = true;
   try {
     const checkout = await fetchJson("/api/billing/checkout", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({
-      plan_code: $("#billingPlan").value, billing_cycle: $("#billingCycle").value,
-      customer: { name: $("#billingName").value, surname: $("#billingSurname").value, gsmNumber: $("#billingPhone").value, identityNumber: $("#billingIdentity").value, address: $("#billingAddress").value, city: $("#billingCity").value, zipCode: $("#billingZip").value, country: $("#billingCountry").value },
+      plan_code: button.dataset.buyPlan, billing_cycle: button.dataset.buyCycle,
     }) });
-    $("#checkoutFrame").srcdoc = `<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"></head><body><div id="iyzipay-checkout-form" class="responsive"></div>${checkout.checkout_form_content}</body></html>`;
-    $("#checkoutFrameWrap").hidden = false;
+    const target = new URL(checkout.checkout_url);
+    if (target.protocol !== "https:" || target.hostname !== "checkout.stripe.com") throw new Error("Stripe yönlendirme adresi doğrulanamadı.");
+    location.assign(target.href);
   } catch (error) { showToast(error.message); }
-  finally { submit.disabled = false; }
+  finally { button.disabled = false; }
 });
-$("#closeCheckout").addEventListener("click", async () => {
-  $("#checkoutFrameWrap").hidden = true; $("#checkoutFrame").srcdoc = "";
-  await loadAuthState(); if (state.auth?.authenticated) renderAccount(state.auth);
+$("#manageBilling").addEventListener("click", async (event) => {
+  event.currentTarget.disabled = true;
+  try {
+    const result = await fetchJson("/api/billing/portal", { method: "POST" });
+    const target = new URL(result.portal_url);
+    if (target.protocol !== "https:" || target.hostname !== "billing.stripe.com") throw new Error("Stripe abonelik adresi doğrulanamadı.");
+    location.assign(target.href);
+  } catch (error) { showToast(error.message); }
+  finally { event.currentTarget.disabled = false; }
 });
 $("#deleteAccount").addEventListener("click", async () => {
   if (!confirm("Hesabınız, abonelik kaydınız, kullanım geçmişiniz ve kanıt dosyalarınız kalıcı olarak silinsin mi?")) return;

@@ -361,54 +361,127 @@ class AccountService:
             raise AccountError("Ödeme oturumu bulunamadı.")
         return dict(row)
 
-    def complete_payment(self, token: str, provider_data: dict[str, Any]) -> dict[str, Any]:
-        subscription_ref = str(provider_data.get("referenceCode", ""))[:255]
-        customer_ref = str(provider_data.get("customerReferenceCode", ""))[:255]
-        status = str(provider_data.get("subscriptionStatus", "")).upper()
-        pricing_ref = str(provider_data.get("pricingPlanReferenceCode", ""))
-        if status not in {"ACTIVE", "PENDING"} or not subscription_ref or not customer_ref:
-            raise AccountError("Ödeme sağlayıcısı aboneliği doğrulamadı.")
+    def _complete_stripe_checkout(
+        self, connection: sqlite3.Connection, checkout: dict[str, Any]
+    ) -> dict[str, Any]:
+        checkout_id = str(checkout.get("id", ""))[:255]
+        metadata = checkout.get("metadata") if isinstance(checkout.get("metadata"), dict) else {}
+        payment = connection.execute(
+            "SELECT * FROM payment_sessions WHERE provider_token=?", (checkout_id,)
+        ).fetchone()
+        if not payment:
+            raise AccountError("Stripe ödeme oturumu bulunamadı.")
+        if (
+            str(checkout.get("client_reference_id", "")) != str(payment["id"])
+            or str(metadata.get("payment_session_id", "")) != str(payment["id"])
+            or str(metadata.get("google_sub", "")) != str(payment["google_sub"])
+            or str(metadata.get("plan_code", "")) != str(payment["plan_code"])
+            or str(metadata.get("billing_cycle", "")) != str(payment["billing_cycle"])
+        ):
+            raise AccountError("Stripe ödeme oturumu paket veya kullanıcıyla eşleşmedi.")
+        if str(checkout.get("status", "")) != "complete" or str(checkout.get("payment_status", "")) not in {
+            "paid", "no_payment_required"
+        }:
+            raise AccountError("Stripe abonelik ödemesini henüz doğrulamadı.")
+        subscription_value = checkout.get("subscription")
+        customer_value = checkout.get("customer")
+        subscription_ref = _stripe_reference(subscription_value, "sub_")
+        customer_ref = _stripe_reference(customer_value, "cus_")
+        if not subscription_ref or not customer_ref:
+            raise AccountError("Stripe abonelik veya müşteri referansı eksik.")
+        subscription_data = subscription_value if isinstance(subscription_value, dict) else {}
+        provider_status = _stripe_status(str(subscription_data.get("status", "active")))
         now = _now()
+        connection.execute(
+            "UPDATE payment_sessions SET provider_subscription_ref=?,provider_customer_ref=?,status='completed',updated_at=? WHERE id=?",
+            (subscription_ref, customer_ref, now, payment["id"]),
+        )
+        connection.execute(
+            "INSERT INTO subscriptions(google_sub,plan_code,status,billing_cycle,period_start,period_end,provider,provider_subscription_ref,provider_customer_ref,updated_at) "
+            "VALUES(?,?,?,?,?,?,?,?,?,?) ON CONFLICT(google_sub) DO UPDATE SET plan_code=excluded.plan_code,status=excluded.status,billing_cycle=excluded.billing_cycle,period_start=excluded.period_start,period_end=excluded.period_end,provider=excluded.provider,provider_subscription_ref=excluded.provider_subscription_ref,provider_customer_ref=excluded.provider_customer_ref,updated_at=excluded.updated_at",
+            (
+                payment["google_sub"], payment["plan_code"], provider_status,
+                payment["billing_cycle"], _stripe_period(subscription_data, "start"),
+                _stripe_period(subscription_data, "end"), "stripe",
+                subscription_ref, customer_ref, now,
+            ),
+        )
+        return {"plan_code": payment["plan_code"], "status": provider_status}
+
+    def complete_stripe_checkout(self, checkout: dict[str, Any]) -> dict[str, Any]:
         with self._connect() as connection:
             connection.execute("BEGIN IMMEDIATE")
-            payment = connection.execute("SELECT * FROM payment_sessions WHERE provider_token=?", (token,)).fetchone()
-            if not payment:
-                raise AccountError("Ödeme oturumu bulunamadı.")
-            expected_ref = os.environ.get(
-                f"IYZICO_{str(payment['plan_code']).upper()}_{str(payment['billing_cycle']).upper()}_PLAN_REF", ""
-            ).strip()
-            if expected_ref and not hmac_compare(pricing_ref, expected_ref):
-                raise AccountError("Ödeme paketi beklenen planla eşleşmedi.")
-            connection.execute(
-                "UPDATE payment_sessions SET provider_subscription_ref=?,provider_customer_ref=?,status='completed',updated_at=? WHERE id=?",
-                (subscription_ref, customer_ref, now, payment["id"]),
-            )
-            connection.execute(
-                "INSERT INTO subscriptions(google_sub,plan_code,status,billing_cycle,period_start,period_end,provider,provider_subscription_ref,provider_customer_ref,updated_at) "
-                "VALUES(?,?,?,?,?,?,?,?,?,?) ON CONFLICT(google_sub) DO UPDATE SET plan_code=excluded.plan_code,status=excluded.status,billing_cycle=excluded.billing_cycle,period_start=excluded.period_start,period_end=excluded.period_end,provider=excluded.provider,provider_subscription_ref=excluded.provider_subscription_ref,provider_customer_ref=excluded.provider_customer_ref,updated_at=excluded.updated_at",
-                (payment["google_sub"], payment["plan_code"], "active" if status == "ACTIVE" else "pending",
-                 payment["billing_cycle"], _milliseconds_to_seconds(provider_data.get("startDate")),
-                 _milliseconds_to_seconds(provider_data.get("endDate")), "iyzico", subscription_ref, customer_ref, now),
-            )
-        return {"plan_code": payment["plan_code"], "status": status.casefold()}
+            return self._complete_stripe_checkout(connection, checkout)
 
-    def process_webhook(self, event: dict[str, Any]) -> bool:
-        event_key = str(event.get("iyziReferenceCode", ""))[:255]
-        subscription_ref = str(event.get("subscriptionReferenceCode", ""))[:255]
-        event_type = str(event.get("iyziEventType", ""))
-        if not event_key or not subscription_ref or event_type not in {"subscription.order.success", "subscription.order.failure"}:
-            raise AccountError("Geçersiz abonelik bildirimi.")
+    def process_stripe_webhook(
+        self, event: dict[str, Any], price_lookup: dict[str, tuple[str, str]]
+    ) -> bool:
+        event_key = str(event.get("id", ""))[:255]
+        event_type = str(event.get("type", ""))
+        allowed = {
+            "checkout.session.completed",
+            "customer.subscription.updated",
+            "customer.subscription.deleted",
+            "invoice.paid",
+            "invoice.payment_failed",
+        }
+        data = event.get("data") if isinstance(event.get("data"), dict) else {}
+        obj = data.get("object") if isinstance(data.get("object"), dict) else {}
+        if not event_key or event_type not in allowed or not obj:
+            raise AccountError("Desteklenmeyen Stripe abonelik bildirimi.")
+        now = _now()
         with self._connect() as connection:
             connection.execute("BEGIN IMMEDIATE")
             try:
                 connection.execute(
-                    "INSERT INTO webhook_events(provider,event_key,received_at) VALUES('iyzico',?,?)", (event_key, _now())
+                    "INSERT INTO webhook_events(provider,event_key,received_at) VALUES('stripe',?,?)",
+                    (event_key, now),
                 )
             except sqlite3.IntegrityError:
                 return False
+
+            if event_type == "checkout.session.completed":
+                self._complete_stripe_checkout(connection, obj)
+                return True
+
+            if event_type.startswith("customer.subscription."):
+                subscription_ref = _stripe_reference(obj, "sub_")
+                customer_ref = _stripe_reference(obj.get("customer"), "cus_")
+                metadata = obj.get("metadata") if isinstance(obj.get("metadata"), dict) else {}
+                google_sub = str(metadata.get("google_sub", ""))
+                price_ref = _stripe_subscription_price(obj)
+                mapped = price_lookup.get(price_ref)
+                status = "cancelled" if event_type.endswith("deleted") else _stripe_status(str(obj.get("status", "")))
+                existing = connection.execute(
+                    "SELECT * FROM subscriptions WHERE provider='stripe' AND provider_subscription_ref=?",
+                    (subscription_ref,),
+                ).fetchone()
+                if not existing and not google_sub:
+                    raise AccountError("Stripe abonelik bildiriminin kullanıcı eşleşmesi yok.")
+                owner = str(existing["google_sub"]) if existing else google_sub
+                if not connection.execute("SELECT 1 FROM users WHERE google_sub=?", (owner,)).fetchone():
+                    raise AccountError("Stripe aboneliğinin kullanıcısı bulunamadı.")
+                plan_code = mapped[0] if mapped else str(existing["plan_code"] if existing else metadata.get("plan_code", "starter"))
+                billing_cycle = mapped[1] if mapped else str(existing["billing_cycle"] if existing else metadata.get("billing_cycle", ""))
+                if plan_code not in PLANS:
+                    raise AccountError("Stripe abonelik fiyatı paket kataloğuyla eşleşmedi.")
+                connection.execute(
+                    "INSERT INTO subscriptions(google_sub,plan_code,status,billing_cycle,period_start,period_end,provider,provider_subscription_ref,provider_customer_ref,updated_at) "
+                    "VALUES(?,?,?,?,?,?,?,?,?,?) ON CONFLICT(google_sub) DO UPDATE SET plan_code=excluded.plan_code,status=excluded.status,billing_cycle=excluded.billing_cycle,period_start=excluded.period_start,period_end=excluded.period_end,provider=excluded.provider,provider_subscription_ref=excluded.provider_subscription_ref,provider_customer_ref=excluded.provider_customer_ref,updated_at=excluded.updated_at",
+                    (
+                        owner, plan_code, status, billing_cycle or None,
+                        _stripe_period(obj, "start"), _stripe_period(obj, "end"), "stripe",
+                        subscription_ref, customer_ref or (str(existing["provider_customer_ref"]) if existing else None), now,
+                    ),
+                )
+                return True
+
+            subscription_ref = _stripe_invoice_subscription(obj)
+            if not subscription_ref:
+                raise AccountError("Stripe fatura bildiriminin abonelik referansı yok.")
             connection.execute(
-                "UPDATE subscriptions SET status=?,updated_at=? WHERE provider_subscription_ref=?",
-                ("active" if event_type.endswith("success") else "past_due", _now(), subscription_ref),
+                "UPDATE subscriptions SET status=?,updated_at=? WHERE provider='stripe' AND provider_subscription_ref=?",
+                ("active" if event_type == "invoice.paid" else "past_due", now, subscription_ref),
             )
         return True
 
@@ -448,14 +521,55 @@ class AccountService:
         return cursor.rowcount > 0
 
 
-def _milliseconds_to_seconds(value: Any) -> int | None:
-    try:
-        number = int(value)
-    except (TypeError, ValueError):
-        return None
-    return number // 1000 if number > 10_000_000_000 else number
+def _stripe_reference(value: Any, prefix: str) -> str:
+    reference = str(value.get("id", "") if isinstance(value, dict) else value or "")[:255]
+    return reference if reference.startswith(prefix) and reference.replace("_", "").isalnum() else ""
 
 
-def hmac_compare(left: str, right: str) -> bool:
-    import hmac
-    return hmac.compare_digest(left.encode("utf-8"), right.encode("utf-8"))
+def _stripe_status(value: str) -> str:
+    normalized = value.casefold()
+    if normalized in {"active", "trialing"}:
+        return "active"
+    if normalized in {"incomplete", "paused"}:
+        return "pending"
+    if normalized in {"past_due", "unpaid", "incomplete_expired"}:
+        return "past_due"
+    if normalized in {"canceled", "cancelled"}:
+        return "cancelled"
+    return "pending"
+
+
+def _stripe_period(subscription: dict[str, Any], edge: str) -> int | None:
+    direct = subscription.get(f"current_period_{edge}")
+    candidates = [direct]
+    items = subscription.get("items") if isinstance(subscription.get("items"), dict) else {}
+    for item in items.get("data", []) if isinstance(items.get("data"), list) else []:
+        if isinstance(item, dict):
+            candidates.append(item.get(f"current_period_{edge}"))
+    numbers: list[int] = []
+    for value in candidates:
+        try:
+            number = int(value)
+        except (TypeError, ValueError):
+            continue
+        if number > 0:
+            numbers.append(number)
+    return (min(numbers) if edge == "start" else max(numbers)) if numbers else None
+
+
+def _stripe_subscription_price(subscription: dict[str, Any]) -> str:
+    items = subscription.get("items") if isinstance(subscription.get("items"), dict) else {}
+    rows = items.get("data") if isinstance(items.get("data"), list) else []
+    if not rows or not isinstance(rows[0], dict):
+        return ""
+    price = rows[0].get("price")
+    return str(price.get("id", "") if isinstance(price, dict) else price or "")
+
+
+def _stripe_invoice_subscription(invoice: dict[str, Any]) -> str:
+    direct = _stripe_reference(invoice.get("subscription"), "sub_")
+    if direct:
+        return direct
+    parent = invoice.get("parent") if isinstance(invoice.get("parent"), dict) else {}
+    details = parent.get("subscription_details") if isinstance(parent.get("subscription_details"), dict) else {}
+    return _stripe_reference(details.get("subscription"), "sub_")

@@ -112,7 +112,7 @@ Web araştırma uygulaması: `https://mevzuat-mcp.seymata.com/app`
 
 Arayüzde Ticaret Bakanlığının yedi bilgi katmanı canlı kayıt sayılarıyla ayrı gösterilir; kaynak, belge türü, yıl ve mülga durumu filtrelenebilir. Seçilen kaydın resmî kaynak zinciri, tam metni ve kopyalanabilir atfı aynı ekranda açılır. **Genel mevzuat** görünümü Bedesten resmî servisine bağlı ayrı arama alanıdır.
 
-> Coolify dağıtımı v1.5.0 sağlık, web arayüzü ve MCP araç taramasıyla doğrulanır. Snapshot verilerini kalıcı tutmak için uygulamada `/data` hedefine persistent volume bağlayın; imaj `MEVZUAT_DATA_DIR=/data` ile hazır gelir.
+> Coolify dağıtımı v1.6.0 sağlık, web arayüzü ve MCP araç taramasıyla doğrulanır. Snapshot verilerini kalıcı tutmak için uygulamada `/data` hedefine persistent volume bağlayın; imaj `MEVZUAT_DATA_DIR=/data` ile hazır gelir.
 
 ### Google ile giriş ve SEO
 
@@ -138,21 +138,20 @@ GOOGLE_SITE_VERIFICATION=<Search Console doğrulama kodu, isteğe bağlı>
 
 Google hesabıyla giriş yapan kullanıcılar Başlangıç, Uzman, Ekip ve Kurumsal paketlerini; aylık kullanım sayaçlarını ve sunucuda saklanan kanıt dosyalarını **Hesabım** alanında görür. Görsel kalıcı olarak saklanmaz. Kanıt dosyası analiz sonucunu; kontrol zamanı, GTİP, menşe, yürürlük referansı, resmî URL’ler ve etkin tarife/kontrol snapshot SHA-256 değerleriyle birlikte JSON olarak saklar ve dışa aktarır. Yönetici adresleri virgülle ayrılmış `ADMIN_EMAILS` değişkeninden alınır; `/admin` paket/durum değişikliklerini denetim günlüğüne yazar.
 
-Kart verisini uygulamaya almayan iyzico Subscription Checkout Form için Coolify’a aşağıdaki Secret değerlerini ekleyin. Önce iyzico panelinde Uzman ve Ekip için aylık/yıllık planları oluşturup verilen referans kodlarını kullanın:
+Kart verisini uygulamaya almayan Stripe Billing + hosted Checkout için Coolify’a aşağıdaki Secret değerlerini ekleyin. Stripe Dashboard’da Uzman ve Ekip ürünlerinin aylık/yıllık tekrar eden TRY fiyatlarını oluşturup gerçek `price_` kimliklerini kullanın:
 
 ```text
 ADMIN_EMAILS=<yönetici Google e-posta adresleri, virgülle ayrılmış>
-IYZICO_BASE_URL=https://sandbox-api.iyzipay.com
-IYZICO_API_KEY=<iyzico API anahtarı>
-IYZICO_SECRET_KEY=<iyzico secret key>
-IYZICO_MERCHANT_ID=<iyzico merchant ID>
-IYZICO_EXPERT_MONTHLY_PLAN_REF=<plan reference code>
-IYZICO_EXPERT_YEARLY_PLAN_REF=<plan reference code>
-IYZICO_TEAM_MONTHLY_PLAN_REF=<plan reference code>
-IYZICO_TEAM_YEARLY_PLAN_REF=<plan reference code>
+STRIPE_SECRET_KEY=<sk_test_ veya canlıda sk_live_ ile başlayan gizli anahtar>
+STRIPE_WEBHOOK_SECRET=<whsec_ ile başlayan endpoint imza anahtarı>
+STRIPE_PRICE_EXPERT_MONTHLY=<price_ kimliği>
+STRIPE_PRICE_EXPERT_YEARLY=<price_ kimliği>
+STRIPE_PRICE_TEAM_MONTHLY=<price_ kimliği>
+STRIPE_PRICE_TEAM_YEARLY=<price_ kimliği>
+STRIPE_AUTOMATIC_TAX=false
 ```
 
-Sandbox doğrulandıktan sonra yalnız `IYZICO_BASE_URL=https://api.iyzipay.com` yapılır ve canlı anahtar/plan referansları girilir. iyzico panelindeki abonelik webhook adresi `https://mevzuat-mcp.seymata.com/api/billing/iyzico/webhook` olmalıdır. Anahtar veya plan referansı eksikse ödeme uçları güvenli biçimde kapalı kalır; paket fiyatları tarayıcıdan değil sunucudaki katalogdan belirlenir.
+Stripe webhook adresi `https://mevzuat-mcp.seymata.com/api/billing/stripe/webhook` olmalı ve yalnız `checkout.session.completed`, `customer.subscription.updated`, `customer.subscription.deleted`, `invoice.paid`, `invoice.payment_failed` olaylarını göndermelidir. Müşteri Portalı, paket değişikliği/iptal ve ödeme yöntemi yönetimini Stripe’ın barındırdığı sayfada yapar. `STRIPE_AUTOMATIC_TAX` yalnız Stripe Tax kayıtları hazırlandıktan sonra `true` yapılmalıdır. Anahtar, webhook secret veya Price ID’lerden biri eksikse ödeme güvenli biçimde kapalı kalır; paket ve fiyat seçimi tarayıcıdan değil sunucudaki katalogdan doğrulanır.
 
 Landing page; canonical, Open Graph/Twitter kartları, `SoftwareApplication` ve `FAQPage` yapılandırılmış verisi, `/robots.txt`, `/sitemap.xml`, manifest ve indekslenmeyen `/app` çalışma alanıyla hazırdır. Google Search Console tarafında alan adı doğrulandıktan sonra `https://mevzuat-mcp.seymata.com/sitemap.xml` gönderilmelidir; indeks kararı ve sıralama Google'a aittir.
 
