@@ -50,7 +50,7 @@ dependencies = [
 mevzuat-mcp = "mevzuat_mcp_server:main"
 
 [tool.setuptools]
-py-modules = ["mevzuat_mcp_server", "mevzuat_client", "mevzuat_models", "article_search", "bedesten_client", "bedesten_models", "ticaret_client", "ticaret_models", "customs_advisor", "tariff_engine", "control_engine", "trusted_certificates", "auth_service", "security_firewall"]
+py-modules = ["mevzuat_mcp_server", "mevzuat_client", "mevzuat_models", "article_search", "bedesten_client", "bedesten_models", "ticaret_client", "ticaret_models", "customs_advisor", "tariff_engine", "control_engine", "trusted_certificates", "auth_service", "account_service", "billing_service", "security_firewall"]
 packages = ["semantic_search"]
 
 [tool.setuptools.data-files]

@@ -11,9 +11,10 @@ import os
 import re
 import threading
 import time
+from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
-from urllib.parse import urlsplit
+from urllib.parse import parse_qs, urlsplit
 
 import httpx
 from pydantic import ValidationError
@@ -21,6 +22,8 @@ from starlette.requests import Request
 from starlette.responses import FileResponse, HTMLResponse, JSONResponse, PlainTextResponse, RedirectResponse, Response
 
 from auth_service import AuthError, GoogleAuthService
+from account_service import AccountError, AccountService, QuotaExceeded
+from billing_service import BillingError, IyzicoBilling
 from customs_advisor import CustomsInquiry, ProductClassificationRequest
 from mevzuat_mcp_server import (
     _BED_VALID_TYPES,
@@ -40,6 +43,8 @@ logger = logging.getLogger(__name__)
 WEB_DIR = Path(__file__).resolve().parent / "web"
 PUBLIC_BASE_URL = os.environ.get("PUBLIC_BASE_URL", "https://mevzuat-mcp.seymata.com").rstrip("/")
 google_auth = GoogleAuthService()
+account_service = AccountService(google_auth.data_dir)
+iyzico_billing = IyzicoBilling()
 agent_identity = AgentTokenVerifier()
 
 
@@ -130,6 +135,54 @@ def _agent_or_browser_identity(request: Request) -> None:
     if not authorization.startswith("Bearer "):
         raise SecurityViolation("Bu işlem için doğrulanmış kullanıcı veya ajan kimliği gerekir.", code="identity_required")
     agent_identity.verify(authorization.removeprefix("Bearer ").strip())
+
+
+def _session_user(request: Request, *, required: bool = False) -> dict[str, Any] | None:
+    token = request.cookies.get(google_auth.session_cookie, "")
+    if token:
+        try:
+            return google_auth.parse_session(token)
+        except AuthError:
+            pass
+    if required:
+        raise AuthError("Bu işlem için Google hesabınızla giriş yapın.")
+    return None
+
+
+def _auth_error(exc: Exception, *, status_code: int = 401) -> JSONResponse:
+    return JSONResponse({"error": str(exc), "code": "authentication_required"}, status_code=status_code)
+
+
+def _required_user(request: Request) -> dict[str, Any]:
+    user = _session_user(request, required=True)
+    if user is None:  # Defensive for type narrowing; required=True already raises.
+        raise AuthError("Bu işlem için Google hesabınızla giriş yapın.")
+    return user
+
+
+def _require_admin(request: Request) -> dict[str, Any]:
+    user = _required_user(request)
+    if not account_service.is_admin(user):
+        raise AuthError("Bu alan yalnızca yöneticilere açıktır.")
+    return user
+
+
+def _enforce_quota(request: Request, operation: str) -> dict[str, Any] | None:
+    """Check a signed user's quota; require login when Google OAuth is enabled."""
+    user = _session_user(request)
+    if not user:
+        if google_auth.configured:
+            raise AuthError("Bu analiz için Google hesabınızla giriş yapın.")
+        return None
+    quota = account_service.account(user)["quotas"][operation]
+    if quota["remaining"] is not None and quota["remaining"] <= 0:
+        raise QuotaExceeded(f"Aylık {operation} kotanız doldu. Hesabım alanından paketinizi yükseltebilirsiniz.")
+    return user
+
+
+def _record_usage(user: dict[str, Any] | None, operation: str) -> None:
+    if user:
+        account_service.consume(user, operation)
 
 
 _DATA_URL_RE = re.compile(r"^data:(image/(?:jpeg|png|webp));base64,([A-Za-z0-9+/=\r\n]+)$")
@@ -238,6 +291,15 @@ async def web_application(request: Request):
     return FileResponse(WEB_DIR / "index.html", media_type="text/html")
 
 
+@mcp.custom_route("/admin", methods=["GET"])
+async def web_admin(request: Request):
+    try:
+        _require_admin(request)
+    except AuthError:
+        return RedirectResponse("/app?account=login", status_code=303)
+    return FileResponse(WEB_DIR / "admin.html", media_type="text/html")
+
+
 @mcp.custom_route("/gizlilik", methods=["GET"])
 async def web_privacy(request: Request):
     return FileResponse(WEB_DIR / "privacy.html", media_type="text/html")
@@ -256,6 +318,11 @@ async def web_css(request: Request):
 @mcp.custom_route("/assets/app.js", methods=["GET"])
 async def web_js(request: Request):
     return FileResponse(WEB_DIR / "app.js", media_type="text/javascript")
+
+
+@mcp.custom_route("/assets/admin.js", methods=["GET"])
+async def web_admin_js(request: Request):
+    return FileResponse(WEB_DIR / "admin.js", media_type="text/javascript")
 
 
 @mcp.custom_route("/assets/landing.css", methods=["GET"])
@@ -319,11 +386,11 @@ async def web_sitemap(request: Request):
     xml = (
         '<?xml version="1.0" encoding="UTF-8"?>'
         '<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">'
-        f"<url><loc>{PUBLIC_BASE_URL}/</loc><lastmod>2026-08-29</lastmod>"
+        f"<url><loc>{PUBLIC_BASE_URL}/</loc><lastmod>2026-08-30</lastmod>"
         "<changefreq>daily</changefreq><priority>1.0</priority></url>"
-        f"<url><loc>{PUBLIC_BASE_URL}/gizlilik</loc><lastmod>2026-08-29</lastmod>"
+        f"<url><loc>{PUBLIC_BASE_URL}/gizlilik</loc><lastmod>2026-08-30</lastmod>"
         "<changefreq>monthly</changefreq><priority>0.3</priority></url>"
-        f"<url><loc>{PUBLIC_BASE_URL}/kullanim-kosullari</loc><lastmod>2026-08-29</lastmod>"
+        f"<url><loc>{PUBLIC_BASE_URL}/kullanim-kosullari</loc><lastmod>2026-08-30</lastmod>"
         "<changefreq>monthly</changefreq><priority>0.3</priority></url>"
         "</urlset>"
     )
@@ -344,13 +411,8 @@ def _secure_cookie() -> bool:
 
 @mcp.custom_route("/api/auth/me", methods=["GET"])
 async def web_auth_me(request: Request):
-    token = request.cookies.get(google_auth.session_cookie, "")
-    session: dict[str, Any] | None = None
-    if token:
-        try:
-            session = google_auth.parse_session(token)
-        except AuthError:
-            session = None
+    session = _session_user(request)
+    account = account_service.account(session) if session else None
     response = JSONResponse(
         {
             "authenticated": session is not None,
@@ -360,10 +422,13 @@ async def web_auth_me(request: Request):
                     "email": session.get("email", ""),
                     "name": session.get("name", ""),
                     "picture": session.get("picture", ""),
+                    "is_admin": bool(account and account["is_admin"]),
                 }
                 if session
                 else None
             ),
+            "account": account,
+            "billing_enabled": iyzico_billing.configured,
         }
     )
     response.headers["Cache-Control"] = "no-store"
@@ -445,6 +510,242 @@ async def web_logout(request: Request):
     response = RedirectResponse("/", status_code=303)
     response.delete_cookie(google_auth.session_cookie, path="/")
     return response
+
+
+@mcp.custom_route("/api/plans", methods=["GET"])
+async def web_plans(request: Request):
+    return JSONResponse({"plans": account_service.public_plans(), "billing_enabled": iyzico_billing.configured})
+
+
+@mcp.custom_route("/api/account", methods=["GET"])
+async def web_account(request: Request):
+    try:
+        user = _required_user(request)
+        return JSONResponse(account_service.account(user), headers={"Cache-Control": "no-store"})
+    except AuthError as exc:
+        return _auth_error(exc)
+
+
+@mcp.custom_route("/api/account", methods=["DELETE"])
+async def web_delete_account(request: Request):
+    try:
+        _trusted_request_origin(request)
+        user = _required_user(request)
+        subscription = account_service.subscription_for_user(user)
+        if subscription and subscription.get("provider") == "iyzico" and subscription.get("status") in {"active", "pending", "past_due"}:
+            reference = str(subscription.get("provider_subscription_ref") or "")
+            if not reference:
+                raise BillingError("Ücretli abonelik referansı bulunamadığı için hesap güvenle silinemedi.")
+            await iyzico_billing.cancel_subscription(reference)
+        account_service.delete_account(user)
+        response = JSONResponse({"deleted": True})
+        response.delete_cookie(google_auth.session_cookie, path="/")
+        return response
+    except SecurityViolation as exc:
+        return _security_response(exc)
+    except AuthError as exc:
+        return _auth_error(exc)
+    except (BillingError, httpx.HTTPError) as exc:
+        logger.warning("Account deletion stopped because subscription cancellation failed", exc_info=True)
+        return JSONResponse({"error": f"Abonelik iptal edilemedi; hesap silinmedi. {exc}"}, status_code=502)
+
+
+def _dossier_evidence() -> dict[str, Any]:
+    tariff_status = tariff_engine.status().model_dump(mode="json")
+    control_status = control_engine.status().model_dump(mode="json")
+    return {
+        "generated_at": datetime.now(UTC).isoformat(timespec="seconds"),
+        "tariff": {
+            "last_checked_at": tariff_status.get("last_checked_at"),
+            "active_snapshots": tariff_status.get("active_snapshots", []),
+            "errors": tariff_status.get("errors", []),
+        },
+        "controls": {
+            "last_checked_at": control_status.get("last_checked_at"),
+            "active_snapshots": control_status.get("active_snapshots", []),
+            "errors": control_status.get("errors", []),
+        },
+        "legal_notice": (
+            "Bu dosya oluşturulduğu andaki kanuni metinler ve resmî veri anlık görüntüleriyle hazırlanmıştır. "
+            "Sonraki değişiklikler için yürürlük tarihi, GTİP, menşe ve dipnotlar yeniden doğrulanmalıdır."
+        ),
+    }
+
+
+@mcp.custom_route("/api/dossiers", methods=["GET"])
+async def web_dossiers(request: Request):
+    try:
+        user = _required_user(request)
+        return JSONResponse({"items": account_service.list_dossiers(user)}, headers={"Cache-Control": "no-store"})
+    except AuthError as exc:
+        return _auth_error(exc)
+
+
+@mcp.custom_route("/api/dossiers", methods=["POST"])
+async def web_create_dossier(request: Request):
+    try:
+        _trusted_request_origin(request)
+        user = _required_user(request)
+        body = await request.json()
+        if not isinstance(body, dict):
+            raise AccountError("Kanıt dosyası isteği bir nesne olmalıdır.")
+        payload = body.get("result")
+        if not isinstance(payload, dict):
+            raise AccountError("Kaydedilecek analiz sonucu eksik.")
+        dossier = account_service.create_dossier(
+            user,
+            title=str(body.get("title", "")),
+            product_name=str(body.get("product_name", "")),
+            gtip=str(body.get("gtip", "")) or None,
+            origin_country=str(body.get("origin_country", "")) or None,
+            effective_date=str(body.get("effective_date", "")) or None,
+            checked_at=datetime.now(UTC).isoformat(timespec="seconds"),
+            payload=payload,
+            evidence=_dossier_evidence(),
+        )
+        return JSONResponse(dossier, status_code=201, headers={"Cache-Control": "no-store"})
+    except SecurityViolation as exc:
+        return _security_response(exc)
+    except AuthError as exc:
+        return _auth_error(exc)
+    except QuotaExceeded as exc:
+        return JSONResponse({"error": str(exc), "code": "quota_exceeded"}, status_code=429)
+    except (AccountError, ValueError) as exc:
+        return JSONResponse({"error": str(exc)}, status_code=422)
+
+
+@mcp.custom_route("/api/dossiers/{dossier_id}", methods=["GET"])
+async def web_get_dossier(request: Request):
+    try:
+        user = _required_user(request)
+        dossier = account_service.get_dossier(user, request.path_params.get("dossier_id", ""))
+        download = request.query_params.get("download") == "1"
+        headers = {"Cache-Control": "no-store"}
+        if download:
+            headers["Content-Disposition"] = f'attachment; filename="kanit-dosyasi-{dossier["id"]}.json"'
+        return JSONResponse(dossier, headers=headers)
+    except AuthError as exc:
+        return _auth_error(exc)
+    except AccountError as exc:
+        return JSONResponse({"error": str(exc)}, status_code=404)
+
+
+@mcp.custom_route("/api/dossiers/{dossier_id}", methods=["DELETE"])
+async def web_delete_dossier(request: Request):
+    try:
+        _trusted_request_origin(request)
+        user = _required_user(request)
+        deleted = account_service.delete_dossier(user, request.path_params.get("dossier_id", ""))
+        return JSONResponse({"deleted": deleted}, status_code=200 if deleted else 404)
+    except SecurityViolation as exc:
+        return _security_response(exc)
+    except AuthError as exc:
+        return _auth_error(exc)
+
+
+@mcp.custom_route("/api/billing/checkout", methods=["POST"])
+async def web_billing_checkout(request: Request):
+    limited = _rate_limit_response(request, "billing-checkout", limit=5, window_seconds=900)
+    if limited:
+        return limited
+    try:
+        _trusted_request_origin(request)
+        user = _required_user(request)
+        body = await request.json()
+        if not isinstance(body, dict):
+            raise BillingError("Ödeme isteği geçersiz.")
+        plan_code = str(body.get("plan_code", ""))
+        billing_cycle = str(body.get("billing_cycle", ""))
+        payment = account_service.create_payment_session(user, plan_code, billing_cycle)
+        customer = body.get("customer")
+        if not isinstance(customer, dict):
+            raise BillingError("Abone bilgileri eksik.")
+        safe_customer = {key: str(value) for key, value in customer.items() if isinstance(key, str)}
+        safe_customer["email"] = str(user.get("email", ""))
+        checkout = await iyzico_billing.initialize_checkout(
+            plan_code=plan_code,
+            billing_cycle=billing_cycle,
+            conversation_id=payment["conversation_id"],
+            callback_url=f"{PUBLIC_BASE_URL}/api/billing/iyzico/callback",
+            customer=safe_customer,
+        )
+        account_service.attach_payment_token(payment["id"], checkout["token"])
+        return JSONResponse(checkout, headers={"Cache-Control": "no-store"})
+    except SecurityViolation as exc:
+        return _security_response(exc)
+    except AuthError as exc:
+        return _auth_error(exc)
+    except (BillingError, AccountError) as exc:
+        return JSONResponse({"error": str(exc)}, status_code=503 if not iyzico_billing.configured else 422)
+    except httpx.HTTPError:
+        logger.exception("iyzico checkout initialization failed")
+        return JSONResponse({"error": "Ödeme sağlayıcısına şu anda ulaşılamıyor."}, status_code=502)
+
+
+async def _callback_token(request: Request) -> str:
+    token = request.query_params.get("token", "")
+    if token or request.method != "POST":
+        return token
+    raw = (await request.body())[:16_384].decode("utf-8", errors="replace")
+    return parse_qs(raw, keep_blank_values=False).get("token", [""])[0]
+
+
+@mcp.custom_route("/api/billing/iyzico/callback", methods=["GET", "POST"])
+async def web_billing_callback(request: Request):
+    try:
+        token = await _callback_token(request)
+        payment = account_service.payment_session_by_token(token)
+        provider_data = await iyzico_billing.retrieve_checkout(token, str(payment["conversation_id"]))
+        account_service.complete_payment(token, provider_data)
+        return RedirectResponse("/app?payment=success&account=open", status_code=303)
+    except (BillingError, AccountError, httpx.HTTPError):
+        logger.warning("iyzico callback could not be confirmed", exc_info=True)
+        return RedirectResponse("/app?payment=failed&account=open", status_code=303)
+
+
+@mcp.custom_route("/api/billing/iyzico/webhook", methods=["POST"])
+async def web_billing_webhook(request: Request):
+    try:
+        body = await request.json()
+        if not isinstance(body, dict):
+            raise BillingError("Geçersiz bildirim.")
+        signature = request.headers.get("x-iyz-signature-v3", "")
+        if not iyzico_billing.verify_subscription_webhook(body, signature):
+            return JSONResponse({"error": "Bildirim imzası doğrulanamadı."}, status_code=401)
+        account_service.process_webhook(body)
+        return JSONResponse({"received": True})
+    except (BillingError, AccountError, ValueError) as exc:
+        return JSONResponse({"error": str(exc)}, status_code=422)
+
+
+@mcp.custom_route("/api/admin/overview", methods=["GET"])
+async def web_admin_overview(request: Request):
+    try:
+        _require_admin(request)
+        return JSONResponse(account_service.admin_overview(), headers={"Cache-Control": "no-store"})
+    except AuthError as exc:
+        return _auth_error(exc, status_code=403)
+
+
+@mcp.custom_route("/api/admin/subscriptions/{google_sub}", methods=["PUT"])
+async def web_admin_subscription(request: Request):
+    try:
+        _trusted_request_origin(request)
+        actor = _require_admin(request)
+        body = await request.json()
+        if not isinstance(body, dict):
+            raise AccountError("Abonelik güncellemesi geçersiz.")
+        account_service.admin_set_plan(
+            actor, request.path_params.get("google_sub", ""),
+            str(body.get("plan_code", "")), str(body.get("status", "")),
+        )
+        return JSONResponse({"updated": True})
+    except SecurityViolation as exc:
+        return _security_response(exc)
+    except AuthError as exc:
+        return _auth_error(exc, status_code=403)
+    except AccountError as exc:
+        return JSONResponse({"error": str(exc)}, status_code=422)
 
 
 @mcp.custom_route("/api/search", methods=["POST"])
@@ -676,8 +977,13 @@ async def web_customs_describe_image(request: Request):
     try:
         _trusted_request_origin(request)
         _agent_or_browser_identity(request)
+        quota_user = _enforce_quota(request, "vision")
     except SecurityViolation as exc:
         return _security_response(exc)
+    except AuthError as exc:
+        return _auth_error(exc)
+    except QuotaExceeded as exc:
+        return JSONResponse({"error": str(exc), "code": "quota_exceeded"}, status_code=429)
     try:
         content_length = int(request.headers.get("content-length", "0") or 0)
     except ValueError:
@@ -690,6 +996,7 @@ async def web_customs_describe_image(request: Request):
             return JSONResponse({"error": "Analiz edilecek ürün görselini yükleyin."}, status_code=422)
         image_bytes, image_media_type = _decode_image_data_url(body["image_data_url"])
         result = await customs_advisor_service.describe_image(image_bytes, image_media_type)
+        _record_usage(quota_user, "vision")
     except RuntimeError as exc:
         return JSONResponse({"error": str(exc)}, status_code=503)
     except (ValidationError, ValueError) as exc:
@@ -717,15 +1024,21 @@ async def web_customs_classify_product(request: Request):
     try:
         _trusted_request_origin(request)
         _agent_or_browser_identity(request)
+        quota_user = _enforce_quota(request, "classification")
         body = await request.json()
         if not isinstance(body, dict):
             raise ValueError("Sınıflandırma isteği bir nesne olmalıdır.")
         guard_data(body, path="ürün evsafı")
         classification = ProductClassificationRequest.model_validate(body)
         result = await customs_advisor_service.classify_product(classification)
+        _record_usage(quota_user, "classification")
         return JSONResponse(redact_data(result.model_dump(mode="json"), contact_data=True))
     except SecurityViolation as exc:
         return _security_response(exc)
+    except AuthError as exc:
+        return _auth_error(exc)
+    except QuotaExceeded as exc:
+        return JSONResponse({"error": str(exc), "code": "quota_exceeded"}, status_code=429)
     except ValidationError as exc:
         message = exc.errors(include_url=False)[0].get("msg", "Ürün evsaflarını kontrol edin.")
         return JSONResponse({"error": f"Evsaflar doğrulanamadı: {message}"}, status_code=422)
@@ -750,8 +1063,13 @@ async def web_customs_precheck(request: Request):
     try:
         _trusted_request_origin(request)
         _agent_or_browser_identity(request)
+        quota_user = _enforce_quota(request, "precheck")
     except SecurityViolation as exc:
         return _security_response(exc)
+    except AuthError as exc:
+        return _auth_error(exc)
+    except QuotaExceeded as exc:
+        return JSONResponse({"error": str(exc), "code": "quota_exceeded"}, status_code=429)
     try:
         content_length = int(request.headers.get("content-length", "0") or 0)
     except ValueError:
@@ -782,6 +1100,7 @@ async def web_customs_precheck(request: Request):
         guard_data(body, path="gümrük sorusu")
         inquiry = CustomsInquiry.model_validate(body)
         result = await customs_advisor_service.analyse(inquiry)
+        _record_usage(quota_user, "precheck")
     except SecurityViolation as exc:
         return _security_response(exc)
     except ValidationError as exc:

@@ -16,6 +16,8 @@ const state = {
   customsClassificationResult: null,
   customsAutoGtip: null,
   customsClassificationAnswers: {},
+  auth: null,
+  currentCustomsResult: null,
 };
 
 const $ = (selector) => document.querySelector(selector);
@@ -559,15 +561,123 @@ async function loadAuthState() {
     const response = await fetch("/api/auth/me", { headers: { Accept: "application/json" } });
     if (!response.ok) return;
     const auth = await response.json();
+    state.auth = auth;
     if (!auth.authenticated || !auth.user) return;
     const firstName = String(auth.user.name || auth.user.email || "Hesabım").split(" ")[0];
     $("#appLogin").hidden = true;
-    $("#appAccountForm").hidden = false;
-    $("#appAccountButton").textContent = `${firstName} · Çıkış`;
+    $("#appAccountButton").hidden = false;
+    $("#appAccountButton").textContent = `${firstName} · Hesabım`;
+    if (new URLSearchParams(location.search).get("account")) openAccount();
   } catch (_) {
     // The application remains usable as a guest if account state is unavailable.
   }
 }
+
+const quotaLabels = { vision: "Görsel analiz", classification: "GTİP adayı", precheck: "Ön değerlendirme", dossier: "Kanıt dosyası" };
+
+function switchAccountTab(tab) {
+  $$('[data-account-tab]').forEach((button) => button.classList.toggle("active", button.dataset.accountTab === tab));
+  $$('[data-account-panel]').forEach((panel) => { panel.hidden = panel.dataset.accountPanel !== tab; });
+  if (tab === "dossiers") loadDossiers();
+}
+
+function renderAccount(auth) {
+  const account = auth.account;
+  $("#accountIdentity").textContent = `${auth.user.name || "Kullanıcı"} · ${auth.user.email}`;
+  $("#currentPlanName").textContent = account.plan.name;
+  $("#currentPlanStatus").textContent = `${account.period} kullanım dönemi · ${account.subscription.status}`;
+  $("#adminLink").hidden = !account.is_admin;
+  $("#quotaGrid").innerHTML = Object.entries(account.quotas).map(([key, quota]) => {
+    const percent = quota.limit == null ? 0 : Math.min(100, Math.round((quota.used / Math.max(1, quota.limit)) * 100));
+    return `<article class="quota-card"><header><b>${escapeHtml(quotaLabels[key] || key)}</b><span>${quota.limit == null ? `${quota.used} / sınırsız` : `${quota.used} / ${quota.limit}`}</span></header><div class="quota-track"><i style="width:${percent}%"></i></div></article>`;
+  }).join("");
+}
+
+async function openAccount(tab = "summary") {
+  if (!state.auth?.authenticated) {
+    location.href = "/auth/google";
+    return;
+  }
+  const dialog = $("#accountDialog");
+  if (!dialog.open) dialog.showModal();
+  switchAccountTab(tab);
+  renderAccount(state.auth);
+  try {
+    const [account, plans] = await Promise.all([fetchJson("/api/account"), fetchJson("/api/plans")]);
+    state.auth.account = account;
+    state.auth.billing_enabled = plans.billing_enabled;
+    renderAccount(state.auth);
+    renderPlans(plans.plans, plans.billing_enabled);
+  } catch (error) { showToast(error.message); }
+}
+
+function renderPlans(plans, billingEnabled) {
+  $("#pricingGrid").innerHTML = plans.map((plan) => {
+    const monthly = plan.monthly_price_try == null ? "Teklif" : plan.monthly_price_try === 0 ? "Ücretsiz" : `${numberFormat.format(plan.monthly_price_try)} TL`;
+    const purchasable = ["expert", "team"].includes(plan.code);
+    return `<article class="price-card${plan.code === "expert" ? " featured" : ""}"><span>${escapeHtml(plan.code)}</span><h3>${escapeHtml(plan.name)}</h3><div class="price">${escapeHtml(monthly)}${plan.monthly_price_try ? "<small> + KDV / ay</small>" : ""}</div><ul>${plan.features.map((item) => `<li>${escapeHtml(item)}</li>`).join("")}</ul><div class="price-actions">${purchasable ? `<button type="button" data-buy-plan="${escapeHtml(plan.code)}" data-buy-cycle="monthly" ${billingEnabled ? "" : "disabled"}>${billingEnabled ? "Aylık başlat" : "Ödeme ayarı bekleniyor"}</button><button class="yearly" type="button" data-buy-plan="${escapeHtml(plan.code)}" data-buy-cycle="yearly" ${billingEnabled ? "" : "disabled"}>Yıllık · ${numberFormat.format(plan.yearly_price_try)} TL + KDV</button>` : `<button type="button" disabled>${plan.code === "starter" ? "Mevcut ücretsiz paket" : "Satış ekibiyle görüşün"}</button>`}</div></article>`;
+  }).join("");
+}
+
+async function loadDossiers() {
+  const target = $("#dossierList");
+  target.innerHTML = "<p>Kanıt dosyaları yükleniyor…</p>";
+  try {
+    const data = await fetchJson("/api/dossiers");
+    target.innerHTML = data.items.length ? data.items.map((item) => `<article class="dossier-item"><div><b>${escapeHtml(item.title)}</b><small>${escapeHtml(item.gtip || "GTİP yok")} · ${escapeHtml(item.origin_country || "menşe yok")} · ${escapeHtml(formatDate(item.checked_at, true))}</small></div><div class="dossier-actions"><a href="/api/dossiers/${encodeURIComponent(item.id)}?download=1">JSON indir</a><button type="button" data-delete-dossier="${escapeHtml(item.id)}">Sil</button></div></article>`).join("") : "<p>Henüz sunucuda kayıtlı kanıt dosyanız yok.</p>";
+  } catch (error) { target.innerHTML = `<p>${escapeHtml(error.message)}</p>`; }
+}
+
+$("#appAccountButton").addEventListener("click", () => openAccount());
+$("#closeAccount").addEventListener("click", () => $("#accountDialog").close());
+$("#accountDialog").addEventListener("click", (event) => { if (event.target === $("#accountDialog")) $("#accountDialog").close(); });
+$$('[data-account-tab]').forEach((button) => button.addEventListener("click", () => switchAccountTab(button.dataset.accountTab)));
+$("#refreshDossiers").addEventListener("click", loadDossiers);
+$("#dossierList").addEventListener("click", async (event) => {
+  const button = event.target.closest("[data-delete-dossier]");
+  if (!button || !confirm("Bu kanıt dosyası kalıcı olarak silinsin mi?")) return;
+  try {
+    await fetchJson(`/api/dossiers/${encodeURIComponent(button.dataset.deleteDossier)}`, { method: "DELETE" });
+    await loadDossiers(); showToast("Kanıt dosyası silindi.");
+  } catch (error) { showToast(error.message); }
+});
+
+$("#pricingGrid").addEventListener("click", (event) => {
+  const button = event.target.closest("[data-buy-plan]");
+  if (!button || button.disabled) return;
+  $("#billingPlan").value = button.dataset.buyPlan;
+  $("#billingCycle").value = button.dataset.buyCycle;
+  $("#billingTitle").textContent = `${button.dataset.buyPlan === "expert" ? "Uzman" : "Ekip"} · ${button.dataset.buyCycle === "yearly" ? "yıllık" : "aylık"} abonelik`;
+  const names = String(state.auth?.user?.name || "").trim().split(/\s+/);
+  $("#billingName").value ||= names.shift() || "";
+  $("#billingSurname").value ||= names.join(" ");
+  $("#billingForm").hidden = false;
+  $("#billingForm").scrollIntoView({ behavior: "smooth", block: "start" });
+});
+$("#cancelBilling").addEventListener("click", () => { $("#billingForm").hidden = true; });
+$("#billingForm").addEventListener("submit", async (event) => {
+  event.preventDefault();
+  const submit = event.currentTarget.querySelector("button[type=submit]");
+  submit.disabled = true;
+  try {
+    const checkout = await fetchJson("/api/billing/checkout", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({
+      plan_code: $("#billingPlan").value, billing_cycle: $("#billingCycle").value,
+      customer: { name: $("#billingName").value, surname: $("#billingSurname").value, gsmNumber: $("#billingPhone").value, identityNumber: $("#billingIdentity").value, address: $("#billingAddress").value, city: $("#billingCity").value, zipCode: $("#billingZip").value, country: $("#billingCountry").value },
+    }) });
+    $("#checkoutFrame").srcdoc = `<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"></head><body><div id="iyzipay-checkout-form" class="responsive"></div>${checkout.checkout_form_content}</body></html>`;
+    $("#checkoutFrameWrap").hidden = false;
+  } catch (error) { showToast(error.message); }
+  finally { submit.disabled = false; }
+});
+$("#closeCheckout").addEventListener("click", async () => {
+  $("#checkoutFrameWrap").hidden = true; $("#checkoutFrame").srcdoc = "";
+  await loadAuthState(); if (state.auth?.authenticated) renderAccount(state.auth);
+});
+$("#deleteAccount").addEventListener("click", async () => {
+  if (!confirm("Hesabınız, abonelik kaydınız, kullanım geçmişiniz ve kanıt dosyalarınız kalıcı olarak silinsin mi?")) return;
+  try { await fetchJson("/api/account", { method: "DELETE" }); location.href = "/?account=deleted"; }
+  catch (error) { showToast(error.message); }
+});
 
 function switchScope(scope) {
   if (scope === state.scope) return;
@@ -726,6 +836,7 @@ function renderCost(cost) {
 }
 
 function renderCustomsResult(data) {
+  state.currentCustomsResult = data;
   const sourceMap = customsSourceMap(data);
   const statusLabels = {
     preliminary: "Ön değerlendirme",
@@ -761,7 +872,7 @@ function renderCustomsResult(data) {
       <section class="answer-section"><h3>Sonraki güvenli adımlar</h3><ol class="next-list">${(data.next_steps || []).map((item) => `<li>${escapeHtml(item)}</li>`).join("")}</ol></section>
       <section class="answer-section"><h3>Resmî kanıt defteri · ${(data.sources || []).length} kaynak</h3><div class="source-ledger">${sources}</div></section>
       <div class="legal-banner"><strong>Önemli:</strong> ${escapeHtml(data.legal_notice)}</div>
-      <div class="result-actions"><button id="saveScenario" type="button">Bu ön değerlendirmeyi kaydet</button></div>
+      <div class="result-actions"><button id="saveScenario" type="button">Kanıt dosyasına kaydet</button></div>
     </article>
     <form class="followup-box" id="followupForm"><label class="field"><span>Bu ürün için takip sorusu</span><input id="followupQuestion" maxlength="1500" placeholder="Örn. TAREKS başvurusunda hangi teknik dosyalar hazırlanmalı?"></label><button class="analyse-button" type="submit"><span>Takip sorusunu sor</span><svg viewBox="0 0 24 24"><path d="m5 12 14 0M14 6l6 6-6 6"/></svg></button></form>`;
   $("#followupForm")?.addEventListener("submit", (event) => {
@@ -771,20 +882,25 @@ function renderCustomsResult(data) {
     $("#customsQuestion").value = value;
     $("#customsForm").requestSubmit();
   });
-  $("#saveScenario")?.addEventListener("click", () => {
-    const items = savedScenarios();
-    items.unshift({
-      id: crypto.randomUUID?.() || String(Date.now()),
-      savedAt: new Date().toISOString(),
-      title: data.inquiry?.product_description || $("#productDescription").value.trim() || "İthalat ön değerlendirmesi",
-      gtip: data.inquiry?.candidate_gtip || $("#candidateGtip").value.trim(),
-      origin: data.inquiry?.origin_country || $("#originCountry").value.trim(),
-      result: data,
-    });
+  $("#saveScenario")?.addEventListener("click", async () => {
+    if (!state.auth?.authenticated) {
+      showToast("Kanıt dosyası için Google hesabınızla giriş yapın.");
+      window.setTimeout(() => { location.href = "/auth/google"; }, 700);
+      return;
+    }
+    const button = $("#saveScenario"); button.disabled = true;
     try {
-      localStorage.setItem("gumrukce-scenarios", JSON.stringify(items.slice(0, 20)));
-      showToast("Ön değerlendirme bu cihazda kaydedildi.");
-    } catch (_) { showToast("Tarayıcı depolama alanı dolu; dosya kaydedilemedi."); }
+      await fetchJson("/api/dossiers", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({
+        title: data.inquiry?.product_description || $("#productDescription").value.trim() || "İthalat ön değerlendirmesi",
+        product_name: $("#productDescription").value.trim(),
+        gtip: data.inquiry?.candidate_gtip || $("#candidateGtip").value.trim(),
+        origin_country: data.inquiry?.origin_country || $("#originCountry").value.trim(),
+        effective_date: data.as_of || new Date().toISOString(), result: data,
+      }) });
+      showToast("Kanıt dosyası kaynak hash’leriyle sunucuya kaydedildi.");
+      button.textContent = "Kanıt dosyasına kaydedildi";
+      const auth = await fetchJson("/api/auth/me"); state.auth = auth;
+    } catch (error) { showToast(error.message); button.disabled = false; }
   });
 }
 

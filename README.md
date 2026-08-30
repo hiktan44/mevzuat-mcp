@@ -134,6 +134,26 @@ GOOGLE_SITE_VERIFICATION=<Search Console doğrulama kodu, isteğe bağlı>
 
 `GOOGLE_CLIENT_SECRET` ve `AUTH_SESSION_SECRET` hiçbir zaman tarayıcıya gönderilmez. OAuth access/refresh tokenları saklanmaz; yalnız doğrulanmış profil alanları ve imzalı birinci taraf oturum çerezi kullanılır. Anahtarlar eklenmediyse Google düğmesi kurulum uyarısı gösterir ve misafir erişimi çalışmaya devam eder.
 
+### Abonelik, kota ve kanıt dosyaları
+
+Google hesabıyla giriş yapan kullanıcılar Başlangıç, Uzman, Ekip ve Kurumsal paketlerini; aylık kullanım sayaçlarını ve sunucuda saklanan kanıt dosyalarını **Hesabım** alanında görür. Görsel kalıcı olarak saklanmaz. Kanıt dosyası analiz sonucunu; kontrol zamanı, GTİP, menşe, yürürlük referansı, resmî URL’ler ve etkin tarife/kontrol snapshot SHA-256 değerleriyle birlikte JSON olarak saklar ve dışa aktarır. Yönetici adresleri virgülle ayrılmış `ADMIN_EMAILS` değişkeninden alınır; `/admin` paket/durum değişikliklerini denetim günlüğüne yazar.
+
+Kart verisini uygulamaya almayan iyzico Subscription Checkout Form için Coolify’a aşağıdaki Secret değerlerini ekleyin. Önce iyzico panelinde Uzman ve Ekip için aylık/yıllık planları oluşturup verilen referans kodlarını kullanın:
+
+```text
+ADMIN_EMAILS=<yönetici Google e-posta adresleri, virgülle ayrılmış>
+IYZICO_BASE_URL=https://sandbox-api.iyzipay.com
+IYZICO_API_KEY=<iyzico API anahtarı>
+IYZICO_SECRET_KEY=<iyzico secret key>
+IYZICO_MERCHANT_ID=<iyzico merchant ID>
+IYZICO_EXPERT_MONTHLY_PLAN_REF=<plan reference code>
+IYZICO_EXPERT_YEARLY_PLAN_REF=<plan reference code>
+IYZICO_TEAM_MONTHLY_PLAN_REF=<plan reference code>
+IYZICO_TEAM_YEARLY_PLAN_REF=<plan reference code>
+```
+
+Sandbox doğrulandıktan sonra yalnız `IYZICO_BASE_URL=https://api.iyzipay.com` yapılır ve canlı anahtar/plan referansları girilir. iyzico panelindeki abonelik webhook adresi `https://mevzuat-mcp.seymata.com/api/billing/iyzico/webhook` olmalıdır. Anahtar veya plan referansı eksikse ödeme uçları güvenli biçimde kapalı kalır; paket fiyatları tarayıcıdan değil sunucudaki katalogdan belirlenir.
+
 Landing page; canonical, Open Graph/Twitter kartları, `SoftwareApplication` ve `FAQPage` yapılandırılmış verisi, `/robots.txt`, `/sitemap.xml`, manifest ve indekslenmeyen `/app` çalışma alanıyla hazırdır. Google Search Console tarafında alan adı doğrulandıktan sonra `https://mevzuat-mcp.seymata.com/sitemap.xml` gönderilmelidir; indeks kararı ve sıralama Google'a aittir.
 
 ChatGPT'de geliştirici modu açıkken **Ayarlar → Uygulamalar → Oluştur** ekranında bu adresi endpoint olarak verin, kimlik doğrulamayı **Yok** seçin ve **Araçları tara** ile 39 aracı yükleyin. Tarife, maliyet, ithalat kontrolü ve Gümrükçe araçları MCP Apps yapılandırılmış sonuç görünümünü destekler. Codex için:
