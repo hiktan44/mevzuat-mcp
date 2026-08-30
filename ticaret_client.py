@@ -612,7 +612,12 @@ class TicaretApiClient:
             )
         return documents
 
-    async def _crawl_source(self, source: TicaretSource) -> tuple[int, list[TicaretDocument], list[str]]:
+    async def _crawl_source(
+        self,
+        source: TicaretSource,
+        *,
+        partial: bool = False,
+    ) -> tuple[int, list[TicaretDocument], list[str]]:
         frontier = [_canonical_page_url(source.url)]
         seen: set[str] = set()
         documents: list[TicaretDocument] = []
@@ -685,6 +690,13 @@ class TicaretApiClient:
                     source.id,
                     len(frontier),
                     source.max_pages,
+                )
+            elif partial:
+                logger.info(
+                    "%s: priority refresh scanned %s pages; %s previously indexed pages remain in the full baseline",
+                    source.id,
+                    source.max_pages,
+                    len(frontier),
                 )
             else:
                 errors.append(
@@ -808,6 +820,9 @@ class TicaretApiClient:
             previous = self._catalog
             try:
                 selected_sources = self.sources
+                has_full_baseline = bool(
+                    core_only and previous is not None and self._last_full_sync_monotonic > 0
+                )
                 if core_only:
                     core_ids = {
                         "resmi_gazete_guncel", "gumruk", "ihracat", "ithalat",
@@ -825,7 +840,10 @@ class TicaretApiClient:
                             return source, await asyncio.wait_for(
                                 self._crawl_recent_trade_legislation(source), timeout=90
                             )
-                        return source, await asyncio.wait_for(self._crawl_source(source), timeout=240)
+                        return source, await asyncio.wait_for(
+                            self._crawl_source(source, partial=has_full_baseline),
+                            timeout=240,
+                        )
                     except asyncio.TimeoutError:
                         return source, (0, [], [f"{source.id}: kaynak taraması 240 saniyelik süre sınırını aştı"])
                     except Exception as exc:
@@ -838,14 +856,14 @@ class TicaretApiClient:
                 if core_only and previous:
                     selected_ids = {source.id for source in selected_sources}
                     for document in previous.documents:
-                        if document.source_id not in selected_ids:
+                        if has_full_baseline or document.source_id not in selected_ids:
                             documents_by_id[document.id] = document
 
                 for source, (pages, documents, source_errors) in crawl_results:
                     page_count += pages
                     errors.extend(source_errors)
                     for document in documents:
-                        documents_by_id.setdefault(document.id, document)
+                        documents_by_id[document.id] = document
 
                 documents = sorted(
                     documents_by_id.values(),

@@ -3,11 +3,11 @@ from __future__ import annotations
 import asyncio
 import subprocess
 import unittest
-from unittest.mock import AsyncMock, patch
+from unittest.mock import AsyncMock, Mock, patch
 
 from bedesten_models import BedMevzuatDocument, BedSearchResult
 from ticaret_client import TicaretApiClient, _sniff_document_extension
-from ticaret_models import TicaretDocument, TicaretSource
+from ticaret_models import TicaretCatalog, TicaretDocument, TicaretSource
 
 
 class TicaretClientParsingTests(unittest.TestCase):
@@ -29,6 +29,64 @@ class TicaretClientParsingTests(unittest.TestCase):
         self.assertTrue({"mevzuat", "destek", "veri", "rapor", "ulke_bilgisi", "iletisim", "yayin"} <= kinds)
         source_ids = {source.id for source in self.client.sources}
         self.assertTrue({"resmi_gazete_guncel", "ithalat_duyurular"} <= source_ids)
+
+    def test_planned_partial_crawl_does_not_report_security_limit_as_source_error(self) -> None:
+        source = self.source.model_copy(update={"max_pages": 1})
+        response = Mock()
+        response.headers = {"content-type": "text/html; charset=utf-8"}
+        response.url = source.url
+        response.text = "<html><body><main>Gümrük mevzuatı</main></body></html>"
+        self.client._get = AsyncMock(return_value=response)
+        child = source.url + "/genelge"
+
+        with patch.object(self.client, "_parse_page", return_value=([child], [])):
+            pages, _, partial_errors = asyncio.run(self.client._crawl_source(source, partial=True))
+            _, _, full_errors = asyncio.run(self.client._crawl_source(source))
+
+        self.assertEqual(pages, 1)
+        self.assertEqual(partial_errors, [])
+        self.assertIn("güvenlik sayfa sınırına ulaşıldı", full_errors[0])
+
+    def test_priority_refresh_merges_into_completed_full_catalog(self) -> None:
+        source = self.source.model_copy(update={"max_pages": 80})
+        self.client.sources = [source]
+        retained = TicaretDocument(
+            id="ticaret_" + "a" * 24,
+            title="Arşivdeki Gümrük Genelgesi",
+            source_id=source.id,
+            content_kind=source.content_kind,
+            section="Genelgeler",
+            document_url=source.url + "/genelge/arsiv",
+            source_page_url=source.url + "/genelge",
+            file_type="html",
+        )
+        previous_page = retained.model_copy(
+            update={
+                "id": "ticaret_" + "b" * 24,
+                "title": "Eski başlık",
+                "document_url": source.url,
+                "source_page_url": source.url,
+                "is_page": True,
+            }
+        )
+        updated_page = previous_page.model_copy(update={"title": "Güncel başlık"})
+        self.client._catalog = TicaretCatalog(
+            synced_at="2026-08-30T00:00:00+00:00",
+            fingerprint="previous",
+            sources=[source],
+            pages_scanned=80,
+            documents=[retained, previous_page],
+        )
+        self.client._last_full_sync_monotonic = 1.0
+        self.client._crawl_source = AsyncMock(return_value=(40, [updated_page], []))
+
+        catalog = asyncio.run(self.client.refresh_catalog(core_only=True))
+
+        documents = {document.id: document for document in catalog.documents}
+        self.assertEqual(documents[retained.id].title, retained.title)
+        self.assertEqual(documents[updated_page.id].title, "Güncel başlık")
+        self.assertEqual(catalog.removed_ids, [])
+        self.client._crawl_source.assert_awaited_once_with(source.model_copy(update={"max_pages": 40}), partial=True)
 
     def test_recent_official_trade_legislation_uses_exact_gazette_metadata(self) -> None:
         source = next(item for item in self.client.sources if item.id == "resmi_gazete_guncel")
