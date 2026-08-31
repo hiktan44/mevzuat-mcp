@@ -205,7 +205,20 @@ class ClassificationEvidenceEngine:
         current = self.source_url
         for _ in range(5):
             validate_outbound_url(current, allowed_hosts=_OFFICIAL_HOSTS)
-            response = await self._http.get(current)
+            response: httpx.Response | None = None
+            last_transport_error: Exception | None = None
+            for attempt in range(3):
+                try:
+                    response = await self._http.get(current)
+                    break
+                except (httpx.RemoteProtocolError, httpx.ReadError, httpx.TimeoutException) as exc:
+                    last_transport_error = exc
+                    if attempt < 2:
+                        await asyncio.sleep(1 + attempt)
+            if response is None:
+                if last_transport_error is None:
+                    raise RuntimeError("Sınıflandırma kaynağı indirilemedi.")
+                raise last_transport_error
             if not response.is_redirect:
                 response.raise_for_status()
                 content = response.content
@@ -315,8 +328,8 @@ class ClassificationEvidenceEngine:
 
     async def periodic_sync_loop(self) -> None:
         while True:
-            await self.sync()
-            await asyncio.sleep(self.sync_interval_seconds)
+            status = await self.sync()
+            await asyncio.sleep(self.sync_interval_seconds if status.ready else 300)
 
     async def search(
         self,
