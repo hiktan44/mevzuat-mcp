@@ -4,15 +4,15 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "mevzuat-mcp"
-version = "1.0.0"
-description = "MCP Server for Turkish Legislation - 18 tools for comprehensive access to Turkish laws, decrees, regulations and circulars"
+version = "1.8.0"
+description = "Remote MCP for Turkish legislation and live Ministry of Trade laws, supports, data, reports and overseas contacts"
 readme = "README.md"
 requires-python = ">=3.11"
 license = {text = "MIT"}
 authors = [
     {name = "Said Surucu", email = "saidsrc@gmail.com"}
 ]
-keywords = ["mcp", "mevzuat", "turkish-law", "legislation", "claude", "llm", "kanun", "khk", "tuzuk", "yonetmelik"]
+keywords = ["mcp", "mevzuat", "turkish-law", "legislation", "chatgpt", "codex", "ticaret", "gumruk", "ithalat", "ihracat", "devlet-destekleri"]
 classifiers = [
     "Development Status :: 5 - Production/Stable",
     "Intended Audience :: Developers",
@@ -24,12 +24,13 @@ classifiers = [
     "Topic :: Text Processing :: Markup :: Markdown",
 ]
 dependencies = [
-    "fastmcp>=2.12.0",
+    "fastmcp>=3.4.7,<4",
     "pydantic>=2.0.0",
     "httpx>=0.24.0",
     "beautifulsoup4>=4.12.0",
     "lxml>=4.9.0",
-    "markitdown[pdf]==0.1.3",
+    "markitdown[docx,pdf,xls]==0.1.3",
+    "openpyxl==3.1.5",
     "playwright==1.55.0",
     "mistralai>=1.0.0",
     "python-dotenv>=1.0.0",
@@ -37,16 +38,25 @@ dependencies = [
     "uvicorn>=0.23.0",
     "numpy>=1.24.0",
     "openai>=1.0.0",
+    "Pillow>=10.4.0",
+    "stripe>=13.0.0",
 ]
 
 [project.urls]
-"Homepage" = "https://github.com/saidsurucu/mevzuat-mcp"
-"Bug Tracker" = "https://github.com/saidsurucu/mevzuat-mcp/issues"
-"Repository" = "https://github.com/saidsurucu/mevzuat-mcp"
+"Homepage" = "https://github.com/hiktan44/mevzuat-mcp"
+"Bug Tracker" = "https://github.com/hiktan44/mevzuat-mcp/issues"
+"Repository" = "https://github.com/hiktan44/mevzuat-mcp"
 
 [project.scripts]
 mevzuat-mcp = "mevzuat_mcp_server:main"
 
 [tool.setuptools]
-py-modules = ["mevzuat_mcp_server", "mevzuat_client", "mevzuat_models", "article_search", "bedesten_client", "bedesten_models"]
+py-modules = ["mevzuat_mcp_server", "mevzuat_client", "mevzuat_models", "article_search", "bedesten_client", "bedesten_models", "ticaret_client", "ticaret_models", "customs_advisor", "tariff_engine", "control_engine", "classification_evidence", "customs_benchmark", "trusted_certificates", "auth_service", "account_service", "billing_service", "security_firewall"]
 packages = ["semantic_search"]
+
+[tool.setuptools.data-files]
+"." = ["ticaret_sources.json", "customs_sources.json", "tariff_sources.json", "control_sources.json"]
+"benchmarks" = [
+    "benchmarks/customs_classification_v1.jsonl",
+    "benchmarks/turkish_btb_gtip12_historical_v1.jsonl",
+]

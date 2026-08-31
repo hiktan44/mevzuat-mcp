@@ -30,7 +30,7 @@ class EmbeddingCache:
         return f"emb:{mevzuat_tur}.{mevzuat_tertip}.{mevzuat_no}"
 
     def _content_hash(self, content: str) -> str:
-        return hashlib.md5(content.encode('utf-8')).hexdigest()
+        return hashlib.sha256(content.encode("utf-8")).hexdigest()
 
     def get(self, mevzuat_tur: int, mevzuat_tertip: str, mevzuat_no: str,
             content: str) -> Optional[Tuple[Any, list]]:

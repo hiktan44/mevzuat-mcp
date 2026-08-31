@@ -1,0 +1,145 @@
+{
+  "cache_seconds": 21600,
+  "sources": [
+    {
+      "id": "tareks",
+      "title": "TAREKS – Risk Esaslı Kontrol Sistemi",
+      "authority": "T.C. Ticaret Bakanlığı",
+      "url": "https://ticaret.gov.tr/urun-guvenligi/tareks"
+    },
+    {
+      "id": "ugd_product_groups",
+      "title": "İthalatta denetimi gerçekleştirilen ürün grupları",
+      "authority": "T.C. Ticaret Bakanlığı",
+      "url": "https://www.ticaret.gov.tr/urun-guvenligi/ithalatta-urun-guvenligi-denetimleri/ithalatta-denetimi-gerceklestirilen-urun-gruplari"
+    },
+    {
+      "id": "ugd_communiques",
+      "title": "Güncel Ürün Güvenliği ve Denetimi Tebliğleri",
+      "authority": "T.C. Ticaret Bakanlığı",
+      "url": "https://ugdgm.ticaret.gov.tr/duyurular/urun-guvenligi-ve-denetimi-tebligleri-resmi-gazetede-yayimlanarak-yururluge-girdi"
+    },
+    {
+      "id": "tse_import_faq",
+      "title": "İthalat hizmetleri sıkça sorulan sorular",
+      "authority": "Türk Standardları Enstitüsü",
+      "url": "https://www.tse.org.tr/sss-baslik/ithalat-hizmetleri/"
+    },
+    {
+      "id": "tariff_btb",
+      "title": "Tarife ve Bağlayıcı Tarife Bilgisi",
+      "authority": "T.C. Ticaret Bakanlığı",
+      "url": "https://ticaret.gov.tr/gumruk-islemleri/sikca-sorulan-sorular/ticari/tarife"
+    },
+    {
+      "id": "tariff_search",
+      "title": "Tarife Arama Motoru",
+      "authority": "T.C. Ticaret Bakanlığı",
+      "url": "https://uygulama.gtb.gov.tr/Tara/TarifeBasitArama",
+      "access_mode": "manual_only",
+      "note": "Bu resmî sayfa güvenlik sorusu/CAPTCHA içerdiği için otomatik sorgulanmaz; kullanıcı bağlantıyı tarayıcıda açıp manuel doğrular."
+    },
+    {
+      "id": "customs_value",
+      "title": "Gümrük kıymeti",
+      "authority": "T.C. Ticaret Bakanlığı",
+      "url": "https://ticaret.gov.tr/gumruk-islemleri/sikca-sorulan-sorular/ticari/gumruk-kiymeti"
+    },
+    {
+      "id": "import_regime",
+      "title": "İthalat Rejimi Kararı 3350 – konsolide güncel metin",
+      "authority": "T.C. Ticaret Bakanlığı",
+      "url": "https://ticaret.gov.tr/ithalat/ithalat-mevzuati/ithalat-rejimi-karari-igv-karari-ve-ithalat-tebligleri/1-ithalat-rejimi-kararikarar-sayisi3350karar-metni-ve-tablolar-konsolide-edilmis-olup-gunceldir"
+    },
+    {
+      "id": "additional_duty",
+      "title": "İlave Gümrük Vergisi Kararı 3351 – konsolide güncel metin",
+      "authority": "T.C. Ticaret Bakanlığı",
+      "url": "https://ticaret.gov.tr/ithalat/ithalat-mevzuati/ithalat-rejimi-karari-igv-karari-ve-ithalat-tebligleri/2-ithalatta-ilave-gumruk-vergisi-uygulanmasina-iliskin-karar-karar-sayisi-3351-karar-metni-ve-tablolar-konsolide-edilmis-olup-gunceldir"
+    },
+    {
+      "id": "import_communiques_2026",
+      "title": "2026 İthalat Tebliğleri ve değişiklikleri",
+      "authority": "T.C. Ticaret Bakanlığı",
+      "url": "https://ticaret.gov.tr/ithalat/ithalat-mevzuati/ithalat-rejimi-karari-igv-karari-ve-ithalat-tebligleri/3-ithalat-tebligleri-2026-yili"
+    },
+    {
+      "id": "additional_financial_liabilities",
+      "title": "Ek Mali Yükümlülük Kararları",
+      "authority": "T.C. Ticaret Bakanlığı",
+      "url": "https://ticaret.gov.tr/ithalat/ithalat-mevzuati/ithalat-rejimi-karari-igv-karari-ve-ithalat-tebligleri/5-ek-mali-yukumluluk-kararlari"
+    },
+    {
+      "id": "anti_dumping_measures",
+      "title": "Damping ve sübvansiyon ulusal mevzuatı ve önlemleri",
+      "authority": "T.C. Ticaret Bakanlığı",
+      "url": "https://ticaret.gov.tr/ithalat/ticaret-politikasi-savunma-araclari/dampinge-ve-subvansiyon/damping-ve-subvansiyon-ulusal-mevzuat"
+    },
+    {
+      "id": "safeguard_measures",
+      "title": "İthalatta korunma önlemleri ulusal mevzuatı",
+      "authority": "T.C. Ticaret Bakanlığı",
+      "url": "https://ticaret.gov.tr/ithalat/ticaret-politikasi-savunma-araclari/korunma-onlemleri/korunma-onlemleri-ulusal-mevzuat"
+    },
+    {
+      "id": "tariff_quotas",
+      "title": "Askıya alma ve tarife kontenjanı",
+      "authority": "T.C. Ticaret Bakanlığı",
+      "url": "https://ticaret.gov.tr/ithalat/askiya-alma-ve-tarife-kontenjani"
+    },
+    {
+      "id": "trade_defence",
+      "title": "Ticaret politikası savunma araçları",
+      "authority": "T.C. Ticaret Bakanlığı",
+      "url": "https://www.ticaret.gov.tr/ithalat/ticaret-politikasi-savunma-araclari"
+    },
+    {
+      "id": "vat_law",
+      "title": "3065 sayılı Katma Değer Vergisi Kanunu",
+      "authority": "Gelir İdaresi Başkanlığı",
+      "url": "https://malatya.gib.gov.tr/mevzuat/kanun/436"
+    },
+    {
+      "id": "chemicals",
+      "title": "KKDİK ve SEA kimyasallar rehberleri",
+      "authority": "T.C. Çevre, Şehircilik ve İklim Değişikliği Bakanlığı",
+      "url": "https://cygm.csb.gov.tr/kimyasallar-yonetimi-dairesi-baskanligi-87372"
+    },
+    {
+      "id": "customs_labs",
+      "title": "Gümrük laboratuvarları ve analiz ücretleri",
+      "authority": "T.C. Ticaret Bakanlığı",
+      "url": "https://ticaret.gov.tr/gumruk-islemleri/bilgi-bankasi"
+    },
+    {
+      "id": "eu_ebti_guidance",
+      "title": "European Binding Tariff Information (EBTI) açıklaması",
+      "authority": "European Commission – DG TAXUD",
+      "url": "https://taxation-customs.ec.europa.eu/online-services/online-services-and-databases-customs/european-binding-tariff-information-ebti_en"
+    },
+    {
+      "id": "eu_class",
+      "title": "Classification Information System (CLASS)",
+      "authority": "European Commission – DG TAXUD",
+      "url": "https://taxation-customs.ec.europa.eu/online-services/online-services-and-databases-customs/classification-information-system-class_en"
+    },
+    {
+      "id": "eu_cn_2026",
+      "title": "Combined Nomenclature 2026 veri seti",
+      "authority": "European Union Open Data Portal",
+      "url": "https://data.europa.eu/data/datasets/combined-nomenclature-2026?locale=en"
+    },
+    {
+      "id": "eu_taric",
+      "title": "EU Customs Tariff (TARIC) ve ham veri",
+      "authority": "European Commission – DG TAXUD",
+      "url": "https://taxation-customs.ec.europa.eu/online-services/online-services-and-databases-customs/eu-customs-tariff-taric_en"
+    },
+    {
+      "id": "eu_classification_regulations",
+      "title": "Güncel AB sınıflandırma tüzükleri konsolide listesi",
+      "authority": "European Commission – DG TAXUD",
+      "url": "https://taxation-customs.ec.europa.eu/news/big-step-simplification-commission-publishes-consolidated-list-classification-regulations-2025-05-12_en"
+    }
+  ]
+}

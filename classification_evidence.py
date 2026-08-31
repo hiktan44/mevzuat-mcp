@@ -1,0 +1,415 @@
+"""Versioned official classification-decision evidence index.
+
+The index deliberately stores text and metadata only.  It does not crawl EBTI result
+pages or copy applicant photographs.  Its first source is the European Commission's
+official consolidated list of valid classification regulations, whose authentic acts
+remain the versions published in the Official Journal/EUR-Lex.
+"""
+
+from __future__ import annotations
+
+import asyncio
+import hashlib
+import io
+import json
+import os
+import re
+import sqlite3
+import time
+from datetime import UTC, datetime
+from pathlib import Path
+from typing import Literal
+from urllib.parse import urljoin
+
+import httpx
+from pdfminer.high_level import extract_text
+from pydantic import BaseModel, Field
+
+from security_firewall import sanitize_untrusted_context, validate_outbound_url
+
+_OFFICIAL_HOSTS = {"taxation-customs.ec.europa.eu", "eur-lex.europa.eu"}
+_SOURCE_URL = (
+    "https://taxation-customs.ec.europa.eu/document/download/"
+    "9d6824da-835d-4d09-bc02-d18a06f403f8_en"
+    "?filename=Consolidated-list-of-%E2%80%9CClassification-Regulations%E2%80%9D.pdf"
+)
+_SOURCE_PAGE_URL = (
+    "https://taxation-customs.ec.europa.eu/news/"
+    "big-step-simplification-commission-publishes-consolidated-list-classification-regulations-2025-05-12_en"
+)
+_CODE_RE = re.compile(r"(?<!\d)(?:\d{4}(?:\s+\d{2}){1,3}|\d{6,10})(?!\d)")
+_REGULATION_RE = re.compile(
+    r"(?:Regulation\s*)?(?:\(EEC\)|\(EC\)|\(EU\))?\s*(?:No\s*)?"
+    r"(\d{1,4}/\d{2,4})(?:\s+of\s+\d{1,2}\.\d{1,2}\.\d{4})?",
+    re.IGNORECASE,
+)
+
+
+def _now() -> str:
+    return datetime.now(UTC).isoformat(timespec="seconds")
+
+
+def _digits(value: str | None) -> str:
+    return re.sub(r"\D", "", value or "")
+
+
+def _excerpt(text: str, needles: list[str], limit: int = 1800) -> str:
+    compact = " ".join(text.split())
+    lowered = compact.casefold()
+    positions = [lowered.find(needle.casefold()) for needle in needles if len(needle.strip()) >= 3]
+    positions = [position for position in positions if position >= 0]
+    start = max(0, (min(positions) if positions else 0) - 350)
+    value = compact[start : start + limit]
+    if start:
+        value = "… " + value
+    if start + limit < len(compact):
+        value += " …"
+    return value
+
+
+class ClassificationEvidenceHit(BaseModel):
+    id: str
+    source_kind: Literal["eu_classification_regulation"] = "eu_classification_regulation"
+    title: str
+    authority: str = "European Commission – DG TAXUD"
+    codes: list[str] = Field(default_factory=list)
+    regulation_references: list[str] = Field(default_factory=list)
+    page_number: int = Field(..., ge=1)
+    excerpt: str
+    url: str
+    source_page_url: str = _SOURCE_PAGE_URL
+    archive_sha256: str
+    retrieved_at: str
+    legal_effect: str = (
+        "Karşılaştırmalı AB sınıflandırma kanıtıdır; Türk GTİP12, Türkiye vergi oranı veya "
+        "Türkiye'de bağlayıcı karar değildir. Otantik metin ilgili AB Resmî Gazetesi/EUR-Lex belgesidir."
+    )
+
+
+class ClassificationEvidenceSearchResult(BaseModel):
+    status: Literal["matched", "not_found", "unavailable"]
+    query: str = ""
+    code_prefix: str | None = None
+    hits: list[ClassificationEvidenceHit] = Field(default_factory=list)
+    snapshot_sha256: str | None = None
+    retrieved_at: str | None = None
+    warnings: list[str] = Field(default_factory=list)
+    as_of: str = Field(default_factory=_now)
+
+
+class ClassificationEvidenceStatus(BaseModel):
+    ready: bool
+    syncing: bool
+    page_count: int = 0
+    active_sha256: str | None = None
+    last_checked_at: str | None = None
+    errors: list[str] = Field(default_factory=list)
+
+
+class ClassificationEvidenceEngine:
+    """Download, version and search official classification-regulation text."""
+
+    def __init__(
+        self,
+        *,
+        data_dir: str | Path | None = None,
+        source_url: str = _SOURCE_URL,
+        sync_interval_seconds: int | None = None,
+    ) -> None:
+        default_dir = Path(
+            os.environ.get(
+                "MEVZUAT_DATA_DIR",
+                Path(os.environ.get("XDG_CACHE_HOME", Path.home() / ".cache")) / "mevzuat-mcp",
+            )
+        )
+        self.data_dir = Path(data_dir or default_dir)
+        self.database_path = self.data_dir / "classification-evidence.sqlite3"
+        self.source_url = source_url
+        self.sync_interval_seconds = max(
+            3600,
+            int(sync_interval_seconds or os.environ.get("CLASSIFICATION_SYNC_INTERVAL_SECONDS", "86400")),
+        )
+        self._sync_lock = asyncio.Lock()
+        self._syncing = False
+        self._errors: list[str] = []
+        self._http = httpx.AsyncClient(
+            follow_redirects=False,
+            timeout=httpx.Timeout(90),
+            headers={"User-Agent": "Gumrukce/1.0 (+official-classification-index)"},
+        )
+        self._initialise()
+
+    def _connect(self) -> sqlite3.Connection:
+        connection = sqlite3.connect(self.database_path, timeout=30)
+        connection.row_factory = sqlite3.Row
+        return connection
+
+    def _initialise(self) -> None:
+        self.data_dir.mkdir(parents=True, exist_ok=True, mode=0o700)
+        self.data_dir.chmod(0o700)
+        with self._connect() as connection:
+            connection.executescript(
+                """
+                PRAGMA journal_mode=WAL;
+                CREATE TABLE IF NOT EXISTS metadata (
+                    key TEXT PRIMARY KEY,
+                    value TEXT NOT NULL
+                );
+                CREATE TABLE IF NOT EXISTS snapshots (
+                    id TEXT PRIMARY KEY,
+                    source_url TEXT NOT NULL,
+                    archive_sha256 TEXT NOT NULL UNIQUE,
+                    retrieved_at TEXT NOT NULL,
+                    page_count INTEGER NOT NULL,
+                    active INTEGER NOT NULL DEFAULT 0
+                );
+                CREATE TABLE IF NOT EXISTS pages (
+                    id TEXT PRIMARY KEY,
+                    snapshot_id TEXT NOT NULL REFERENCES snapshots(id),
+                    page_number INTEGER NOT NULL,
+                    codes_json TEXT NOT NULL,
+                    regulations_json TEXT NOT NULL,
+                    content TEXT NOT NULL,
+                    UNIQUE(snapshot_id, page_number)
+                );
+                CREATE VIRTUAL TABLE IF NOT EXISTS pages_fts USING fts5(
+                    page_id UNINDEXED,
+                    snapshot_id UNINDEXED,
+                    codes,
+                    content,
+                    tokenize='unicode61 remove_diacritics 2'
+                );
+                """
+            )
+        self.database_path.chmod(0o600)
+
+    def status(self) -> ClassificationEvidenceStatus:
+        with self._connect() as connection:
+            row = connection.execute(
+                "SELECT archive_sha256,retrieved_at,page_count FROM snapshots WHERE active=1 LIMIT 1"
+            ).fetchone()
+            checked = connection.execute("SELECT value FROM metadata WHERE key='last_checked_at'").fetchone()
+        return ClassificationEvidenceStatus(
+            ready=bool(row),
+            syncing=self._syncing,
+            page_count=int(row["page_count"]) if row else 0,
+            active_sha256=str(row["archive_sha256"]) if row else None,
+            last_checked_at=str(checked["value"]) if checked else None,
+            errors=self._errors[-8:],
+        )
+
+    async def close(self) -> None:
+        await self._http.aclose()
+
+    async def _download(self) -> bytes:
+        current = self.source_url
+        for _ in range(5):
+            validate_outbound_url(current, allowed_hosts=_OFFICIAL_HOSTS)
+            response: httpx.Response | None = None
+            last_transport_error: Exception | None = None
+            for attempt in range(3):
+                try:
+                    response = await self._http.get(current)
+                    break
+                except (httpx.RemoteProtocolError, httpx.ReadError, httpx.TimeoutException) as exc:
+                    last_transport_error = exc
+                    if attempt < 2:
+                        await asyncio.sleep(1 + attempt)
+            if response is None:
+                if last_transport_error is None:
+                    raise RuntimeError("Sınıflandırma kaynağı indirilemedi.")
+                raise last_transport_error
+            if not response.is_redirect:
+                response.raise_for_status()
+                content = response.content
+                if len(content) > 15 * 1024 * 1024 or not content.startswith(b"%PDF-"):
+                    raise ValueError("Sınıflandırma kaynağı beklenen resmî PDF biçiminde değil.")
+                return content
+            location = response.headers.get("location", "")
+            if not location:
+                raise ValueError("Sınıflandırma kaynağı hedefsiz yönlendirme döndürdü.")
+            current = urljoin(str(response.url), location)
+        raise ValueError("Sınıflandırma kaynağı çok fazla yönlendirme yaptı.")
+
+    @staticmethod
+    def _extract_pages(content: bytes) -> list[str]:
+        text = extract_text(io.BytesIO(content))
+        return [page.strip() for page in text.split("\f") if page.strip()]
+
+    @staticmethod
+    def _page_metadata(page: str) -> tuple[list[str], list[str]]:
+        codes = sorted(
+            {
+                _digits(match.group(0))
+                for match in _CODE_RE.finditer(page)
+                if len(_digits(match.group(0))) in {6, 8, 10}
+            }
+        )
+        regulations = list(dict.fromkeys(match.group(1) for match in _REGULATION_RE.finditer(page)))[:30]
+        return codes[:80], regulations
+
+    async def sync(self, *, force: bool = False) -> ClassificationEvidenceStatus:
+        async with self._sync_lock:
+            self._syncing = True
+            try:
+                current_status = self.status()
+                if not force and current_status.last_checked_at:
+                    try:
+                        checked = datetime.fromisoformat(current_status.last_checked_at)
+                        if (datetime.now(UTC) - checked).total_seconds() < self.sync_interval_seconds:
+                            return current_status
+                    except ValueError:
+                        pass
+                content = await self._download()
+                archive_sha256 = hashlib.sha256(content).hexdigest()
+                retrieved_at = _now()
+                with self._connect() as connection:
+                    existing = connection.execute(
+                        "SELECT id FROM snapshots WHERE archive_sha256=?",
+                        (archive_sha256,),
+                    ).fetchone()
+                    if existing:
+                        connection.execute("UPDATE snapshots SET active=(id=?)", (existing["id"],))
+                        connection.execute(
+                            "INSERT INTO metadata(key,value) VALUES('last_checked_at',?) "
+                            "ON CONFLICT(key) DO UPDATE SET value=excluded.value",
+                            (retrieved_at,),
+                        )
+                        self._errors.clear()
+                        return self.status()
+
+                pages = await asyncio.to_thread(self._extract_pages, content)
+                snapshot_id = f"eu-classification-{archive_sha256[:16]}"
+                rows: list[tuple[str, str, int, str, str, str]] = []
+                fts_rows: list[tuple[str, str, str, str]] = []
+                for page_number, raw_page in enumerate(pages, start=1):
+                    clean_page, _ = sanitize_untrusted_context(raw_page)
+                    codes, regulations = self._page_metadata(clean_page)
+                    page_id = f"{snapshot_id}-p{page_number}"
+                    rows.append(
+                        (
+                            page_id,
+                            snapshot_id,
+                            page_number,
+                            json.dumps(codes, ensure_ascii=False),
+                            json.dumps(regulations, ensure_ascii=False),
+                            clean_page[:100_000],
+                        )
+                    )
+                    fts_rows.append((page_id, snapshot_id, " ".join(codes), clean_page[:100_000]))
+
+                with self._connect() as connection:
+                    connection.execute("UPDATE snapshots SET active=0")
+                    connection.execute(
+                        "INSERT INTO snapshots(id,source_url,archive_sha256,retrieved_at,page_count,active) "
+                        "VALUES(?,?,?,?,?,1)",
+                        (snapshot_id, self.source_url, archive_sha256, retrieved_at, len(rows)),
+                    )
+                    connection.executemany(
+                        "INSERT INTO pages(id,snapshot_id,page_number,codes_json,regulations_json,content) "
+                        "VALUES(?,?,?,?,?,?)",
+                        rows,
+                    )
+                    connection.executemany(
+                        "INSERT INTO pages_fts(page_id,snapshot_id,codes,content) VALUES(?,?,?,?)",
+                        fts_rows,
+                    )
+                    connection.execute(
+                        "INSERT INTO metadata(key,value) VALUES('last_checked_at',?) "
+                        "ON CONFLICT(key) DO UPDATE SET value=excluded.value",
+                        (retrieved_at,),
+                    )
+                self._errors.clear()
+            except Exception as exc:
+                self._errors.append(f"{type(exc).__name__}: {str(exc)[:300]}")
+            finally:
+                self._syncing = False
+        return self.status()
+
+    async def periodic_sync_loop(self) -> None:
+        while True:
+            status = await self.sync()
+            await asyncio.sleep(self.sync_interval_seconds if status.ready else 300)
+
+    async def search(
+        self,
+        query: str,
+        *,
+        code_prefix: str | None = None,
+        limit: int = 5,
+        auto_sync: bool = True,
+    ) -> ClassificationEvidenceSearchResult:
+        limit = max(1, min(limit, 12))
+        code = _digits(code_prefix)
+        if code and len(code) not in {4, 6, 8, 10}:
+            raise ValueError("Sınıflandırma kanıtı kodu 4, 6, 8 veya 10 haneli olmalıdır.")
+        if auto_sync and not self.status().ready:
+            await self.sync()
+        status = self.status()
+        if not status.ready:
+            return ClassificationEvidenceSearchResult(
+                status="unavailable",
+                query=query[:500],
+                code_prefix=code or None,
+                warnings=["Resmî sınıflandırma karar indeksi henüz hazır değil.", *status.errors[-3:]],
+            )
+
+        terms = [term for term in re.findall(r"[\wÀ-ž]{3,}", query.casefold()) if not term.isdigit()][:16]
+        rows: list[sqlite3.Row] = []
+        with self._connect() as connection:
+            active = connection.execute(
+                "SELECT id,archive_sha256,retrieved_at FROM snapshots WHERE active=1 LIMIT 1"
+            ).fetchone()
+            if code:
+                rows.extend(
+                    connection.execute(
+                        "SELECT * FROM pages WHERE snapshot_id=? AND codes_json LIKE ? ORDER BY page_number LIMIT ?",
+                        (active["id"], f'%"{code}%', limit * 3),
+                    ).fetchall()
+                )
+            if terms and len(rows) < limit:
+                fts_query = " OR ".join(f'"{term.replace(chr(34), "")}"' for term in terms)
+                rows.extend(
+                    connection.execute(
+                        "SELECT p.* FROM pages_fts f JOIN pages p ON p.id=f.page_id "
+                        "WHERE f.snapshot_id=? AND pages_fts MATCH ? ORDER BY bm25(pages_fts) LIMIT ?",
+                        (active["id"], fts_query, limit * 2),
+                    ).fetchall()
+                )
+
+        seen: set[str] = set()
+        hits: list[ClassificationEvidenceHit] = []
+        for row in rows:
+            if row["id"] in seen:
+                continue
+            seen.add(row["id"])
+            codes = json.loads(row["codes_json"])
+            regulations = json.loads(row["regulations_json"])
+            hits.append(
+                ClassificationEvidenceHit(
+                    id=f"classreg_{active['archive_sha256'][:10]}_p{row['page_number']}",
+                    title=(
+                        f"AB Sınıflandırma Tüzükleri 2026 konsolide listesi — sayfa {row['page_number']}"
+                    ),
+                    codes=codes,
+                    regulation_references=regulations,
+                    page_number=row["page_number"],
+                    excerpt=_excerpt(row["content"], [code, *terms]),
+                    url=self.source_url,
+                    archive_sha256=active["archive_sha256"],
+                    retrieved_at=active["retrieved_at"],
+                )
+            )
+            if len(hits) >= limit:
+                break
+        return ClassificationEvidenceSearchResult(
+            status="matched" if hits else "not_found",
+            query=query[:500],
+            code_prefix=code or None,
+            hits=hits,
+            snapshot_sha256=active["archive_sha256"],
+            retrieved_at=active["retrieved_at"],
+            warnings=[
+                "Bu indeks AB karşılaştırmalı sınıflandırma kanıtıdır; Türk GTİP12 sonucunu tek başına belirlemez."
+            ],
+        )

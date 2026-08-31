@@ -8,24 +8,36 @@ WORKDIR /app
 RUN apt-get update && apt-get install -y \
     gcc \
     g++ \
+    antiword \
+    catdoc \
     wget \
     gnupg \
     && rm -rf /var/lib/apt/lists/*
 
-# Copy Python files and requirements
-COPY pyproject.toml setup.py ./
+# Copy Python files and the reviewed dependency lock
+COPY pyproject.toml uv.lock setup.py README.md ./
 COPY *.py ./
-COPY requirements.txt ./
+COPY ticaret_sources.json ./
+COPY customs_sources.json ./
+COPY tariff_sources.json ./
+COPY control_sources.json ./
 COPY semantic_search/ ./semantic_search/
+COPY benchmarks/ ./benchmarks/
+COPY web/ ./web/
 
-# Install Python dependencies
-RUN pip install --no-cache-dir -r requirements.txt
+# Install the exact audited dependency set into the project virtual environment
+RUN pip install --no-cache-dir uv && uv sync --frozen --no-dev
+ENV PATH="/app/.venv/bin:$PATH"
+ENV PLAYWRIGHT_BROWSERS_PATH=/ms-playwright
 
 # Install Playwright browsers (Chromium only for smaller image)
 RUN playwright install --with-deps chromium
 
-# Install the package in development mode
-RUN pip install -e .
+# Run the public web service without root privileges
+RUN useradd --create-home --shell /usr/sbin/nologin appuser \
+    && mkdir -p /data \
+    && chown -R appuser:appuser /app /ms-playwright /data
+USER appuser
 
 # Expose port
 EXPOSE 8000
@@ -34,6 +46,9 @@ EXPOSE 8000
 ENV PORT=8000
 ENV PYTHONUNBUFFERED=1
 ENV CONTAINER_ENV=1
+ENV MEVZUAT_DATA_DIR=/data
+ENV HOME=/home/appuser
+VOLUME ["/data"]
 
 # Health check
 HEALTHCHECK --interval=30s --timeout=10s --start-period=40s --retries=3 \

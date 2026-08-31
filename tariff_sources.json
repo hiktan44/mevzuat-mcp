@@ -1,0 +1,23 @@
+{
+  "sync_interval_seconds": 3600,
+  "sources": [
+    {
+      "id": "import_regime",
+      "title": "İthalat Rejimi Kararı 3350 – 2026 konsolide tablolar",
+      "authority": "T.C. Ticaret Bakanlığı",
+      "landing_url": "https://ticaret.gov.tr/ithalat/ithalat-mevzuati/ithalat-rejimi-karari-igv-karari-ve-ithalat-tebligleri/1-ithalat-rejimi-kararikarar-sayisi3350karar-metni-ve-tablolar-konsolide-edilmis-olup-gunceldir",
+      "archive_text": "Ekler için tıklayınız",
+      "measure_family": "customs_duty",
+      "valid_from": "2026-01-01"
+    },
+    {
+      "id": "additional_duty",
+      "title": "İlave Gümrük Vergisi Kararı 3351 – 2026 konsolide tablolar",
+      "authority": "T.C. Ticaret Bakanlığı",
+      "landing_url": "https://ticaret.gov.tr/ithalat/ithalat-mevzuati/ithalat-rejimi-karari-igv-karari-ve-ithalat-tebligleri/2-ithalatta-ilave-gumruk-vergisi-uygulanmasina-iliskin-karar-karar-sayisi-3351-karar-metni-ve-tablolar-konsolide-edilmis-olup-gunceldir",
+      "archive_text": "Ek-1, Ek-2 ve Ek-3",
+      "measure_family": "additional_duty",
+      "valid_from": "2026-01-01"
+    }
+  ]
+}

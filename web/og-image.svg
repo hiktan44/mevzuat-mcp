@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="630" viewBox="0 0 1200 630">
+  <rect width="1200" height="630" fill="#eef6fa"/>
+  <path d="M0 475h1200v155H0z" fill="#08233d"/>
+  <g stroke="#c6d8e4" opacity=".7"><path d="M0 95h1200M0 190h1200M0 285h1200M0 380h1200"/><path d="M150 0v475M300 0v475M450 0v475M600 0v475M750 0v475M900 0v475M1050 0v475"/></g>
+  <path d="M72 65h70v70H72z" fill="none" stroke="#08233d" stroke-width="12"/><path d="M122 115h35v35h-35z" fill="#eef6fa"/><path d="M147 140h18v18h-18z" fill="#f97316"/>
+  <text x="190" y="97" fill="#08233d" font-family="Arial,sans-serif" font-weight="700" font-size="34">Ticaret Bilgi Masası</text>
+  <text x="190" y="132" fill="#587085" font-family="Arial,sans-serif" font-size="17" letter-spacing="2">RESMÎ KAYNAKLI DIŞ TİCARET ZEKÂSI</text>
+  <text x="72" y="270" fill="#08233d" font-family="Arial,sans-serif" font-weight="700" font-size="70">İthalattan önce</text>
+  <text x="72" y="350" fill="#007f87" font-family="Arial,sans-serif" font-weight="700" font-size="70">dosyanızı görün.</text>
+  <g transform="translate(805 80)"><circle cx="150" cy="150" r="125" fill="none" stroke="#007f87" stroke-width="2"/><circle cx="150" cy="150" r="85" fill="none" stroke="#007f87" stroke-width="2"/><circle cx="150" cy="150" r="45" fill="#dff2f3" stroke="#007f87" stroke-width="2"/><path d="M150 150 266 105" stroke="#f97316" stroke-width="10"/><circle cx="266" cy="105" r="13" fill="#f97316"/><rect x="90" y="123" width="120" height="56" fill="#08233d"/><text x="150" y="147" text-anchor="middle" fill="#9fb8c8" font-family="Arial,sans-serif" font-size="11">ADAY GTİP</text><text x="150" y="168" text-anchor="middle" fill="white" font-family="Arial,sans-serif" font-weight="700" font-size="18">3 SONUÇ</text></g>
+  <text x="72" y="535" fill="#fff" font-family="Arial,sans-serif" font-size="27">GTİP · VERGİ · İGV · TAREKS · TSE · BELGE</text>
+  <rect x="72" y="570" width="165" height="6" fill="#f97316"/>
+</svg>

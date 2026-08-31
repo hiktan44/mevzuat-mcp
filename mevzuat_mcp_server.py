@@ -3,9 +3,11 @@
 FastMCP server for mevzuat.gov.tr (direct API).
 Supports searching and PDF content extraction for Kanun (laws).
 """
+import asyncio
 import logging
+from contextlib import asynccontextmanager
 from pydantic import Field
-from typing import Optional
+from typing import Literal, Optional
 
 from fastmcp import FastMCP
 
@@ -16,6 +18,35 @@ from mevzuat_models import (
     MevzuatArticleContent
 )
 from article_search import search_articles_by_keyword, ArticleSearchResult, format_search_results, _matches_query, search_plain_text_articles
+from ticaret_client import TicaretApiClient
+from ticaret_models import (
+    TicaretCatalogStatus,
+    TicaretContentSearchResult,
+    TicaretDocumentContent,
+    TicaretSearchResult,
+)
+from customs_advisor import (
+    ClassificationAnswer,
+    CustomsAdvisor,
+    CustomsEvidencePack,
+    CustomsInquiry,
+    ProductClassificationRequest,
+    ProductClassificationResult,
+)
+from tariff_engine import (
+    LandedCostInput,
+    TariffDecisionTreeResult,
+    TariffEngine,
+    TariffLookupResult,
+    TariffSyncStatus,
+)
+from control_engine import ImportControlEngine, ImportControlLookupResult, ControlSyncStatus
+from classification_evidence import (
+    ClassificationEvidenceEngine,
+    ClassificationEvidenceSearchResult,
+    ClassificationEvidenceStatus,
+)
+from security_firewall import guard_data, guard_text
 
 # Semantic search (optional, requires OPENROUTER_API_KEY)
 from semantic_search.embedder import is_openrouter_available
@@ -35,10 +66,66 @@ logging.basicConfig(
 logging.getLogger("httpx").setLevel(logging.WARNING)
 logger = logging.getLogger(__name__)
 
+ticaret_client = TicaretApiClient()
+tariff_engine = TariffEngine()
+control_engine = ImportControlEngine()
+classification_engine = ClassificationEvidenceEngine()
+customs_advisor_service = CustomsAdvisor(
+    tariff_engine=tariff_engine,
+    control_engine=control_engine,
+    classification_engine=classification_engine,
+)
+
+
+@asynccontextmanager
+async def _server_lifespan(server):
+    """Keep the Ministry catalogue fresh without delaying ASGI startup."""
+    refresh_task = asyncio.create_task(
+        ticaret_client.periodic_refresh_loop(),
+        name="ticaret-catalog-refresh",
+    )
+    tariff_task = asyncio.create_task(
+        tariff_engine.periodic_sync_loop(),
+        name="official-tariff-refresh",
+    )
+    control_task = asyncio.create_task(
+        control_engine.periodic_sync_loop(),
+        name="official-import-controls-refresh",
+    )
+    classification_task = asyncio.create_task(
+        classification_engine.periodic_sync_loop(),
+        name="official-classification-evidence-refresh",
+    )
+    try:
+        yield {
+            "ticaret_client": ticaret_client,
+            "customs_advisor": customs_advisor_service,
+            "tariff_engine": tariff_engine,
+            "control_engine": control_engine,
+            "classification_engine": classification_engine,
+        }
+    finally:
+        for task in (refresh_task, tariff_task, control_task, classification_task):
+            task.cancel()
+            try:
+                await task
+            except asyncio.CancelledError:
+                pass
+        await ticaret_client.close()
+        await customs_advisor_service.close()
+        await tariff_engine.close()
+        await control_engine.close()
+        await classification_engine.close()
+
 app = FastMCP(
     name="MevzuatGovTrMCP",
+    version="1.8.0",
+    lifespan=_server_lifespan,
     instructions="MCP server for Turkish legislation search and content retrieval. "
-    "Two data sources: mevzuat.gov.tr (21 tools, Playwright-based) and bedesten.adalet.gov.tr (5 tools, pure REST). "
+    "Three source families: mevzuat.gov.tr, bedesten.adalet.gov.tr, and a continuously refreshed official "
+    "Ministry of Trade catalogue covering customs, imports, exports, state supports, internal trade, consumer law, "
+    "free zones, product safety, service trade, statistics/data, publications, country-market reports, commercial "
+    "counsellor/attaché reports and contact information. "
     "\n\n"
     "== mevzuat.gov.tr tools (21 tools) ==\n"
     "9 legislation types: Kanun, KHK, Tüzük, Kurum Yönetmeliği, Tebliğ, CB Kararnamesi, CB Kararı, CB Yönetmeliği, CB Genelgesi. "
@@ -51,7 +138,17 @@ app = FastMCP(
     "get_mevzuat_content (full text), search_within_mevzuat (article keyword search), "
     "get_mevzuat_gerekce (law rationale/gerekçe), get_mevzuat_madde_tree (article tree/TOC). "
     "Solr operators: \"exact\", +required, -prohibited, wildcard*, fuzzy~, \"proximity\"~N, boost^N. "
-    "NOTE: AND/OR/NOT do NOT work in search_mevzuat - use +term1 +term2 instead."
+    "NOTE: AND/OR/NOT do NOT work in search_mevzuat - use +term1 +term2 instead. "
+    "\n\n"
+    "== Ticaret Bakanlığı, Gümrükçe, resmî tarife ve ithalat kontrolü tools (14 tools) ==\n"
+    "Use list_ticaret_sources to see source coverage and content kinds. Use search_ticaret_catalog for current "
+    "Ministry metadata, get_ticaret_document for bounded full text, search_ticaret_content for bounded multi-document "
+    "full-text search, and get_ticaret_catalog_status for freshness. Results always include official source URLs. "
+    "For legal analysis, distinguish current and repealed material, cite the exact official source, state uncertainty, "
+    "and treat the output as informational rather than a substitute for professional legal advice. "
+    "Use prepare_customs_precheck before answering product-specific import questions. It returns a dated official "
+    "evidence pack, missing intake fields, a user-rate-only cost calculation and a mandatory legal notice. Never "
+    "present a photo-derived code as a binding GTIP or invent an uncited tax rate."
 )
 
 # Initialize client with caching enabled (1 hour TTL by default)
@@ -101,6 +198,7 @@ async def _semantic_search_within(
     resmi_gazete_tarihi: Optional[str] = None,
 ) -> str:
     """Shared helper for semantic search within any legislation type."""
+    query = guard_text(query, source="semantik mevzuat araması", max_chars=4_000)
     # 1. Get content with tertip fallback (already cached by mevzuat_client)
     content_result = await _get_content_with_tertip_fallback(
         mevzuat_no=mevzuat_no,
@@ -2014,7 +2112,7 @@ async def search_mevzuat(
         description="Official Gazette issue number filter. E.g., '28513'.",
     ),
     page: int = Field(1, ge=1, description="Page number (1-based, default: 1)"),
-    page_size: int = Field(25, ge=1, le=100, description="Results per page (1-100, default: 25)"),
+    page_size: int = Field(20, ge=1, le=20, description="Results per page (1-20, default: 20)"),
 ) -> str:
     """
     Search or browse all Turkish legislation on bedesten.adalet.gov.tr.
@@ -2295,6 +2393,643 @@ async def get_mevzuat_madde_tree(
     except Exception as e:
         logger.exception("Error in get_mevzuat_madde_tree")
         return f"An unexpected error occurred: {str(e)}"
+
+
+# ============================================================================
+# Ticaret Bakanlığı live catalogue tools
+# ============================================================================
+
+_TICARET_CONTENT_KINDS = Literal[
+    "mevzuat",
+    "destek",
+    "veri",
+    "rapor",
+    "ulke_bilgisi",
+    "iletisim",
+    "yayin",
+]
+
+
+@app.tool(
+    annotations={
+        "title": "Resmî tarife tablolarını eşitle",
+        "readOnlyHint": True,
+        "destructiveHint": False,
+        "idempotentHint": True,
+        "openWorldHint": True,
+    }
+)
+async def sync_official_tariff_data(
+    force_refresh: bool = Field(
+        False,
+        description="True ise Ticaret Bakanlığındaki ZIP arşivleri yeniden kontrol edilir; normalde altı saatlik önbellek kullanılır.",
+    ),
+) -> TariffSyncStatus:
+    """Synchronise versioned 2026 Import Regime and additional-duty tables.
+
+    Archive links are discovered on the current official Ministry landing pages.
+    Every workbook is ZIP/CRC checked and SHA-256 versioned. The tool never calls
+    the CAPTCHA-protected tariff search engine and never imports third-party rates.
+    """
+    return await tariff_engine.sync(force=force_refresh)
+
+
+@app.tool(
+    annotations={
+        "title": "Resmî AB sınıflandırma karar indeksini eşitle",
+        "readOnlyHint": True,
+        "destructiveHint": False,
+        "idempotentHint": True,
+        "openWorldHint": True,
+    }
+)
+async def sync_classification_evidence(
+    force_refresh: bool = Field(False, description="DG TAXUD sınıflandırma tüzükleri PDF'sini yeniden kontrol eder."),
+) -> ClassificationEvidenceStatus:
+    """Version the official text-only classification-regulation list.
+
+    EBTI result pages and applicant photographs are not crawled.  The indexed EU
+    material is comparative evidence only and is never treated as Turkish GTIP12.
+    """
+    return await classification_engine.sync(force=force_refresh)
+
+
+@app.tool(
+    app=True,
+    annotations={
+        "title": "Resmî sınıflandırma gerekçelerinde ara",
+        "readOnlyHint": True,
+        "destructiveHint": False,
+        "idempotentHint": True,
+        "openWorldHint": True,
+    },
+)
+async def search_classification_evidence(
+    query: str = Field(..., min_length=2, max_length=500, description="Ürün tanımı, teknik evsaf veya arama terimleri."),
+    code_prefix: Optional[str] = Field(
+        None,
+        pattern=r"^(?:(?:\d[. ]*){4}|(?:\d[. ]*){6}|(?:\d[. ]*){8}|(?:\d[. ]*){10})$",
+        description="Varsa 4/6/8/10 haneli HS/CN kodu.",
+    ),
+    limit: int = Field(5, ge=1, le=12),
+) -> ClassificationEvidenceSearchResult:
+    """Retrieve official classification-regulation pages by code and product terms."""
+    return await classification_engine.search(query, code_prefix=code_prefix, limit=limit)
+
+
+@app.tool(
+    app=True,
+    annotations={
+        "title": "Ürün evsafından en yakın üç tarife adayını getir",
+        "readOnlyHint": True,
+        "destructiveHint": False,
+        "idempotentHint": False,
+        "openWorldHint": True,
+    },
+)
+async def suggest_candidate_tariff_codes(
+    product_description: str = Field(..., min_length=12, max_length=2000),
+    product_category: str = Field("", max_length=200),
+    composition: str = Field("", max_length=500),
+    intended_use: str = Field("", max_length=300),
+    target_user: str = Field("", max_length=300),
+    declared_product_type: str = Field("", max_length=300),
+    construction_form: str = Field("", max_length=1000),
+    function_mechanism: str = Field("", max_length=1000),
+    components_accessories: str = Field("", max_length=1000),
+    label_text: str = Field("", max_length=1000),
+    visible_features: str = Field("", max_length=2000),
+    inferred_features: str = Field("", max_length=1500),
+    classification_questions: str = Field("", max_length=1500),
+    classification_answers: Optional[list[ClassificationAnswer]] = Field(
+        None,
+        description="Görsel analizinin sorduğu eksik bilgi sorularına kullanıcının verdiği cevaplar.",
+    ),
+    origin_country: str = Field("", max_length=100),
+) -> ProductClassificationResult:
+    """Return up to three non-binding HS6/CN8 candidates from approved product attributes.
+
+    Every candidate is checked for existence in the active official Turkish tariff
+    snapshot. When origin is supplied, customs duty and additional-duty rates are
+    returned only if every matching 12-digit subline has one unambiguous rate.
+    """
+    request = ProductClassificationRequest(
+        product_description=product_description,
+        product_category=product_category,
+        composition=composition,
+        intended_use=intended_use,
+        target_user=target_user,
+        declared_product_type=declared_product_type,
+        construction_form=construction_form,
+        function_mechanism=function_mechanism,
+        components_accessories=components_accessories,
+        label_text=label_text,
+        visible_features=visible_features,
+        inferred_features=inferred_features,
+        classification_questions=classification_questions,
+        classification_answers=classification_answers or [],
+        origin_country=origin_country,
+    )
+    guard_data(request.model_dump(mode="json"), path="MCP ürün evsafı")
+    return await customs_advisor_service.classify_product(request)
+
+
+@app.tool(
+    app=True,
+    annotations={
+        "title": "GTİP ve menşeye göre resmî tarife önlemlerini getir",
+        "readOnlyHint": True,
+        "destructiveHint": False,
+        "idempotentHint": True,
+        "openWorldHint": True,
+    }
+)
+async def lookup_tariff_measures(
+    gtip: str = Field(
+        ...,
+        pattern=r"^(?:(?:\d[. ]*){6}|(?:\d[. ]*){8}|(?:\d[. ]*){10}|(?:\d[. ]*){12})$",
+        description="Noktalı veya düz 6/8 haneli HS/CN ya da 10/12 haneli Türk tarife kodu.",
+    ),
+    origin_country: Optional[str] = Field(None, max_length=100, description="Menşe ülke; sevk ülkesinden ayrıdır."),
+) -> TariffLookupResult:
+    """Return source-row-level customs duty and additional-duty evidence.
+
+    A 6/8/10 digit code expands to every matching 12-digit Turkish tariff line.
+    Results include rate variants, the selected country column, alternatives,
+    conditional end-use rates, workbook/sheet/row, archive checksum and warnings.
+    A rate is automatic only when every matching subline has the same unfootnoted rate.
+    """
+    return await tariff_engine.lookup(gtip, origin_country=origin_country)
+
+
+@app.tool(
+    app=True,
+    annotations={
+        "title": "HS/CN adayından Türk GTİP12 karar ağacını aç",
+        "readOnlyHint": True,
+        "destructiveHint": False,
+        "idempotentHint": True,
+        "openWorldHint": True,
+    },
+)
+async def resolve_turkish_tariff_tree(
+    gtip: str = Field(
+        ...,
+        pattern=r"^(?:(?:\d[. ]*){6}|(?:\d[. ]*){8}|(?:\d[. ]*){10}|(?:\d[. ]*){12})$",
+        description="Kullanıcının seçtiği 6/8/10/12 haneli tarife dalı.",
+    ),
+    origin_country: Optional[str] = Field(None, max_length=100),
+) -> TariffDecisionTreeResult:
+    """Expose every immediate official child without ranking or auto-selecting one.
+
+    Call repeatedly until GTIP12 when product evidence supports the next branch.
+    For a shorter prefix, rates are safe only when returned as unambiguous across
+    every descendant.  The tool never proves that the goods belong in a branch.
+    """
+    return await tariff_engine.decision_tree(gtip, origin_country=origin_country)
+
+
+@app.tool(
+    app=True,
+    annotations={
+        "title": "Kaynaklı ithalat maliyeti hesapla",
+        "readOnlyHint": True,
+        "destructiveHint": False,
+        "idempotentHint": True,
+        "openWorldHint": True,
+    }
+)
+async def calculate_import_landed_cost(
+    gtip: str = Field(
+        ...,
+        pattern=r"^(?:(?:\d[. ]*){6}|(?:\d[. ]*){8}|(?:\d[. ]*){10}|(?:\d[. ]*){12})$",
+        description="6/8/10/12 haneli tarife kodu; kısa kodlar 12 haneli alt satırlara açılır.",
+    ),
+    origin_country: str = Field(..., min_length=2, max_length=100),
+    invoice_value: float = Field(..., gt=0, le=1_000_000_000),
+    freight: float = Field(0, ge=0, le=1_000_000_000),
+    insurance: float = Field(0, ge=0, le=1_000_000_000),
+    other_costs: float = Field(0, ge=0, le=1_000_000_000),
+    quantity: Optional[float] = Field(None, gt=0, le=1_000_000_000),
+    currency: str = Field("USD", min_length=3, max_length=3),
+    vat_rate: Optional[float] = Field(None, ge=0, le=100, description="Resmî kaynaktan doğrulanmış ürüne özel KDV oranı."),
+    kkdf_rate: Optional[float] = Field(None, ge=0, le=100, description="Ödeme şekline göre doğrulanmış KKDF oranı; uygulanmıyorsa 0."),
+    anti_dumping_amount: Optional[float] = Field(None, ge=0, le=1_000_000_000, description="Ürün/üretici için doğrulanmış damping vergisi toplamı; uygulanmadığı doğrulandıysa 0."),
+    sct_amount: Optional[float] = Field(None, ge=0, le=1_000_000_000, description="Doğrulanmış ÖTV toplamı; uygulanmadığı doğrulandıysa 0."),
+    surveillance_unit_value: Optional[float] = Field(None, ge=0, le=1_000_000_000, description="Gözetim birim kıymeti; uygulanmadığı doğrulandıysa 0."),
+    has_surveillance_certificate: Optional[bool] = Field(None),
+) -> dict:
+    """Calculate a reproducible landed cost with official safe-to-use tariff rates.
+
+    Customs duty/İGV are taken only when the current official snapshot resolves one
+    unfootnoted rate shared by every matching 12-digit subline for the code and origin.
+    VAT, KKDF, dumping, SCT and surveillance facts remain explicit inputs until their
+    product-specific official datasets are available. Missing or divergent rates block
+    the total instead of becoming zero.
+    """
+    return await tariff_engine.calculate(
+        gtip,
+        origin_country,
+        LandedCostInput(
+            invoice_value=invoice_value,
+            freight=freight,
+            insurance=insurance,
+            other_costs=other_costs,
+            quantity=quantity,
+            currency=currency,
+            anti_dumping_amount=anti_dumping_amount,
+            kkdf_rate=kkdf_rate,
+            vat_rate=vat_rate,
+            sct_amount=sct_amount,
+            surveillance_unit_value=surveillance_unit_value,
+            has_surveillance_certificate=has_surveillance_certificate,
+        ),
+    )
+
+
+@app.tool(
+    annotations={
+        "title": "Tarife snapshot değişikliklerini karşılaştır",
+        "readOnlyHint": True,
+        "destructiveHint": False,
+        "idempotentHint": True,
+        "openWorldHint": False,
+    }
+)
+async def compare_tariff_snapshots(
+    source_id: Literal["import_regime", "additional_duty"] = Field(...),
+    limit: int = Field(200, ge=1, le=1000),
+) -> dict:
+    """Compare the two latest official archive snapshots by GTIP, measure and country group."""
+    return tariff_engine.changes(source_id, limit=limit)
+
+
+@app.tool(
+    annotations={
+        "title": "Güncel ithalat kontrol tebliğlerini eşitle",
+        "readOnlyHint": True,
+        "destructiveHint": False,
+        "idempotentHint": True,
+        "openWorldHint": True,
+    }
+)
+async def sync_import_control_rules(
+    force_refresh: bool = Field(False, description="Resmî konsolide tebliğ metinlerini yeniden kontrol eder."),
+) -> ControlSyncStatus:
+    """Version and index current Product Safety and Inspection communiques.
+
+    The source is the Ministry of Justice's official Bedesten legislation service.
+    GTIP annex scope, TAREKS/risk wording, possible inspection methods and the
+    document-list excerpt are stored with a full-text SHA-256 checksum.
+    """
+    return await control_engine.sync(force=force_refresh)
+
+
+@app.tool(
+    app=True,
+    annotations={
+        "title": "GTİP için TAREKS, TSE ve ithalat kontrollerini araştır",
+        "readOnlyHint": True,
+        "destructiveHint": False,
+        "idempotentHint": True,
+        "openWorldHint": True,
+    }
+)
+async def lookup_import_controls(
+    gtip: str = Field(..., pattern=r"^(?:\d[. ]*){12}$", description="Noktalı veya düz 12 haneli Türk GTİP."),
+) -> ImportControlLookupResult:
+    """Find GTIP annex matches without claiming automatic physical inspection.
+
+    A match establishes only that the code appears in an indexed communique
+    annex. Product nature, exemptions and the authority's risk result must still
+    be checked. Private laboratories are never presented as automatically required.
+    """
+    return await control_engine.lookup(gtip)
+
+
+@app.tool(
+    annotations={
+        "title": "İthalat kontrol tebliği sürüm değişikliklerini göster",
+        "readOnlyHint": True,
+        "destructiveHint": False,
+        "idempotentHint": True,
+        "openWorldHint": False,
+    }
+)
+async def compare_import_control_snapshots(
+    rule_code: Optional[str] = Field(None, max_length=20, description="Örn. 2026/18; boşsa tüm tebliğler."),
+    limit: int = Field(50, ge=1, le=200),
+) -> list[dict]:
+    """Return version changes detected in official consolidated control texts."""
+    return control_engine.changes(rule_code, limit=limit)
+
+
+@app.tool(
+    annotations={
+        "title": "Ticaret Bakanlığı kaynaklarını listele",
+        "readOnlyHint": True,
+        "destructiveHint": False,
+        "idempotentHint": True,
+        "openWorldHint": True,
+    }
+)
+async def list_ticaret_sources() -> dict:
+    """List official Ministry of Trade source trees and live document/page counts.
+
+    Returns separate source families for legislation, state supports, statistics/data,
+    reports, country-market information, counsellor/attaché contacts and publications.
+    The URLs and counts come from the current live catalogue, not a generated sector list.
+    """
+    return await ticaret_client.list_sources()
+
+
+@app.tool(
+    app=True,
+    annotations={
+        "title": "Gümrük ithalat ön değerlendirme kanıtını hazırla",
+        "readOnlyHint": True,
+        "destructiveHint": False,
+        "idempotentHint": False,
+        "openWorldHint": True,
+    }
+)
+async def prepare_customs_precheck(
+    question: str = Field(..., min_length=3, max_length=1500, description="Kullanıcının ithalat/gümrük sorusu."),
+    product_description: str = Field("", max_length=2000, description="Teknik ve ticari ürün tanımı."),
+    candidate_gtip: Optional[str] = Field(None, max_length=30, description="Varsa resmî karar ağacında kullanıcıca seçilmiş 6/8/10/12 haneli tarife kodu."),
+    tariff_selection_confirmed: bool = Field(False, description="Kodun kullanıcı tarafından resmî karar ağacında seçildiği onayı."),
+    exact_gtip_confirmed: bool = Field(False, description="Yalnızca doğrulanmış 12 haneli Türk GTİP seçildiyse true."),
+    classification_verification_status: Optional[Literal[
+        "dual_agreement", "dual_partial_agreement", "arbitrated_disagreement",
+        "unresolved_disagreement", "single_model_only",
+    ]] = Field(None, description="Bağımsız sınıflandırma modellerinin doğrulama sonucu."),
+    classification_confidence_score: Optional[int] = Field(None, ge=0, le=100, description="Resmî kanıt ve model uzlaşmasından türetilen güven puanı."),
+    classification_models: Optional[list[str]] = Field(None, max_length=3, description="Sınıflandırmada kullanılan bağımsız model kimlikleri."),
+    origin_country: Optional[str] = Field(None, max_length=100, description="Menşe ülke; sevk ülkesinden ayrıdır."),
+    dispatch_country: Optional[str] = Field(None, max_length=100, description="Varsa sevk/çıkış ülkesi."),
+    intended_use: Optional[str] = Field(None, max_length=300, description="Ürünün kullanım amacı ve hedef kullanıcısı."),
+    target_user: Optional[str] = Field(None, max_length=300, description="Hedef kullanıcının cinsiyet ve yaş grubu."),
+    declared_product_type: Optional[str] = Field(None, max_length=300, description="İthalatta beyan edilmesi düşünülen ürün türü."),
+    classification_answers: Optional[list[ClassificationAnswer]] = Field(
+        None,
+        description="Sınıflandırmayı netleştiren kullanıcı soru-cevapları.",
+    ),
+    composition: Optional[str] = Field(None, max_length=500, description="Malzeme, kimyasal bileşim veya tekstil elyaf oranları."),
+    condition: Literal["new", "used", "unknown"] = Field("unknown", description="Ürünün yeni/kullanılmış durumu."),
+    invoice_value: Optional[float] = Field(None, gt=0, le=1_000_000_000),
+    freight: Optional[float] = Field(None, ge=0, le=1_000_000_000),
+    insurance: Optional[float] = Field(None, ge=0, le=1_000_000_000),
+    other_pre_import_costs: Optional[float] = Field(None, ge=0, le=1_000_000_000),
+    currency: str = Field("USD", min_length=3, max_length=3),
+    incoterm: Optional[str] = Field(None, max_length=20),
+    payment_method: Optional[str] = Field(None, max_length=80, description="KKDF değerlendirmesi için ödeme şekli."),
+    quantity: Optional[float] = Field(None, gt=0, le=1_000_000_000, description="Birim maliyet ve gözetim hesabı için miktar."),
+    as_of_date: Optional[str] = Field(None, pattern=r"^\d{4}-\d{2}-\d{2}$", description="İşlem tarihi; YYYY-AA-GG."),
+    customs_duty_rate: Optional[float] = Field(None, ge=0, le=1000, description="Yalnızca kullanıcıca doğrulanmış oran; araç oran üretmez."),
+    additional_duty_rate: Optional[float] = Field(None, ge=0, le=1000, description="Yalnızca kullanıcıca doğrulanmış İGV/ek oran."),
+    additional_financial_liability_rate: Optional[float] = Field(None, ge=0, le=1000),
+    anti_dumping_amount: Optional[float] = Field(None, ge=0, le=1_000_000_000),
+    kkdf_rate: Optional[float] = Field(None, ge=0, le=100),
+    vat_rate: Optional[float] = Field(None, ge=0, le=100, description="Yalnızca kullanıcıca doğrulanmış KDV oranı."),
+    sct_amount: Optional[float] = Field(None, ge=0, le=1_000_000_000),
+    surveillance_unit_value: Optional[float] = Field(None, ge=0, le=1_000_000_000),
+    has_surveillance_certificate: Optional[bool] = Field(None),
+) -> CustomsEvidencePack:
+    """Prepare the evidence required for a cautious product-specific import answer.
+
+    Returns current official Turkish sources for GTIP/BTB, TAREKS, TSE, product-safety
+    communiques, chemicals, customs value, tax and trade-defence checks plus comparative
+    EU EBTI/CLASS/CN/TARIC sources. EU codes are not Turkish GTIP12 or Turkish tax rates.
+    The caller must cite the returned source IDs, ask for the listed missing fields, and
+    include legal_notice verbatim. A product image may suggest questions/candidates but
+    cannot create a binding classification. Exact rates must not be inferred when the
+    official evidence does not directly establish product, origin and date applicability.
+    """
+    inquiry = CustomsInquiry(
+        question=question,
+        product_description=product_description,
+        candidate_gtip=candidate_gtip,
+        tariff_selection_confirmed=tariff_selection_confirmed,
+        exact_gtip_confirmed=exact_gtip_confirmed,
+        classification_verification_status=classification_verification_status,
+        classification_confidence_score=classification_confidence_score,
+        classification_models=classification_models or [],
+        origin_country=origin_country,
+        dispatch_country=dispatch_country,
+        intended_use=intended_use,
+        target_user=target_user,
+        declared_product_type=declared_product_type,
+        classification_answers=classification_answers or [],
+        composition=composition,
+        condition=condition,
+        invoice_value=invoice_value,
+        freight=freight,
+        insurance=insurance,
+        other_pre_import_costs=other_pre_import_costs,
+        currency=currency,
+        incoterm=incoterm,
+        payment_method=payment_method,
+        quantity=quantity,
+        as_of_date=as_of_date,
+        customs_duty_rate=customs_duty_rate,
+        additional_duty_rate=additional_duty_rate,
+        additional_financial_liability_rate=additional_financial_liability_rate,
+        anti_dumping_amount=anti_dumping_amount,
+        kkdf_rate=kkdf_rate,
+        vat_rate=vat_rate,
+        sct_amount=sct_amount,
+        surveillance_unit_value=surveillance_unit_value,
+        has_surveillance_certificate=has_surveillance_certificate,
+    )
+    guard_data(inquiry.model_dump(mode="json"), path="MCP gümrük sorusu")
+    return await customs_advisor_service.evidence_pack(inquiry)
+
+
+@app.tool(
+    annotations={
+        "title": "Ticaret Bakanlığı kataloğunda ara",
+        "readOnlyHint": True,
+        "destructiveHint": False,
+        "idempotentHint": True,
+        "openWorldHint": True,
+    }
+)
+async def search_ticaret_catalog(
+    query: str = Field(
+        "",
+        max_length=300,
+        description=(
+            "Turkish keywords, document number, country, sector, support name or contact term. "
+            "Examples: 'Gümrük Kanunu 4458', '5973 pazara giriş desteği', "
+            "'Çin kozmetik sektör raporu', 'Kabil Ticaret Müşavirliği'. Leave empty to browse with filters."
+        ),
+    ),
+    content_kinds: Optional[list[_TICARET_CONTENT_KINDS]] = Field(
+        None,
+        description=(
+            "Optional separate information layers: mevzuat, destek, veri, rapor, "
+            "ulke_bilgisi, iletisim, yayin. Leave empty to search all layers."
+        ),
+    ),
+    source_ids: Optional[list[str]] = Field(
+        None,
+        description="Optional source IDs returned by list_ticaret_sources, e.g. ['gumruk', 'destekler'].",
+    ),
+    document_types: Optional[list[str]] = Field(
+        None,
+        description="Optional types such as Kanun, Yönetmelik, Tebliğ, Genelge, Karar, Rapor, İstatistik or Rehber.",
+    ),
+    year: Optional[int] = Field(None, ge=1900, le=2100, description="Optional year filter."),
+    include_repealed: bool = Field(
+        False,
+        description="Include records visibly marked Mülga/yürürlükten kaldırılmış. Default false for safer current-law analysis.",
+    ),
+    offset: int = Field(0, ge=0, le=100000, description="Zero-based result offset."),
+    limit: int = Field(20, ge=1, le=50, description="Maximum results to return (1-50)."),
+) -> TicaretSearchResult:
+    """Search the continuously refreshed Ministry of Trade information catalogue.
+
+    Covers customs, import/export rules and implementation notices, state support
+    decisions/circulars, internal trade, consumer and product-safety rules, free zones,
+    service trade, official statistics/data links, Ministry publications, country-market
+    and commercial counsellor/attaché reports, and overseas contact information.
+
+    This is metadata and live-page-summary search. Use get_ticaret_document for a selected
+    result's full text or search_ticaret_content to scan selected candidates. Every result
+    carries both the document URL and the Ministry source-page URL.
+    """
+    return await ticaret_client.search(
+        query=query,
+        content_kinds=list(content_kinds) if content_kinds else None,
+        source_ids=source_ids,
+        document_types=document_types,
+        year=year,
+        include_repealed=include_repealed,
+        offset=offset,
+        limit=limit,
+    )
+
+
+@app.tool(
+    annotations={
+        "title": "Ticaret Bakanlığı belgesini getir",
+        "readOnlyHint": True,
+        "destructiveHint": False,
+        "idempotentHint": True,
+        "openWorldHint": True,
+    }
+)
+async def get_ticaret_document(
+    document_id: str = Field(
+        ...,
+        pattern=r"^ticaret_[0-9a-f]{24}$",
+        description="Document ID returned by search_ticaret_catalog. URLs are not accepted; this prevents arbitrary downloads.",
+    ),
+    offset: int = Field(0, ge=0, le=10000000, description="Character offset for reading a later part of a long document."),
+    max_characters: int = Field(
+        40000,
+        ge=1000,
+        le=100000,
+        description="Maximum extracted characters returned in this call. Continue with offset when truncated=true.",
+    ),
+) -> TicaretDocumentContent:
+    """Fetch and extract a bounded slice of an official Ministry document or page.
+
+    Supports live HTML and official PDF, DOCX, XLSX, CSV, text and ZIP resources.
+    ZIP contents are listed and supported members are extracted within safety limits.
+    Large documents are paginated by character offset. The response includes resolved
+    official URL, source metadata, total size, truncation state and extraction warnings.
+    """
+    return await ticaret_client.get_document_content(
+        document_id,
+        offset=offset,
+        max_characters=max_characters,
+    )
+
+
+@app.tool(
+    annotations={
+        "title": "Ticaret Bakanlığı belgelerinde tam metin ara",
+        "readOnlyHint": True,
+        "destructiveHint": False,
+        "idempotentHint": True,
+        "openWorldHint": True,
+    }
+)
+async def search_ticaret_content(
+    query: str = Field(
+        ...,
+        min_length=2,
+        max_length=300,
+        description="Text or phrase to find inside official pages/documents.",
+    ),
+    document_ids: Optional[list[str]] = Field(
+        None,
+        max_length=25,
+        description=(
+            "Preferred precise mode: IDs returned by search_ticaret_catalog. "
+            "Provide up to 25 IDs to scan those exact documents."
+        ),
+    ),
+    content_kinds: Optional[list[_TICARET_CONTENT_KINDS]] = Field(
+        None,
+        description="Optional information-layer filters when document_ids is omitted.",
+    ),
+    source_ids: Optional[list[str]] = Field(
+        None,
+        description="Optional source IDs when document_ids is omitted.",
+    ),
+    year: Optional[int] = Field(None, ge=1900, le=2100, description="Optional year filter."),
+    include_repealed: bool = Field(False, description="Include visibly repealed records in candidate selection."),
+    max_documents_to_scan: int = Field(
+        12,
+        ge=1,
+        le=25,
+        description="Maximum documents downloaded and scanned in this call (1-25).",
+    ),
+    max_results: int = Field(10, ge=1, le=20, description="Maximum matching documents returned (1-20)."),
+) -> TicaretContentSearchResult:
+    """Search inside a bounded set of live Ministry pages and downloadable documents.
+
+    For broad research, first narrow candidates with search_ticaret_catalog and then pass
+    their IDs here in batches. The response explicitly reports candidate and scanned counts,
+    so a partial scan cannot be mistaken for an exhaustive legal conclusion.
+    """
+    return await ticaret_client.search_content(
+        query=query,
+        document_ids=document_ids,
+        content_kinds=list(content_kinds) if content_kinds else None,
+        source_ids=source_ids,
+        year=year,
+        include_repealed=include_repealed,
+        max_documents_to_scan=max_documents_to_scan,
+        max_results=max_results,
+    )
+
+
+@app.tool(
+    annotations={
+        "title": "Ticaret Bakanlığı katalog güncelliğini göster",
+        "readOnlyHint": True,
+        "destructiveHint": False,
+        "idempotentHint": True,
+        "openWorldHint": True,
+    }
+)
+async def get_ticaret_catalog_status(
+    force_refresh: bool = Field(
+        False,
+        description=(
+            "When true, wait for a full live rescan before returning. This can take several minutes; "
+            "normally leave false because priority legislation is refreshed hourly and the complete "
+            "catalogue is refreshed every six hours."
+        ),
+    ),
+) -> TicaretCatalogStatus:
+    """Return catalogue freshness, next sync time, coverage counts and source errors."""
+    if force_refresh:
+        await ticaret_client.refresh_catalog()
+    return ticaret_client.status()
 
 
 def main():
