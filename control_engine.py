@@ -104,6 +104,9 @@ class ImportControlMatch(BaseModel):
 class ImportControlLookupResult(BaseModel):
     status: Literal["matched", "not_found", "unavailable"]
     gtip: str
+    scope_determination: Literal["annex_match", "no_indexed_match", "unavailable"] = "unavailable"
+    risk_selection_status: Literal["not_determined_by_this_system"] = "not_determined_by_this_system"
+    product_scope_review_required: bool = True
     matches: list[ImportControlMatch] = Field(default_factory=list)
     warnings: list[str] = Field(default_factory=list)
     as_of: str
@@ -741,6 +744,7 @@ class ImportControlEngine:
         if not self.status().ready:
             return ImportControlLookupResult(
                 status="unavailable", gtip=code,
+                scope_determination="unavailable",
                 warnings=["Resmî kontrol tebliğleri arka planda eşitleniyor; uygunluk hakkında sonuç verilmedi. Kısa süre sonra yeniden deneyin."],
                 as_of=_now(),
             )
@@ -802,6 +806,7 @@ class ImportControlEngine:
             )
         return ImportControlLookupResult(
             status="matched" if matches else "not_found", gtip=code, matches=matches,
+            scope_determination="annex_match" if matches else "no_indexed_match",
             warnings=warnings, as_of=_now(),
         )
 

@@ -16,12 +16,15 @@ from customs_advisor import (
     CustomsAdvisor,
     CustomsInquiry,
     CustomsModelResult,
+    EvidenceSource,
     Finding,
     OfficialSourceRegistry,
     ProductAttributeAnalysis,
     ProductClassificationRequest,
     TaxFinding,
     _deterministic_cost,
+    _evidence_prompt,
+    _expert_review_packet,
     _missing_information,
     _openrouter_message_text,
     _openrouter_headers,
@@ -56,6 +59,7 @@ class CustomsAdvisorSafetyTests(unittest.TestCase):
         inquiry = CustomsInquiry(
             question="Bu ürünün ithalat koşulları nedir?",
             candidate_gtip="6104.63.00.00.00",
+            tariff_selection_confirmed=True,
         )
         self.assertEqual(inquiry.candidate_gtip, "610463000000")
         self.assertIn("Ürünün teknik ve ticari tanımı", _missing_information(inquiry))
@@ -63,6 +67,65 @@ class CustomsAdvisorSafetyTests(unittest.TestCase):
     def test_invalid_gtip_is_rejected(self) -> None:
         with self.assertRaises(ValueError):
             CustomsInquiry(question="Bu ürün nedir?", candidate_gtip="12345")
+
+    def test_unconfirmed_tariff_code_is_rejected_server_side(self) -> None:
+        with self.assertRaises(ValueError):
+            CustomsInquiry(question="Bu ürün nedir?", candidate_gtip="610463")
+
+    def test_exact_confirmation_requires_twelve_digits(self) -> None:
+        with self.assertRaises(ValueError):
+            CustomsInquiry(
+                question="Bu ürün nedir?",
+                candidate_gtip="610463",
+                tariff_selection_confirmed=True,
+                exact_gtip_confirmed=True,
+            )
+
+    def test_classification_model_ids_are_bounded_and_sanitised(self) -> None:
+        inquiry = CustomsInquiry(
+            question="Bu ürün nedir?",
+            classification_models=[" google/gemini-test ", "google/gemini-test", "z-ai/glm-test"],
+        )
+        self.assertEqual(inquiry.classification_models, ["google/gemini-test", "z-ai/glm-test"])
+        with self.assertRaises(ValueError):
+            CustomsInquiry(question="Bu ürün nedir?", classification_models=["https://example.test/model?secret=x"])
+
+    def test_evidence_prompt_and_expert_packet_keep_hash_chain(self) -> None:
+        digest = "a" * 64
+        inquiry = CustomsInquiry(
+            question="Bu ürünün yükümlülükleri nedir?",
+            product_description="Porselen kahve fincanı takımı",
+            candidate_gtip="691110000000",
+            tariff_selection_confirmed=True,
+            exact_gtip_confirmed=True,
+            classification_verification_status="dual_agreement",
+            classification_confidence_score=90,
+            classification_models=["google/gemini-test", "z-ai/glm-test"],
+        )
+        pack = SimpleNamespace(
+            inquiry=inquiry,
+            missing_information=[],
+            deterministic_cost={"status": "rates_missing"},
+            tariff_lookup=SimpleNamespace(unresolved_measure_types=["anti_dumping"]),
+            control_lookup=SimpleNamespace(matches=[]),
+            sources=[EvidenceSource(
+                id="tariff_customs_duty_test_1",
+                title="İthalat Rejimi",
+                authority="T.C. Ticaret Bakanlığı",
+                url="https://ticaret.gov.tr/test",
+                excerpt="GTİP ve oran kanıtı",
+                retrieved_at="2026-08-31T00:00:00+03:00",
+                sha256=digest,
+            )],
+            as_of="2026-08-31T00:00:00+03:00",
+            legal_notice="Ön değerlendirmedir.",
+        )
+        prompt = _evidence_prompt(pack)
+        packet = _expert_review_packet(pack)
+        self.assertIn("RESMÎ KANIT PAKETİ", prompt)
+        self.assertIn("gümrük_müşaviri", packet.review_types)
+        self.assertEqual(packet.tariff_snapshot_sha256, [digest])
+        self.assertTrue(packet.escalation_required)
 
     def test_cost_uses_only_user_supplied_rates(self) -> None:
         inquiry = CustomsInquiry(
@@ -73,7 +136,12 @@ class CustomsAdvisorSafetyTests(unittest.TestCase):
             other_pre_import_costs=20,
             customs_duty_rate=10,
             additional_duty_rate=5,
+            additional_financial_liability_rate=0,
+            anti_dumping_amount=0,
+            kkdf_rate=0,
             vat_rate=20,
+            sct_amount=0,
+            surveillance_unit_value=0,
         )
         cost = _deterministic_cost(inquiry)
         self.assertIsNotNone(cost)
@@ -236,6 +304,19 @@ class OfficialSourceRegistryTests(unittest.IsolatedAsyncioTestCase):
 
 
 class TariffClassificationTests(unittest.IsolatedAsyncioTestCase):
+    @staticmethod
+    def _candidate_result(code: str, explanation: str = "Resmî cetvelde doğrulanacak aday.") -> dict:
+        return {
+            "candidates": [{
+                "code": code,
+                "explanation": explanation,
+                "confidence": "high",
+                "decisive_missing_information": [],
+            }],
+            "missing_information": [],
+            "summary": f"{code} değerlendirildi.",
+        }
+
     async def test_candidates_are_verified_and_receive_origin_rates(self) -> None:
         class FakeTariffEngine:
             async def lookup(self, code, **kwargs):
@@ -329,6 +410,79 @@ class TariffClassificationTests(unittest.IsolatedAsyncioTestCase):
             await advisor.close()
         self.assertEqual(result.candidates[0].rate_status, "origin_required")
         self.assertIsNone(result.candidates[0].customs_duty_rate)
+
+    async def test_gemini_and_glm_are_called_independently_and_self_reported_confidence_is_ignored(self) -> None:
+        class FakeTariffEngine:
+            async def lookup(self, code, **kwargs):
+                return SimpleNamespace(
+                    matched_gtip_count=2,
+                    unambiguous_rates={"customs_duty": 8.0},
+                    ambiguous_measure_types=[],
+                    rate_variants={"customs_duty": [8.0]},
+                )
+
+        called_chains = []
+
+        async def fake_chat(**kwargs):
+            called_chains.append(kwargs["models"])
+            first = kwargs["models"][0]
+            resolved = "google/gemini-test" if "gemini" in first else "z-ai/glm-test"
+            return json.dumps(self._candidate_result("691110")), resolved
+
+        advisor = CustomsAdvisor(tariff_engine=FakeTariffEngine())
+        try:
+            with patch.dict(os.environ, {"OPENROUTER_API_KEY": "test-key"}), patch(
+                "customs_advisor._openrouter_chat",
+                new=fake_chat,
+            ):
+                result = await advisor.classify_product(
+                    ProductClassificationRequest(product_description="Porselen kahve fincanı takımı")
+                )
+        finally:
+            await advisor.close()
+        self.assertEqual(result.verification_status, "dual_agreement")
+        self.assertEqual(result.candidates[0].model_votes, 2)
+        self.assertEqual(result.candidates[0].agreement_status, "exact")
+        self.assertNotEqual(result.candidates[0].confidence, "high")
+        self.assertIn("gemini", called_chains[0][0])
+        self.assertIn("glm", called_chains[1][0])
+
+    async def test_third_model_arbitrates_only_when_primary_codes_disagree(self) -> None:
+        class FakeTariffEngine:
+            async def lookup(self, code, **kwargs):
+                return SimpleNamespace(
+                    matched_gtip_count=1,
+                    unambiguous_rates={"customs_duty": 8.0},
+                    ambiguous_measure_types=[],
+                    rate_variants={"customs_duty": [8.0]},
+                )
+
+        calls = []
+
+        async def fake_chat(**kwargs):
+            first = kwargs["models"][0]
+            calls.append(first)
+            if "gemini" in first:
+                return json.dumps(self._candidate_result("691110")), "google/gemini-test"
+            if "glm" in first:
+                return json.dumps(self._candidate_result("691200")), "z-ai/glm-test"
+            return json.dumps(self._candidate_result("691110")), "x-ai/grok-test"
+
+        advisor = CustomsAdvisor(tariff_engine=FakeTariffEngine())
+        try:
+            with patch.dict(os.environ, {"OPENROUTER_API_KEY": "test-key"}), patch(
+                "customs_advisor._openrouter_chat",
+                new=fake_chat,
+            ):
+                result = await advisor.classify_product(
+                    ProductClassificationRequest(product_description="Seramik veya porselen kahve fincanı")
+                )
+        finally:
+            await advisor.close()
+        self.assertEqual(result.verification_status, "arbitrated_disagreement")
+        self.assertEqual(len(calls), 3)
+        self.assertEqual(result.candidates[0].code, "691110")
+        self.assertEqual(result.candidates[0].model_votes, 2)
 
 
 if __name__ == "__main__":

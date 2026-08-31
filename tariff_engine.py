@@ -148,6 +148,44 @@ class TariffLookupResult(BaseModel):
     conditional_measures: list[TariffMeasure] = Field(default_factory=list)
     alternatives: list[TariffMeasure] = Field(default_factory=list)
     snapshots: list[TariffSnapshot] = Field(default_factory=list)
+    measure_coverage: dict[str, "MeasureCoverage"] = Field(default_factory=dict)
+    unresolved_measure_types: list[str] = Field(default_factory=list)
+    warnings: list[str] = Field(default_factory=list)
+    as_of: str
+
+
+class MeasureCoverage(BaseModel):
+    status: Literal["verified_snapshot", "partial_snapshot", "not_integrated", "user_confirmation_required"]
+    source_ids: list[str] = Field(default_factory=list)
+    note: str
+
+
+class TariffTreeNode(BaseModel):
+    """One deterministic branch in the HS6 -> CN8 -> TR10 -> GTIP12 tree."""
+
+    code: str
+    level: Literal["HS6", "CN8", "TR10", "GTIP12"]
+    final: bool
+    descendant_count: int = Field(..., ge=1)
+    rate_status: Literal["unambiguous", "ambiguous", "origin_required"]
+    unambiguous_rates: dict[str, float] = Field(default_factory=dict)
+    rate_variants: dict[str, list[float]] = Field(default_factory=dict)
+    ambiguous_measure_types: list[str] = Field(default_factory=list)
+    warnings: list[str] = Field(default_factory=list)
+
+
+class TariffDecisionTreeResult(BaseModel):
+    """Deterministic descendants of a tariff prefix from active official tables."""
+
+    status: Literal["matched", "not_found", "unavailable"]
+    prefix: str
+    level: Literal["HS6", "CN8", "TR10", "GTIP12"]
+    next_level: Literal["CN8", "TR10", "GTIP12"] | None = None
+    origin_country: str | None = None
+    total_children: int = 0
+    children: list[TariffTreeNode] = Field(default_factory=list)
+    requires_user_selection: bool = True
+    exact_gtip_selected: bool = False
     warnings: list[str] = Field(default_factory=list)
     as_of: str
 
@@ -172,10 +210,10 @@ class LandedCostInput(BaseModel):
     customs_duty_rate: float | None = Field(None, ge=0, le=1000)
     additional_duty_rate: float | None = Field(None, ge=0, le=1000)
     additional_financial_liability_rate: float | None = Field(None, ge=0, le=1000)
-    anti_dumping_amount: float = Field(0, ge=0, le=1_000_000_000)
+    anti_dumping_amount: float | None = Field(None, ge=0, le=1_000_000_000)
     kkdf_rate: float | None = Field(None, ge=0, le=100)
     vat_rate: float | None = Field(None, ge=0, le=100)
-    sct_amount: float = Field(0, ge=0, le=1_000_000_000)
+    sct_amount: float | None = Field(None, ge=0, le=1_000_000_000)
     surveillance_unit_value: float | None = Field(None, ge=0, le=1_000_000_000)
     has_surveillance_certificate: bool | None = None
 
@@ -721,6 +759,55 @@ class TariffEngine:
             snapshot_id=snapshot["id"], automatic_calculation_allowed=bool(row["automatic_calculation_allowed"]),
         )
 
+    @staticmethod
+    def _measure_coverage(snapshots: list[sqlite3.Row]) -> dict[str, MeasureCoverage]:
+        active = {str(snapshot["source_id"]) for snapshot in snapshots}
+        return {
+            "customs_duty": MeasureCoverage(
+                status="verified_snapshot" if "import_regime" in active else "not_integrated",
+                source_ids=["import_regime"] if "import_regime" in active else [],
+                note="Menşe sütunu, dipnot ve alt GTİP birliği sağlanırsa otomatik kullanılabilir.",
+            ),
+            "additional_duty": MeasureCoverage(
+                status="verified_snapshot" if "additional_duty" in active else "not_integrated",
+                source_ids=["additional_duty"] if "additional_duty" in active else [],
+                note="İGV, menşe ve bütün GTİP12 alt satırları aynı oranı verirse otomatik kullanılabilir.",
+            ),
+            "additional_financial_liability": MeasureCoverage(
+                status="partial_snapshot" if "import_regime" in active else "not_integrated",
+                source_ids=["import_regime"] if "import_regime" in active else [],
+                note="Konsolide cetveldeki IV sayılı liste okunur; diğer ek mali yükümlülük kararları ayrıca doğrulanmalıdır.",
+            ),
+            "anti_dumping": MeasureCoverage(
+                status="not_integrated",
+                note="Ürün, menşe ve üretici/ihracatçı bazlı güncel damping/sübvansiyon önlemi henüz yapılandırılmış hesap motorunda değildir.",
+            ),
+            "surveillance": MeasureCoverage(
+                status="not_integrated",
+                note="Gözetim tebliği, birim kıymet, menşe ve yürürlük tarihi ayrıca doğrulanmalıdır.",
+            ),
+            "safeguard": MeasureCoverage(
+                status="not_integrated",
+                note="Korunma önlemi ve varsa ülke/istisna kapsamı ayrıca doğrulanmalıdır.",
+            ),
+            "tariff_quota": MeasureCoverage(
+                status="not_integrated",
+                note="Tarife kontenjanı tahsis ve bakiye durumu işlem tarihinde ayrıca doğrulanmalıdır.",
+            ),
+            "vat": MeasureCoverage(
+                status="user_confirmation_required",
+                note="Ürüne özgü güncel KDV oranı resmî kaynaktan doğrulanıp girilmelidir.",
+            ),
+            "kkdf": MeasureCoverage(
+                status="user_confirmation_required",
+                note="Ödeme şekli ve istisnaya göre KKDF oranı doğrulanıp girilmelidir.",
+            ),
+            "sct": MeasureCoverage(
+                status="user_confirmation_required",
+                note="ÖTV kapsamı ve matrahı doğrulanıp toplam tutar girilmelidir.",
+            ),
+        }
+
     async def lookup(self, gtip: str, *, origin_country: str | None = None, auto_sync: bool = True) -> TariffLookupResult:
         normalised = _normalise_gtip(gtip)
         if not normalised or len(normalised) not in {6, 8, 10, 12}:
@@ -748,9 +835,12 @@ class TariffEngine:
                     ).fetchall()
                 all_rows.extend((row, snapshot) for row in rows)
         if not all_rows:
+            coverage = self._measure_coverage(snapshots)
             return TariffLookupResult(
                 status="not_found", gtip=normalised, match_mode=match_mode, origin_country=origin_country,
-                snapshots=[self._snapshot(row) for row in snapshots], as_of=_now(),
+                snapshots=[self._snapshot(row) for row in snapshots], measure_coverage=coverage,
+                unresolved_measure_types=[key for key, item in coverage.items() if item.status != "verified_snapshot"],
+                as_of=_now(),
                 warnings=["Bu kod aktif resmî tarife/İGV tablolarında bulunamadı; kod ve fasıl doğrulaması gerekir."],
             )
 
@@ -834,6 +924,13 @@ class TariffEngine:
                 warnings.append(
                     "Gösterilen otomatik oranlar bütün eşleşen 12 haneli satırlarda aynıdır; beyan öncesinde kesin 12 haneli GTİP yine doğrulanmalıdır."
                 )
+        coverage = self._measure_coverage(snapshots)
+        unresolved = [key for key, item in coverage.items() if item.status != "verified_snapshot"]
+        if unresolved:
+            warnings.append(
+                "Bu sonuç bütün ticaret politikası ve iç vergi kalemlerinin doğrulandığı anlamına gelmez; "
+                "kapsam matrisi 'partial/not_integrated/user_confirmation_required' kalemlerini ayrı gösterir."
+            )
         return TariffLookupResult(
             status="matched" if primary and not ambiguous_measure_types else "partial",
             gtip=normalised, match_mode=match_mode, matched_gtips=matched_gtips[:500],
@@ -841,7 +938,123 @@ class TariffEngine:
             resolved_country_group=selected, rate_variants=rate_variants,
             unambiguous_rates=unambiguous_rates, ambiguous_measure_types=ambiguous_measure_types,
             measures=primary[:500], conditional_measures=conditional[:240],
-            alternatives=alternatives[:120], snapshots=[self._snapshot(row) for row in snapshots], warnings=warnings, as_of=_now(),
+            alternatives=alternatives[:120], snapshots=[self._snapshot(row) for row in snapshots],
+            measure_coverage=coverage, unresolved_measure_types=unresolved, warnings=warnings, as_of=_now(),
+        )
+
+    async def decision_tree(
+        self,
+        gtip: str,
+        *,
+        origin_country: str | None = None,
+        auto_sync: bool = True,
+    ) -> TariffDecisionTreeResult:
+        """Return the next official tariff level without guessing a child code.
+
+        The method deliberately exposes every immediate branch.  It never ranks or
+        auto-selects a child, because a rate row proving that a code exists does not
+        prove that the user's goods belong under that code.
+        """
+        normalised = _normalise_gtip(gtip)
+        level_by_length: dict[int, Literal["HS6", "CN8", "TR10", "GTIP12"]] = {
+            6: "HS6",
+            8: "CN8",
+            10: "TR10",
+            12: "GTIP12",
+        }
+        next_by_length: dict[int, tuple[int, Literal["CN8", "TR10", "GTIP12"]]] = {
+            6: (8, "CN8"),
+            8: (10, "TR10"),
+            10: (12, "GTIP12"),
+        }
+        if not normalised or len(normalised) not in level_by_length:
+            raise ValueError("Tarife karar ağacı için 6, 8, 10 veya 12 haneli kod gereklidir.")
+        if auto_sync and not self.status().ready:
+            await self.sync()
+        if not self.status().ready:
+            return TariffDecisionTreeResult(
+                status="unavailable",
+                prefix=normalised,
+                level=level_by_length[len(normalised)],
+                origin_country=origin_country,
+                warnings=["Resmî tarife tabloları henüz eşitlenmedi."],
+                as_of=_now(),
+            )
+
+        current = await self.lookup(normalised, origin_country=origin_country, auto_sync=False)
+        if current.status in {"not_found", "unavailable"} or current.matched_gtip_count < 1:
+            return TariffDecisionTreeResult(
+                status="not_found" if current.status == "not_found" else "unavailable",
+                prefix=normalised,
+                level=level_by_length[len(normalised)],
+                origin_country=origin_country,
+                warnings=current.warnings,
+                as_of=current.as_of,
+            )
+
+        if len(normalised) == 12:
+            return TariffDecisionTreeResult(
+                status="matched",
+                prefix=normalised,
+                level="GTIP12",
+                origin_country=origin_country,
+                requires_user_selection=False,
+                exact_gtip_selected=True,
+                warnings=current.warnings,
+                as_of=current.as_of,
+            )
+
+        child_length, next_level = next_by_length[len(normalised)]
+        child_codes = sorted({code[:child_length] for code in current.matched_gtips})
+        child_lookups = await asyncio.gather(
+            *(
+                self.lookup(code, origin_country=origin_country, auto_sync=False)
+                for code in child_codes
+            )
+        )
+        children: list[TariffTreeNode] = []
+        for code, lookup in zip(child_codes, child_lookups):
+            if not origin_country:
+                rate_status: Literal["unambiguous", "ambiguous", "origin_required"] = "origin_required"
+            elif lookup.ambiguous_measure_types or "customs_duty" not in lookup.unambiguous_rates:
+                rate_status = "ambiguous"
+            else:
+                rate_status = "unambiguous"
+            children.append(
+                TariffTreeNode(
+                    code=code,
+                    level=next_level,
+                    final=child_length == 12,
+                    descendant_count=lookup.matched_gtip_count,
+                    rate_status=rate_status,
+                    unambiguous_rates=lookup.unambiguous_rates,
+                    rate_variants=lookup.rate_variants,
+                    ambiguous_measure_types=lookup.ambiguous_measure_types,
+                    warnings=lookup.warnings[:6],
+                )
+            )
+
+        warnings = [
+            f"{normalised} altında {len(children)} adet {next_level} dalı ve "
+            f"{current.matched_gtip_count} adet GTİP12 satırı bulundu.",
+            "Bir alt dal yalnızca kullanıcı tarafından doğrulanan ürün evsafıyla seçilmelidir.",
+        ]
+        if len(children) == 1:
+            warnings.append(
+                "Tek alt dal bulunması ürün sınıflandırmasını hukuken kesinleştirmez; ürün evsafı yine doğrulanmalıdır."
+            )
+        return TariffDecisionTreeResult(
+            status="matched",
+            prefix=normalised,
+            level=level_by_length[len(normalised)],
+            next_level=next_level,
+            origin_country=origin_country,
+            total_children=len(children),
+            children=children,
+            requires_user_selection=True,
+            exact_gtip_selected=False,
+            warnings=warnings,
+            as_of=current.as_of,
         )
 
     async def calculate(
@@ -911,7 +1124,9 @@ def calculate_landed_cost(data: LandedCostInput) -> LandedCostResult:
     warnings: list[str] = []
     missing: list[str] = []
     customs_value = data.invoice_value + data.freight + data.insurance
-    if data.surveillance_unit_value is not None:
+    if data.surveillance_unit_value is None:
+        missing.append("Gözetim birim kıymeti (uygulanmıyorsa 0)")
+    elif data.surveillance_unit_value > 0:
         if data.quantity is None:
             missing.append("Gözetim kıymeti için miktar")
         elif data.has_surveillance_certificate is False:
@@ -935,16 +1150,27 @@ def calculate_landed_cost(data: LandedCostInput) -> LandedCostResult:
 
     duty = percentage("customs_duty", "Gümrük vergisi oranı", customs_value, data.customs_duty_rate)
     additional = percentage("additional_duty", "İlave gümrük vergisi oranı", customs_value, data.additional_duty_rate)
-    emy = percentage("financial_liability", "Ek mali yükümlülük oranı", customs_value, data.additional_financial_liability_rate) if data.additional_financial_liability_rate is not None else 0.0
-    if data.anti_dumping_amount:
+    emy = percentage("financial_liability", "Ek mali yükümlülük oranı", customs_value, data.additional_financial_liability_rate)
+    if data.anti_dumping_amount is None:
+        missing.append("Damping/sübvansiyon önlemi (uygulanmıyorsa 0)")
+        lines.append({"code": "anti_dumping", "label": "Damping karşıtı vergi", "base": None, "rate": None, "amount": None, "formula": "uygulanabilirlik doğrulanmadı"})
+    else:
         lines.append({"code": "anti_dumping", "label": "Damping karşıtı vergi", "base": None, "rate": None, "amount": round(data.anti_dumping_amount, 2), "formula": "doğrulanmış sabit/toplam tutar"})
-    kkdf = percentage("kkdf", "KKDF oranı", data.invoice_value, data.kkdf_rate) if data.kkdf_rate is not None else 0.0
+    kkdf = percentage("kkdf", "KKDF oranı", data.invoice_value, data.kkdf_rate)
+    if data.sct_amount is None:
+        missing.append("ÖTV tutarı (uygulanmıyorsa 0)")
+        lines.append({"code": "sct", "label": "ÖTV", "base": None, "rate": None, "amount": None, "formula": "uygulanabilirlik doğrulanmadı"})
+    else:
+        lines.append({"code": "sct", "label": "ÖTV", "base": None, "rate": None, "amount": round(data.sct_amount, 2), "formula": "doğrulanmış toplam tutar"})
 
-    pre_vat_known = duty is not None and additional is not None
+    pre_vat_known = all(
+        value is not None
+        for value in (duty, additional, emy, data.anti_dumping_amount, kkdf, data.sct_amount, data.surveillance_unit_value)
+    )
     vat_base = None
     vat = None
     if pre_vat_known:
-        vat_base = customs_value + duty + additional + (emy or 0) + data.anti_dumping_amount + (kkdf or 0) + data.sct_amount + data.other_costs
+        vat_base = customs_value + duty + additional + emy + data.anti_dumping_amount + kkdf + data.sct_amount + data.other_costs
         vat = percentage("vat", "KDV oranı", vat_base, data.vat_rate)
     else:
         if data.vat_rate is None:

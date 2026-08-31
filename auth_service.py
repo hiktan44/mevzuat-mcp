@@ -26,7 +26,12 @@ def _b64encode(value: bytes) -> str:
 
 
 def _b64decode(value: str) -> bytes:
-    return base64.urlsafe_b64decode(value + "=" * (-len(value) % 4))
+    if not value or any(character not in "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-_" for character in value):
+        raise ValueError("Geçersiz base64url değeri.")
+    decoded = base64.urlsafe_b64decode(value + "=" * (-len(value) % 4))
+    if not hmac.compare_digest(_b64encode(decoded), value):
+        raise ValueError("Kanonik olmayan base64url değeri.")
+    return decoded
 
 
 class GoogleAuthService:

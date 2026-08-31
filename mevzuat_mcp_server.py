@@ -35,11 +35,17 @@ from customs_advisor import (
 )
 from tariff_engine import (
     LandedCostInput,
+    TariffDecisionTreeResult,
     TariffEngine,
     TariffLookupResult,
     TariffSyncStatus,
 )
 from control_engine import ImportControlEngine, ImportControlLookupResult, ControlSyncStatus
+from classification_evidence import (
+    ClassificationEvidenceEngine,
+    ClassificationEvidenceSearchResult,
+    ClassificationEvidenceStatus,
+)
 from security_firewall import guard_data, guard_text
 
 # Semantic search (optional, requires OPENROUTER_API_KEY)
@@ -63,7 +69,12 @@ logger = logging.getLogger(__name__)
 ticaret_client = TicaretApiClient()
 tariff_engine = TariffEngine()
 control_engine = ImportControlEngine()
-customs_advisor_service = CustomsAdvisor(tariff_engine=tariff_engine, control_engine=control_engine)
+classification_engine = ClassificationEvidenceEngine()
+customs_advisor_service = CustomsAdvisor(
+    tariff_engine=tariff_engine,
+    control_engine=control_engine,
+    classification_engine=classification_engine,
+)
 
 
 @asynccontextmanager
@@ -81,15 +92,20 @@ async def _server_lifespan(server):
         control_engine.periodic_sync_loop(),
         name="official-import-controls-refresh",
     )
+    classification_task = asyncio.create_task(
+        classification_engine.periodic_sync_loop(),
+        name="official-classification-evidence-refresh",
+    )
     try:
         yield {
             "ticaret_client": ticaret_client,
             "customs_advisor": customs_advisor_service,
             "tariff_engine": tariff_engine,
             "control_engine": control_engine,
+            "classification_engine": classification_engine,
         }
     finally:
-        for task in (refresh_task, tariff_task, control_task):
+        for task in (refresh_task, tariff_task, control_task, classification_task):
             task.cancel()
             try:
                 await task
@@ -99,10 +115,11 @@ async def _server_lifespan(server):
         await customs_advisor_service.close()
         await tariff_engine.close()
         await control_engine.close()
+        await classification_engine.close()
 
 app = FastMCP(
     name="MevzuatGovTrMCP",
-    version="1.6.0",
+    version="1.7.0",
     lifespan=_server_lifespan,
     instructions="MCP server for Turkish legislation search and content retrieval. "
     "Three source families: mevzuat.gov.tr, bedesten.adalet.gov.tr, and a continuously refreshed official "
@@ -2418,6 +2435,49 @@ async def sync_official_tariff_data(
 
 
 @app.tool(
+    annotations={
+        "title": "Resmî AB sınıflandırma karar indeksini eşitle",
+        "readOnlyHint": True,
+        "destructiveHint": False,
+        "idempotentHint": True,
+        "openWorldHint": True,
+    }
+)
+async def sync_classification_evidence(
+    force_refresh: bool = Field(False, description="DG TAXUD sınıflandırma tüzükleri PDF'sini yeniden kontrol eder."),
+) -> ClassificationEvidenceStatus:
+    """Version the official text-only classification-regulation list.
+
+    EBTI result pages and applicant photographs are not crawled.  The indexed EU
+    material is comparative evidence only and is never treated as Turkish GTIP12.
+    """
+    return await classification_engine.sync(force=force_refresh)
+
+
+@app.tool(
+    app=True,
+    annotations={
+        "title": "Resmî sınıflandırma gerekçelerinde ara",
+        "readOnlyHint": True,
+        "destructiveHint": False,
+        "idempotentHint": True,
+        "openWorldHint": True,
+    },
+)
+async def search_classification_evidence(
+    query: str = Field(..., min_length=2, max_length=500, description="Ürün tanımı, teknik evsaf veya arama terimleri."),
+    code_prefix: Optional[str] = Field(
+        None,
+        pattern=r"^(?:(?:\d[. ]*){4}|(?:\d[. ]*){6}|(?:\d[. ]*){8}|(?:\d[. ]*){10})$",
+        description="Varsa 4/6/8/10 haneli HS/CN kodu.",
+    ),
+    limit: int = Field(5, ge=1, le=12),
+) -> ClassificationEvidenceSearchResult:
+    """Retrieve official classification-regulation pages by code and product terms."""
+    return await classification_engine.search(query, code_prefix=code_prefix, limit=limit)
+
+
+@app.tool(
     app=True,
     annotations={
         "title": "Ürün evsafından en yakın üç tarife adayını getir",
@@ -2505,6 +2565,33 @@ async def lookup_tariff_measures(
 @app.tool(
     app=True,
     annotations={
+        "title": "HS/CN adayından Türk GTİP12 karar ağacını aç",
+        "readOnlyHint": True,
+        "destructiveHint": False,
+        "idempotentHint": True,
+        "openWorldHint": True,
+    },
+)
+async def resolve_turkish_tariff_tree(
+    gtip: str = Field(
+        ...,
+        pattern=r"^(?:(?:\d[. ]*){6}|(?:\d[. ]*){8}|(?:\d[. ]*){10}|(?:\d[. ]*){12})$",
+        description="Kullanıcının seçtiği 6/8/10/12 haneli tarife dalı.",
+    ),
+    origin_country: Optional[str] = Field(None, max_length=100),
+) -> TariffDecisionTreeResult:
+    """Expose every immediate official child without ranking or auto-selecting one.
+
+    Call repeatedly until GTIP12 when product evidence supports the next branch.
+    For a shorter prefix, rates are safe only when returned as unambiguous across
+    every descendant.  The tool never proves that the goods belong in a branch.
+    """
+    return await tariff_engine.decision_tree(gtip, origin_country=origin_country)
+
+
+@app.tool(
+    app=True,
+    annotations={
         "title": "Kaynaklı ithalat maliyeti hesapla",
         "readOnlyHint": True,
         "destructiveHint": False,
@@ -2527,9 +2614,9 @@ async def calculate_import_landed_cost(
     currency: str = Field("USD", min_length=3, max_length=3),
     vat_rate: Optional[float] = Field(None, ge=0, le=100, description="Resmî kaynaktan doğrulanmış ürüne özel KDV oranı."),
     kkdf_rate: Optional[float] = Field(None, ge=0, le=100, description="Ödeme şekline göre doğrulanmış KKDF oranı; uygulanmıyorsa 0."),
-    anti_dumping_amount: float = Field(0, ge=0, le=1_000_000_000, description="Ürün/üretici için doğrulanmış damping vergisi toplamı."),
-    sct_amount: float = Field(0, ge=0, le=1_000_000_000, description="Doğrulanmış ÖTV toplamı; uygulanmıyorsa 0."),
-    surveillance_unit_value: Optional[float] = Field(None, ge=0, le=1_000_000_000),
+    anti_dumping_amount: Optional[float] = Field(None, ge=0, le=1_000_000_000, description="Ürün/üretici için doğrulanmış damping vergisi toplamı; uygulanmadığı doğrulandıysa 0."),
+    sct_amount: Optional[float] = Field(None, ge=0, le=1_000_000_000, description="Doğrulanmış ÖTV toplamı; uygulanmadığı doğrulandıysa 0."),
+    surveillance_unit_value: Optional[float] = Field(None, ge=0, le=1_000_000_000, description="Gözetim birim kıymeti; uygulanmadığı doğrulandıysa 0."),
     has_surveillance_certificate: Optional[bool] = Field(None),
 ) -> dict:
     """Calculate a reproducible landed cost with official safe-to-use tariff rates.
@@ -2669,7 +2756,15 @@ async def list_ticaret_sources() -> dict:
 async def prepare_customs_precheck(
     question: str = Field(..., min_length=3, max_length=1500, description="Kullanıcının ithalat/gümrük sorusu."),
     product_description: str = Field("", max_length=2000, description="Teknik ve ticari ürün tanımı."),
-    candidate_gtip: Optional[str] = Field(None, max_length=30, description="Varsa 4/6/8/10/12 haneli aday GTİP."),
+    candidate_gtip: Optional[str] = Field(None, max_length=30, description="Varsa resmî karar ağacında kullanıcıca seçilmiş 6/8/10/12 haneli tarife kodu."),
+    tariff_selection_confirmed: bool = Field(False, description="Kodun kullanıcı tarafından resmî karar ağacında seçildiği onayı."),
+    exact_gtip_confirmed: bool = Field(False, description="Yalnızca doğrulanmış 12 haneli Türk GTİP seçildiyse true."),
+    classification_verification_status: Optional[Literal[
+        "dual_agreement", "dual_partial_agreement", "arbitrated_disagreement",
+        "unresolved_disagreement", "single_model_only",
+    ]] = Field(None, description="Bağımsız sınıflandırma modellerinin doğrulama sonucu."),
+    classification_confidence_score: Optional[int] = Field(None, ge=0, le=100, description="Resmî kanıt ve model uzlaşmasından türetilen güven puanı."),
+    classification_models: Optional[list[str]] = Field(None, max_length=3, description="Sınıflandırmada kullanılan bağımsız model kimlikleri."),
     origin_country: Optional[str] = Field(None, max_length=100, description="Menşe ülke; sevk ülkesinden ayrıdır."),
     dispatch_country: Optional[str] = Field(None, max_length=100, description="Varsa sevk/çıkış ülkesi."),
     intended_use: Optional[str] = Field(None, max_length=300, description="Ürünün kullanım amacı ve hedef kullanıcısı."),
@@ -2693,10 +2788,10 @@ async def prepare_customs_precheck(
     customs_duty_rate: Optional[float] = Field(None, ge=0, le=1000, description="Yalnızca kullanıcıca doğrulanmış oran; araç oran üretmez."),
     additional_duty_rate: Optional[float] = Field(None, ge=0, le=1000, description="Yalnızca kullanıcıca doğrulanmış İGV/ek oran."),
     additional_financial_liability_rate: Optional[float] = Field(None, ge=0, le=1000),
-    anti_dumping_amount: float = Field(0, ge=0, le=1_000_000_000),
+    anti_dumping_amount: Optional[float] = Field(None, ge=0, le=1_000_000_000),
     kkdf_rate: Optional[float] = Field(None, ge=0, le=100),
     vat_rate: Optional[float] = Field(None, ge=0, le=100, description="Yalnızca kullanıcıca doğrulanmış KDV oranı."),
-    sct_amount: float = Field(0, ge=0, le=1_000_000_000),
+    sct_amount: Optional[float] = Field(None, ge=0, le=1_000_000_000),
     surveillance_unit_value: Optional[float] = Field(None, ge=0, le=1_000_000_000),
     has_surveillance_certificate: Optional[bool] = Field(None),
 ) -> CustomsEvidencePack:
@@ -2714,6 +2809,11 @@ async def prepare_customs_precheck(
         question=question,
         product_description=product_description,
         candidate_gtip=candidate_gtip,
+        tariff_selection_confirmed=tariff_selection_confirmed,
+        exact_gtip_confirmed=exact_gtip_confirmed,
+        classification_verification_status=classification_verification_status,
+        classification_confidence_score=classification_confidence_score,
+        classification_models=classification_models or [],
         origin_country=origin_country,
         dispatch_country=dispatch_country,
         intended_use=intended_use,

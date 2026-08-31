@@ -22,6 +22,7 @@ COPY customs_sources.json ./
 COPY tariff_sources.json ./
 COPY control_sources.json ./
 COPY semantic_search/ ./semantic_search/
+COPY benchmarks/ ./benchmarks/
 COPY web/ ./web/
 
 # Install the exact audited dependency set into the project virtual environment

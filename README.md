@@ -69,7 +69,8 @@ Yeni araçlar:
 * `search_ticaret_content`: seçilen en fazla 25 belgenin tam metninde bağlamlı arama yapar.
 * `get_ticaret_catalog_status`: son yenileme, sonraki tarama, kapsam parmak izi ve kaynak hatalarını verir.
 * `prepare_customs_precheck`: ürün, aday GTİP, menşe ve maliyet girdileri için TAREKS/TSE, ürün güvenliği, kimyasallar, gümrük kıymeti, vergi ve ticaret politikası önlemlerine ilişkin tarihli resmî kanıt paketi hazırlar.
-* `sync_official_tariff_data`, `lookup_tariff_measures`, `calculate_import_landed_cost`, `compare_tariff_snapshots`: 2026 İthalat Rejimi ve İGV arşivlerini SHA-256 ile sürümler; GTİP/menşe sütununu kaynak dosya, sayfa ve satır düzeyinde gösterir.
+* `sync_official_tariff_data`, `lookup_tariff_measures`, `resolve_turkish_tariff_tree`, `calculate_import_landed_cost`, `compare_tariff_snapshots`: 2026 İthalat Rejimi ve İGV arşivlerini SHA-256 ile sürümler; GTİP/menşe sütununu kaynak dosya, sayfa ve satır düzeyinde gösterir. Karar ağacı HS6 → CN8 → Türkiye 10 → GTİP12 dallarını otomatik seçim yapmadan açar; kısa kodda oran yalnız bütün alt GTİP12 satırlarında ortaksa güvenli oran olarak döner.
+* `sync_classification_evidence`, `search_classification_evidence`: DG TAXUD'un geçerli AB sınıflandırma tüzükleri konsolide listesini metin olarak SHA-256 ile sürümler; CN kodu, tüzük referansı, sayfa ve gerekçe parçalarını aranabilir yapar. Bu veri yalnız karşılaştırmalı sınıflandırma kanıtıdır; Türkiye GTİP12 veya Türkiye vergi oranı değildir. EBTI sonuç sayfaları ve açık kullanım hakkı doğrulanmamış başvuru fotoğrafları otomatik taranmaz.
 * `sync_import_control_rules`, `lookup_import_controls`, `compare_import_control_snapshots`: güncel Ürün Güvenliği ve Denetimi tebliğlerinin kaynakta belirtilen kapsam eklerini resmî konsolide metin veya resmî ek arşivinden indeksler; liste kapsamını TAREKS risk sonucu ve fiilî denetimden ayırır. 2026/21 için yalnız kapsam oluşturan Ek-1/A–D ile Ek-2 alınır; form ekleri dışarıda bırakılır ve 168 GTİP satırı indekslenir.
 
 Kontrol tebliğlerinin ilk soğuk eşitlemesi, resmî Bedesten hız sınırına saygı göstermek için tek tek ve aralıklı yapılır; birkaç dakika sürebilir. Sonraki sorgular `/data` içindeki snapshot'tan yanıtlanır ve altı saatte bir güncellenir. `CONTROL_REQUEST_INTERVAL_SECONDS` varsayılanı `6.5` saniyedir; resmî servisin sınırını aşacak şekilde düşürülmemelidir.
@@ -78,9 +79,13 @@ Mevzuat/Resmî Gazete sunucusu geçerli TLS uç sertifikasıyla birlikte zaman z
 
 ## Gümrükçe’ye Sor
 
-Web arayüzündeki **Gümrükçe’ye Sor** sekmesi iki ayrı güvenlik aşaması kullanır. Fotoğraf cihazda önizlendikten sonra görünen **Ürünü Analiz Et** düğmesiyle kullanıcı analizi açıkça başlatır; görsel bu eylemden önce sunucuya gönderilmez. Fotoğraf yalnızca ürün evsafına çevrilir; tanım, görünen marka/model, ölçü, etiket metni, görünen ve belirsiz özellikler düzenlenebilir satırlara gelir. Kullanıcı bu alanları açıkça onaylamadan GTİP, vergi veya TAREKS araştırması başlamaz. Ardından en fazla beş **aday** kod, gerekli belgeler, kontroller ve resmî snapshot'ta menşe/dipnot bakımından tek anlamlı olan oranlar ile kullanıcı tarafından ayrıca doğrulanan mali kalemler kaynak kimlikleriyle sunulur.
+Web arayüzündeki **Gümrükçe’ye Sor** sekmesi üç güvenlik aşaması kullanır. Fotoğraf cihazda önizlendikten sonra görünen **Ürünü Analiz Et** düğmesiyle kullanıcı analizi açıkça başlatır; görsel bu eylemden önce sunucuya gönderilmez. Fotoğraf yalnızca ürün evsafına çevrilir; tanım, görünen marka/model, ölçü, etiket metni, görünen ve belirsiz özellikler düzenlenebilir satırlara gelir. Kullanıcı bu alanları açıkça onaylamadan sınıflandırma başlamaz. En fazla beş **aday** kod gösterilir fakat ilk aday otomatik seçilmez. Her aday aktif Türk tarife satırında doğrulanır ve varsa resmî AB sınıflandırma tüzüğü sayfalarıyla desteklenir. Kullanıcı bir aday seçince resmî HS6 → CN8 → Türkiye 10 → GTİP12 ağacı adım adım açılır; TAREKS kapsam sorgusu yalnız doğrulanmış 12 haneli satırda çalışır. Vergi oranları, kısa kod altında bütün GTİP12 satırlarında ortaksa gösterilir; menşe/dipnot bakımından ayrışan oranlar kesin sonuç gibi sunulmaz.
 
 Çalışma masasında ayrıca **Tarife & Maliyet**, **Kontroller & Belgeler**, **Değişiklikler** ve **İşlem Rehberi** sekmeleri bulunur. Tarife ekranı resmî workbook/sheet/row ve arşiv checksum'unu; kontrol ekranı tebliğ Ek-1 satırını, yetkili sistemi ve risk uyarısını; değişiklik ekranı snapshot farklarını, cihazdaki GTİP izleme listesini ve kaydedilmiş ön değerlendirmeleri gösterir.
+
+Maliyet motoru gümrük vergisi ve İGV dışında ek mali yükümlülük, damping/sübvansiyon, KKDF, KDV, ÖTV ve gözetim kalemlerini de ayrı ayrı ister. Yapılandırılmış canlı kaynağa henüz bağlanmamış bir kalem otomatik olarak `0` kabul edilmez: kullanıcı resmî kaynaktan uygulanmadığını doğruladıysa `0` girmeli, aksi halde toplam maliyet bilinçli olarak eksik bırakılır. Sonuçtaki kapsam matrisi her kalemi `verified_snapshot`, `partial_snapshot`, `not_integrated` veya `user_confirmation_required` olarak açıkça gösterir.
+
+Sınıflandırma kalitesi [customs_classification_v1.jsonl](benchmarks/customs_classification_v1.jsonl) içindeki kaynak URL'si, sayfa, tüzük numarası ve arşiv SHA-256 değeri sabitlenmiş resmî AB karar örnekleriyle ölçülür. `customs_benchmark.py` Top-1/Top-3 HS6 ve CN8 metriklerini ayrı hesaplar. Bu başlangıç veri seti Türk GTİP12 performans iddiası değildir; doğrulanmış Türk BTB örnekleri hukuken kullanılabilir biçimde sağlandıkça ayrı bir GTİP12 test katmanı eklenmelidir.
 
 * Fotoğraf tek başına kesin veya bağlayıcı GTİP üretmez. Kesin sınıflandırma için teknik belge ve gerektiğinde Bağlayıcı Tarife Bilgisi gerekir.
 * Güvenlik sorusu/CAPTCHA kullanan Bakanlık Tarife Arama Motoru otomatik aşılmaz; sonuçlarda yalnızca manuel doğrulama bağlantısı olarak yer alır.
@@ -88,12 +93,13 @@ Web arayüzündeki **Gümrükçe’ye Sor** sekmesi iki ayrı güvenlik aşamas�
 * EBTI metinleri ve resmî indirme verileri kaynak olarak kullanılabilir. Açık kullanım hakkı teyit edilmemiş EBTI ürün görselleri topluca kopyalanmaz ve model eğitimine alınmaz.
 * Her sonuç tarihli resmî kaynak zinciri, belirsizlikler ve zorunlu hukuki uyarıyla birlikte döner. Sistem yüzde yüz doğruluk veya bağlayıcı idari karar iddiasında bulunmaz.
 
-Görsel evsaf çıkarımı ve resmî kanıt paketinin yorumlanması tek bir OpenRouter anahtarıyla çalışır. OpenRouter, listedeki modelleri sırayla dener; bir modelin sağlayıcıları hata verir, hız sınırına takılır veya yanıtı reddederse sonraki modele geçer. Varsayılan zincir **Gemini → GLM 5.3 Flash → Grok → GPT → Claude** şeklindedir:
+Görsel evsaf çıkarımı ve resmî kanıt paketinin yorumlanması tek bir OpenRouter anahtarıyla çalışır. Görsel analizde modeller sırayla yedeklenir. Tarife sınıflandırmasında ise Gemini ve GLM 5.3 Flash aynı onaylı evsafı birbirinden bağımsız değerlendirir; ilk kodları ayrışırsa Grok/GPT/Claude zincirindeki ilk kullanılabilir farklı model hakem olur. Güven puanı modelin kendi iddiasından değil, bağımsız model uzlaşması, aktif Türk tarife satırı, resmî sınıflandırma gerekçesi ve eksik ayırt edici evsaftan hesaplanır. Varsayılan zincir **Gemini → GLM 5.3 Flash → Grok → GPT → Claude** şeklindedir:
 
 ```text
 OPENROUTER_API_KEY=<sunucuda gizli değer>
 OPENROUTER_VISION_MODELS=~google/gemini-flash-latest,z-ai/glm-5.3-flash,~x-ai/grok-latest,openai/gpt-chat-latest,~anthropic/claude-opus-latest
 OPENROUTER_CUSTOMS_MODELS=~google/gemini-flash-latest,z-ai/glm-5.3-flash,~x-ai/grok-latest,openai/gpt-chat-latest,~anthropic/claude-opus-latest
+CLASSIFICATION_SYNC_INTERVAL_SECONDS=86400
 ```
 
 Her çağrı katı JSON şeması ve `require_parameters=true` kullanır; bu nedenle görsel giriş veya yapılandırılmış çıktı desteği olmayan uçlar seçilmez. `data_collection=deny`, istemleri veri saklayabilen sağlayıcı uçlarına göndermemek için zorunludur. Nano Banana bir görsel üretim/düzenleme modelidir ve bu metin çıkarım akışında kullanılmaz. Model ürün adı, kategori, kapsamlı tanım, bileşim, kullanım, görünür menşe ibaresi, marka/model, ölçü, etiket, renk, fiziksel yapı, parçalar, çalışma mekanizması, ambalaj ve sınıflandırma sorularını ayrı alanlara çıkarır. Görselden belirlenemeyen menşe, teknik değer ve maliyet girdilerini uydurmak yerine kullanıcıya tamamlanacak bilgi olarak gösterir.
@@ -112,7 +118,7 @@ Web araştırma uygulaması: `https://mevzuat-mcp.seymata.com/app`
 
 Arayüzde Ticaret Bakanlığının yedi bilgi katmanı canlı kayıt sayılarıyla ayrı gösterilir; kaynak, belge türü, yıl ve mülga durumu filtrelenebilir. Seçilen kaydın resmî kaynak zinciri, tam metni ve kopyalanabilir atfı aynı ekranda açılır. **Genel mevzuat** görünümü Bedesten resmî servisine bağlı ayrı arama alanıdır.
 
-> Coolify dağıtımı v1.6.0 sağlık, web arayüzü ve MCP araç taramasıyla doğrulanır. Snapshot verilerini kalıcı tutmak için uygulamada `/data` hedefine persistent volume bağlayın; imaj `MEVZUAT_DATA_DIR=/data` ile hazır gelir.
+> Coolify dağıtımı v1.7.0 sağlık, web arayüzü ve MCP araç taramasıyla doğrulanır. Snapshot verilerini kalıcı tutmak için uygulamada `/data` hedefine persistent volume bağlayın; imaj `MEVZUAT_DATA_DIR=/data` ile hazır gelir.
 
 ### Google ile giriş ve SEO
 
@@ -344,7 +350,7 @@ CB Kararı ve CB Genelgesi gibi PDF tabanlı mevzuatlar için Mistral OCR kullan
 ---
 🛠️ **Kullanılabilir Araçlar (MCP Tools)**
 
-Bu FastMCP sunucusu LLM modelleri için **39 araç** sunar (üç resmî kaynak ailesi).
+Bu FastMCP sunucusu LLM modelleri için **43 araç** sunar (üç resmî kaynak ailesi).
 
 ### A. mevzuat.gov.tr Araçları (21 araç)
 

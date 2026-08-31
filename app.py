@@ -28,6 +28,7 @@ from customs_advisor import CustomsInquiry, ProductClassificationRequest
 from mevzuat_mcp_server import (
     _BED_VALID_TYPES,
     bedesten_client,
+    classification_engine,
     control_engine,
     customs_advisor_service,
     tariff_engine,
@@ -564,6 +565,7 @@ async def web_delete_account(request: Request):
 def _dossier_evidence() -> dict[str, Any]:
     tariff_status = tariff_engine.status().model_dump(mode="json")
     control_status = control_engine.status().model_dump(mode="json")
+    classification_status = classification_engine.status().model_dump(mode="json")
     return {
         "generated_at": datetime.now(UTC).isoformat(timespec="seconds"),
         "tariff": {
@@ -575,6 +577,12 @@ def _dossier_evidence() -> dict[str, Any]:
             "last_checked_at": control_status.get("last_checked_at"),
             "active_snapshots": control_status.get("active_snapshots", []),
             "errors": control_status.get("errors", []),
+        },
+        "classification_evidence": {
+            "last_checked_at": classification_status.get("last_checked_at"),
+            "active_sha256": classification_status.get("active_sha256"),
+            "page_count": classification_status.get("page_count", 0),
+            "errors": classification_status.get("errors", []),
         },
         "legal_notice": (
             "Bu dosya oluşturulduğu andaki kanuni metinler ve resmî veri anlık görüntüleriyle hazırlanmıştır. "
@@ -1158,6 +1166,36 @@ async def web_tariff_status(request: Request):
     return JSONResponse(tariff_engine.status().model_dump(mode="json"))
 
 
+@mcp.custom_route("/api/classification/status", methods=["GET"])
+async def web_classification_status(request: Request):
+    limited = _rate_limit_response(request, "classification-status", limit=60, window_seconds=60)
+    if limited:
+        return limited
+    return JSONResponse(classification_engine.status().model_dump(mode="json"))
+
+
+@mcp.custom_route("/api/classification/evidence", methods=["POST"])
+async def web_classification_evidence(request: Request):
+    limited = _rate_limit_response(request, "classification-evidence", limit=20, window_seconds=60)
+    if limited:
+        return limited
+    try:
+        body = await request.json()
+        if not isinstance(body, dict):
+            raise ValueError("Sınıflandırma kanıt isteği bir nesne olmalıdır.")
+        result = await classification_engine.search(
+            str(body.get("query", ""))[:500],
+            code_prefix=str(body.get("code_prefix", "")).strip() or None,
+            limit=max(1, min(int(body.get("limit", 5)), 12)),
+        )
+        return JSONResponse(result.model_dump(mode="json"))
+    except (TypeError, ValueError, ValidationError) as exc:
+        return JSONResponse({"error": str(exc)}, status_code=422)
+    except Exception:
+        logger.exception("Classification evidence lookup failed")
+        return JSONResponse({"error": "Resmî sınıflandırma kanıtları şu anda sorgulanamadı."}, status_code=502)
+
+
 @mcp.custom_route("/api/tariff/lookup", methods=["POST"])
 async def web_tariff_lookup(request: Request):
     """Look up official customs/IGV rows for a 6/8/10/12 digit tariff code and origin."""
@@ -1178,6 +1216,28 @@ async def web_tariff_lookup(request: Request):
     except Exception:
         logger.exception("Tariff lookup failed")
         return JSONResponse({"error": "Resmî tarife tabloları şu anda sorgulanamadı."}, status_code=502)
+
+
+@mcp.custom_route("/api/tariff/tree", methods=["POST"])
+async def web_tariff_tree(request: Request):
+    """Return the next deterministic HS6/CN8/TR10/GTIP12 branches."""
+    limited = _rate_limit_response(request, "tariff-tree", limit=60, window_seconds=60)
+    if limited:
+        return limited
+    try:
+        body = await request.json()
+        if not isinstance(body, dict):
+            raise ValueError("Tarife karar ağacı isteği bir nesne olmalıdır.")
+        result = await tariff_engine.decision_tree(
+            str(body.get("gtip", "")),
+            origin_country=str(body.get("origin_country", "")).strip() or None,
+        )
+        return JSONResponse(result.model_dump(mode="json"))
+    except (ValueError, ValidationError) as exc:
+        return JSONResponse({"error": str(exc)}, status_code=422)
+    except Exception:
+        logger.exception("Tariff decision tree failed")
+        return JSONResponse({"error": "Resmî GTİP karar ağacı şu anda hazırlanamadı."}, status_code=502)
 
 
 @mcp.custom_route("/api/tariff/cost", methods=["POST"])
@@ -1257,14 +1317,17 @@ async def health_check(request):
     """Health check endpoint for Coolify and other monitoring services."""
     tariff_status = tariff_engine.status()
     control_status = control_engine.status()
+    classification_status = classification_engine.status()
     return JSONResponse({
         "status": "healthy",
         "service": "Mevzuat MCP Server",
-        "version": "1.6.0",
+        "version": "1.7.0",
         "tariff_ready": tariff_status.ready,
         "tariff_measures": tariff_status.measure_count,
         "controls_ready": control_status.ready,
         "control_scope_rows": control_status.scope_count,
+        "classification_evidence_ready": classification_status.ready,
+        "classification_evidence_pages": classification_status.page_count,
     })
 
 class McpRateLimitMiddleware:

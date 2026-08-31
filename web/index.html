@@ -214,13 +214,23 @@
               <div class="product-fields">
                 <label class="field"><span>Ürün tanımı <b>*</b></span><textarea id="productDescription" maxlength="2000" required placeholder="Ürünün adı, işlevi, marka/modeli, ölçüsü ve teknik özellikleri"></textarea></label>
                 <div class="field-row">
-                  <label class="field"><span>Aday HS / CN / GTİP</span><input id="candidateGtip" maxlength="30" inputmode="numeric" placeholder="6, 8, 10 veya 12 hane"></label>
+                  <label class="field"><span>Seçilen HS / CN / Türk GTİP</span><input id="candidateGtip" maxlength="30" inputmode="numeric" placeholder="Aday seçin veya 6, 8, 10, 12 hane yazın"></label>
                   <label class="field"><span>Menşe ülke <b>*</b></span><input id="originCountry" maxlength="100" required placeholder="Örn. Çin"></label>
                 </div>
                 <section class="gtip-suggestions" id="gtipSuggestions" hidden aria-live="polite">
                   <header><b>En yakın tarife adayları</b><small id="gtipSuggestionStatus">Evsaf onayından sonra hazırlanır.</small></header>
                   <div id="gtipSuggestionList"></div>
-                  <p>Bir adaya tıklayın; kod yukarıdaki kutuya yerleşir. Kod ve oranlar bağlayıcı değildir.</p>
+                  <p>Bir aday seçtiğinizde Türk tarife ağacının alt dalları açılır. Sistem ilk adayı kendiliğinden seçmez.</p>
+                </section>
+                <section class="tariff-tree" id="tariffTree" hidden aria-live="polite" aria-labelledby="tariffTreeTitle">
+                  <header>
+                    <div><span class="eyebrow">Resmî tarife dalları</span><h3 id="tariffTreeTitle">Türk GTİP12 karar ağacı</h3></div>
+                    <small id="tariffTreeStatus">Bir HS/CN adayı seçin.</small>
+                  </header>
+                  <div class="tariff-tree-path" id="tariffTreePath" aria-label="Seçilen tarife yolu"></div>
+                  <div class="tariff-tree-questions" id="tariffTreeQuestions" hidden></div>
+                  <div class="tariff-tree-list" id="tariffTreeList"></div>
+                  <p id="tariffTreeNotice">Alt kod, yalnızca doğruladığınız ürün evsafına göre seçilmelidir.</p>
                 </section>
                 <label class="field"><span>Malzeme / elyaf bileşimi ve oranı</span><input id="composition" maxlength="500" placeholder="Örn. %60 pamuk, %40 polyester; paslanmaz çelik 304"></label>
                 <p class="product-file-status" id="productFileStatus" data-state="waiting">Görsel analizi tamamlandığında temel evsaflar önce bu ürün dosyasına işlenir.</p>
@@ -286,12 +296,19 @@
                 <label class="field"><span>Navlun</span><input id="freight" type="number" min="0" step="0.01" placeholder="0,00"></label>
                 <label class="field"><span>Sigorta</span><input id="insurance" type="number" min="0" step="0.01" placeholder="0,00"></label>
                 <label class="field"><span>Diğer tescil öncesi gider</span><input id="otherCosts" type="number" min="0" step="0.01" placeholder="0,00"></label>
+                <label class="field"><span>Miktar / adet</span><input id="quantity" type="number" min="0.0001" step="0.0001" placeholder="Birim maliyet için"></label>
                 <label class="field"><span>Para birimi</span><select id="currency"><option>USD</option><option>EUR</option><option>TRY</option><option>GBP</option><option>CNY</option></select></label>
                 <label class="field verified-rate"><span>Doğrulanmış gümrük vergisi %</span><input id="customsDutyRate" type="number" min="0" max="1000" step="0.01" placeholder="Bilmiyorsanız boş"></label>
                 <label class="field verified-rate"><span>Doğrulanmış İGV / ek vergi %</span><input id="additionalDutyRate" type="number" min="0" max="1000" step="0.01" placeholder="Bilmiyorsanız boş"></label>
+                <label class="field verified-rate"><span>Ek mali yükümlülük %</span><input id="additionalFinancialLiabilityRate" type="number" min="0" max="1000" step="0.01" placeholder="Yoksa doğrulayıp 0"></label>
+                <label class="field verified-rate"><span>KKDF %</span><input id="kkdfRate" type="number" min="0" max="100" step="0.01" placeholder="Yoksa doğrulayıp 0"></label>
                 <label class="field verified-rate"><span>Doğrulanmış KDV %</span><input id="vatRate" type="number" min="0" max="100" step="0.01" placeholder="Bilmiyorsanız boş"></label>
+                <label class="field verified-rate"><span>Damping / sübvansiyon toplamı</span><input id="antiDumpingAmount" type="number" min="0" step="0.01" placeholder="Yoksa doğrulayıp 0"></label>
+                <label class="field verified-rate"><span>ÖTV toplamı</span><input id="sctAmount" type="number" min="0" step="0.01" placeholder="Yoksa doğrulayıp 0"></label>
+                <label class="field verified-rate"><span>Gözetim birim kıymeti</span><input id="surveillanceUnitValue" type="number" min="0" step="0.0001" placeholder="Yoksa doğrulayıp 0"></label>
+                <label class="field verified-rate"><span>Gözetim belgesi</span><select id="hasSurveillanceCertificate"><option value="">Belirtilmedi</option><option value="true">Var</option><option value="false">Yok</option></select></label>
               </div>
-              <p class="rate-warning">Bu üç oran yalnızca resmî kaynaktan veya müşavirinizden doğruladıysanız girilmelidir.</p>
+              <p class="rate-warning">Her mali kalem resmî kaynaktan veya müşavirinizden doğrulanmalıdır. Uygulanmayan kaleme boş bırakmak yerine doğruladıktan sonra 0 yazın; boş kalan kalem toplam maliyeti bilinçli olarak durdurur.</p>
             </details>
 
             <div class="consent-line"><span aria-hidden="true">!</span><p>Fotoğraf yalnızca evsaf çıkarır; kesin GTİP sayılmaz. Güvenlik sorulu Tarife Arama Motoru otomatik aşılmaz ve yalnızca manuel doğrulama bağlantısı olarak gösterilir.</p></div>

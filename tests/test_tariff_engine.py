@@ -78,6 +78,8 @@ class LandedCostTests(unittest.TestCase):
         self.assertEqual(result.status, "partial")
         self.assertIsNone(result.landed_total)
         self.assertIn("Gümrük vergisi oranı", result.missing_rates)
+        self.assertIn("Damping/sübvansiyon önlemi (uygulanmıyorsa 0)", result.missing_rates)
+        self.assertIn("Gözetim birim kıymeti (uygulanmıyorsa 0)", result.missing_rates)
 
     def test_full_formula_is_reproducible(self) -> None:
         result = calculate_landed_cost(
@@ -89,7 +91,12 @@ class LandedCostTests(unittest.TestCase):
                 quantity=10,
                 customs_duty_rate=10,
                 additional_duty_rate=5,
+                additional_financial_liability_rate=0,
+                anti_dumping_amount=0,
+                kkdf_rate=0,
                 vat_rate=20,
+                sct_amount=0,
+                surveillance_unit_value=0,
             )
         )
         self.assertEqual(result.status, "complete")
@@ -106,7 +113,11 @@ class LandedCostTests(unittest.TestCase):
                 has_surveillance_certificate=False,
                 customs_duty_rate=0,
                 additional_duty_rate=0,
+                additional_financial_liability_rate=0,
+                anti_dumping_amount=0,
+                kkdf_rate=0,
                 vat_rate=20,
+                sct_amount=0,
             )
         )
         self.assertEqual(result.customs_value, 2000)
@@ -179,6 +190,8 @@ class TariffPrefixLookupTests(unittest.IsolatedAsyncioTestCase):
         self.assertIn("additional_duty", result.ambiguous_measure_types)
         self.assertTrue(any(item.country_group == "DÜ" for item in result.measures))
         self.assertEqual(result.status, "partial")
+        self.assertEqual(result.measure_coverage["anti_dumping"].status, "not_integrated")
+        self.assertIn("anti_dumping", result.unresolved_measure_types)
 
     async def test_eight_digit_prefix_calculates_when_all_sublines_share_rates(self) -> None:
         for suffix, row in (("0011", "1"), ("0022", "2")):
@@ -191,6 +204,30 @@ class TariffPrefixLookupTests(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(result.unambiguous_rates, {"customs_duty": 5.0, "additional_duty": 12.0})
         self.assertEqual(result.ambiguous_measure_types, [])
         self.assertEqual(result.status, "matched")
+
+    async def test_decision_tree_exposes_each_level_without_auto_selecting(self) -> None:
+        for suffix, rate in (("001111", 5), ("002222", 7), ("991111", 9)):
+            gtip = f"123456{suffix}"
+            self._insert_measure(f"tree-{suffix}", "import-2026", gtip, "customs_duty", rate, "7")
+
+        hs6 = await self.engine.decision_tree("123456", origin_country="Çin", auto_sync=False)
+        self.assertEqual([child.code for child in hs6.children], ["12345600", "12345699"])
+        self.assertTrue(hs6.requires_user_selection)
+        self.assertFalse(hs6.exact_gtip_selected)
+        self.assertEqual(hs6.children[0].descendant_count, 2)
+
+        cn8 = await self.engine.decision_tree("12345600", origin_country="Çin", auto_sync=False)
+        self.assertEqual([child.code for child in cn8.children], ["1234560011", "1234560022"])
+        self.assertEqual(cn8.next_level, "TR10")
+
+        tr10 = await self.engine.decision_tree("1234560011", origin_country="Çin", auto_sync=False)
+        self.assertEqual([child.code for child in tr10.children], ["123456001111"])
+        self.assertTrue(tr10.children[0].final)
+
+        exact = await self.engine.decision_tree("123456001111", origin_country="Çin", auto_sync=False)
+        self.assertTrue(exact.exact_gtip_selected)
+        self.assertFalse(exact.requires_user_selection)
+        self.assertEqual(exact.children, [])
 
 
 if __name__ == "__main__":

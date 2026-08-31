@@ -11,6 +11,7 @@ import asyncio
 import base64
 import io
 import json
+import logging
 import os
 import re
 import time
@@ -23,9 +24,10 @@ from urllib.parse import urljoin, urlsplit
 import httpx
 from bs4 import BeautifulSoup
 from PIL import Image, ImageOps, UnidentifiedImageError
-from pydantic import BaseModel, Field, field_validator
+from pydantic import BaseModel, Field, field_validator, model_validator
 
 from control_engine import ImportControlEngine, ImportControlLookupResult
+from classification_evidence import ClassificationEvidenceEngine, ClassificationEvidenceHit
 from security_firewall import (
     redact_data,
     sanitize_untrusted_context,
@@ -38,7 +40,10 @@ from tariff_engine import (
     calculate_landed_cost,
 )
 
+logger = logging.getLogger(__name__)
+
 _GTIP_RE = re.compile(r"^\d{4}(?:\d{2}){0,4}$")
+_SELECTED_TARIFF_RE = re.compile(r"^\d{6}(?:\d{2}){0,3}$")
 _ALLOWED_IMAGE_TYPES = {"image/jpeg", "image/png", "image/webp"}
 _ALLOWED_SOURCE_HOSTS = {
     "ticaret.gov.tr",
@@ -83,6 +88,17 @@ class CustomsInquiry(BaseModel):
     question: str = Field(..., min_length=3, max_length=1500)
     product_description: str = Field("", max_length=2000)
     candidate_gtip: str | None = Field(None, max_length=30)
+    tariff_selection_confirmed: bool = False
+    exact_gtip_confirmed: bool = False
+    classification_verification_status: Literal[
+        "dual_agreement",
+        "dual_partial_agreement",
+        "arbitrated_disagreement",
+        "unresolved_disagreement",
+        "single_model_only",
+    ] | None = None
+    classification_confidence_score: int | None = Field(None, ge=0, le=100)
+    classification_models: list[str] = Field(default_factory=list, max_length=3)
     origin_country: str | None = Field(None, max_length=100)
     dispatch_country: str | None = Field(None, max_length=100)
     intended_use: str | None = Field(None, max_length=300)
@@ -116,10 +132,10 @@ class CustomsInquiry(BaseModel):
     customs_duty_rate: float | None = Field(None, ge=0, le=1000)
     additional_duty_rate: float | None = Field(None, ge=0, le=1000)
     additional_financial_liability_rate: float | None = Field(None, ge=0, le=1000)
-    anti_dumping_amount: float = Field(0, ge=0, le=1_000_000_000)
+    anti_dumping_amount: float | None = Field(None, ge=0, le=1_000_000_000)
     kkdf_rate: float | None = Field(None, ge=0, le=100)
     vat_rate: float | None = Field(None, ge=0, le=100)
-    sct_amount: float = Field(0, ge=0, le=1_000_000_000)
+    sct_amount: float | None = Field(None, ge=0, le=1_000_000_000)
     surveillance_unit_value: float | None = Field(None, ge=0, le=1_000_000_000)
     has_surveillance_certificate: bool | None = None
 
@@ -127,9 +143,17 @@ class CustomsInquiry(BaseModel):
     @classmethod
     def validate_gtip(cls, value: str | None) -> str | None:
         normalised = _normalise_gtip(value)
-        if normalised and not _GTIP_RE.fullmatch(normalised):
-            raise ValueError("GTİP 4, 6, 8, 10 veya 12 rakam olmalıdır.")
+        if normalised and not _SELECTED_TARIFF_RE.fullmatch(normalised):
+            raise ValueError("Tarife kodu 6, 8, 10 veya 12 rakam olmalıdır.")
         return normalised
+
+    @model_validator(mode="after")
+    def validate_tariff_confirmation(self) -> "CustomsInquiry":
+        if self.candidate_gtip and not self.tariff_selection_confirmed:
+            raise ValueError("Tarife kodu, resmî karar ağacında kullanıcı tarafından seçilip doğrulanmalıdır.")
+        if self.exact_gtip_confirmed and len(self.candidate_gtip or "") != 12:
+            raise ValueError("Kesin alt GTİP onayı yalnızca 12 haneli Türk GTİP için verilebilir.")
+        return self
 
     @field_validator("currency")
     @classmethod
@@ -138,6 +162,18 @@ class CustomsInquiry(BaseModel):
         if not value.isalpha():
             raise ValueError("Para birimi üç harfli olmalıdır.")
         return value
+
+    @field_validator("classification_models")
+    @classmethod
+    def validate_classification_models(cls, values: list[str]) -> list[str]:
+        cleaned: list[str] = []
+        for value in values:
+            model = value.strip()
+            if not model or len(model) > 120 or not re.fullmatch(r"[A-Za-z0-9._:/@+-]+", model):
+                raise ValueError("Sınıflandırma model kimliği geçersizdir.")
+            if model not in cleaned:
+                cleaned.append(model)
+        return cleaned
 
 
 class EvidenceSource(BaseModel):
@@ -150,6 +186,7 @@ class EvidenceSource(BaseModel):
     source_updated_at: str | None = None
     fetch_warning: str | None = None
     access_mode: Literal["automated", "manual_only"] = "automated"
+    sha256: str | None = Field(None, pattern=r"^[a-f0-9]{64}$")
 
 
 class ProductAttributeAnalysis(BaseModel):
@@ -228,11 +265,24 @@ class VerifiedTariffCandidate(TariffCandidateDraft):
     additional_financial_liability_rate: float | None = None
     rate_variants: dict[str, list[float]] = Field(default_factory=dict)
     rate_status: Literal["unambiguous", "ambiguous", "origin_required"] = "origin_required"
+    classification_evidence: list[ClassificationEvidenceHit] = Field(default_factory=list, max_length=5)
+    confidence_score: int = Field(0, ge=0, le=100)
+    model_votes: int = Field(1, ge=1, le=3)
+    agreement_status: Literal["exact", "same_hs6", "single_model", "disputed"] = "single_model"
+    confidence_factors: list[str] = Field(default_factory=list, max_length=10)
 
 
 class ProductClassificationResult(BaseModel):
     status: Literal["candidates_found", "insufficient_information"]
     model: str
+    models: list[str] = Field(default_factory=list)
+    verification_status: Literal[
+        "dual_agreement",
+        "dual_partial_agreement",
+        "arbitrated_disagreement",
+        "unresolved_disagreement",
+        "single_model_only",
+    ] = "single_model_only"
     candidates: list[VerifiedTariffCandidate] = Field(default_factory=list)
     missing_information: list[str] = Field(default_factory=list)
     summary: str
@@ -296,6 +346,27 @@ class CustomsPrecheckResult(BaseModel):
     sources: list[EvidenceSource] = Field(default_factory=list)
     legal_notice: str
     safety_notes: list[str] = Field(default_factory=list)
+    inquiry: CustomsInquiry
+    expert_review_packet: "ExpertReviewPacket"
+
+
+class ExpertReviewPacket(BaseModel):
+    risk_level: Literal["moderate", "high", "critical"]
+    escalation_required: bool
+    review_types: list[Literal["BTB", "gümrük_müşaviri", "yetkili_kurum"]] = Field(default_factory=list)
+    reasons: list[str] = Field(default_factory=list)
+    selected_tariff_code: str | None = None
+    classification_path: list[str] = Field(default_factory=list)
+    classification_verification_status: str | None = None
+    classification_confidence_score: int | None = None
+    unresolved_measure_types: list[str] = Field(default_factory=list)
+    questions_for_reviewer: list[str] = Field(default_factory=list)
+    official_sources: list[dict[str, str | None]] = Field(default_factory=list)
+    tariff_snapshot_sha256: list[str] = Field(default_factory=list)
+    control_document_sha256: list[str] = Field(default_factory=list)
+    classification_snapshot_sha256: list[str] = Field(default_factory=list)
+    generated_at: str
+    legal_notice: str
 
 
 class CustomsEvidencePack(BaseModel):
@@ -892,6 +963,87 @@ def _evidence_prompt(pack: CustomsEvidencePack) -> str:
     )
 
 
+def _expert_review_packet(pack: CustomsEvidencePack) -> ExpertReviewPacket:
+    inquiry = pack.inquiry
+    reasons: list[str] = []
+    review_types: list[Literal["BTB", "gümrük_müşaviri", "yetkili_kurum"]] = []
+    questions = list(pack.missing_information)
+    code = inquiry.candidate_gtip or None
+    if not inquiry.exact_gtip_confirmed or not code or len(code) != 12:
+        reasons.append("12 haneli Türk GTİP, ürün evsafıyla kesinleştirilmemiştir.")
+        review_types.append("BTB")
+        questions.append("Eşyanın teknik evsafı hangi 12 haneli Türk GTİP satırını destekliyor?")
+    if inquiry.classification_verification_status not in {"dual_agreement", "dual_partial_agreement"}:
+        reasons.append("Bağımsız model doğrulaması tam uzlaşma göstermemiş veya sonucu dosyaya aktarılmamıştır.")
+        review_types.append("BTB")
+    if inquiry.classification_confidence_score is None or inquiry.classification_confidence_score < 80:
+        reasons.append("Kanıta dayalı sınıflandırma güven puanı 80 eşiğinin altındadır veya belirtilmemiştir.")
+        review_types.append("BTB")
+
+    unresolved = list(pack.tariff_lookup.unresolved_measure_types) if pack.tariff_lookup else []
+    if unresolved:
+        reasons.append("Bazı mali/ticaret politikası kalemleri yapılandırılmış canlı kaynaktan kesinleşmemiştir.")
+        review_types.append("gümrük_müşaviri")
+        questions.append("Damping, gözetim, korunma, tarife kontenjanı, KDV, KKDF ve ÖTV uygulanabilirliği nedir?")
+    if pack.deterministic_cost is None or pack.deterministic_cost.get("status") == "rates_missing":
+        reasons.append("Toplam ithalat maliyetinde doğrulanmamış kalemler vardır.")
+        review_types.append("gümrük_müşaviri")
+    if pack.control_lookup and pack.control_lookup.matches:
+        reasons.append("GTİP en az bir güncel kontrol tebliği kapsam satırıyla eşleşmiştir.")
+        review_types.append("yetkili_kurum")
+        questions.append("Ürün teknik kapsamda mıdır; muafiyet, TAREKS başvurusu veya kurum izni gerekir mi?")
+    if inquiry.condition == "used":
+        reasons.append("Kullanılmış eşya ithalatı ayrıca izin ve yaş/teknik şart incelemesi gerektirebilir.")
+        review_types.extend(["gümrük_müşaviri", "yetkili_kurum"])
+
+    review_types = list(dict.fromkeys(review_types))
+    questions = list(dict.fromkeys(question for question in questions if question))
+    critical = (not inquiry.exact_gtip_confirmed and bool(unresolved)) or bool(pack.control_lookup and pack.control_lookup.matches)
+    risk_level: Literal["moderate", "high", "critical"] = "critical" if critical else ("high" if reasons else "moderate")
+    path = []
+    if code:
+        path = [code[:length] for length in (6, 8, 10, 12) if len(code) >= length]
+    official_sources = [
+        {
+            "id": source.id,
+            "title": source.title,
+            "url": source.url,
+            "retrieved_at": source.retrieved_at,
+            "source_updated_at": source.source_updated_at,
+            "sha256": source.sha256,
+        }
+        for source in pack.sources
+        if source.excerpt
+    ]
+    return ExpertReviewPacket(
+        risk_level=risk_level,
+        escalation_required=bool(reasons),
+        review_types=review_types,
+        reasons=reasons,
+        selected_tariff_code=code,
+        classification_path=path,
+        classification_verification_status=inquiry.classification_verification_status,
+        classification_confidence_score=inquiry.classification_confidence_score,
+        unresolved_measure_types=unresolved,
+        questions_for_reviewer=questions,
+        official_sources=official_sources,
+        tariff_snapshot_sha256=list(dict.fromkeys(
+            source.sha256 for source in pack.sources
+            if source.sha256 and source.id.startswith("tariff_")
+        )),
+        control_document_sha256=list(dict.fromkeys(
+            source.sha256 for source in pack.sources
+            if source.sha256 and source.id.startswith("control_")
+        )),
+        classification_snapshot_sha256=list(dict.fromkeys(
+            source.sha256 for source in pack.sources
+            if source.sha256 and source.id.startswith("classreg_")
+        )),
+        generated_at=pack.as_of,
+        legal_notice=pack.legal_notice,
+    )
+
+
 _SYSTEM_INSTRUCTIONS = """
 Sen Türkiye ithalat mevzuatı için kanıt-temelli bir ön değerlendirme yardımcısısın.
 Bu bir bağlayıcı tarife kararı, gümrük müşavirliği hizmeti veya hukuki görüş değildir.
@@ -944,10 +1096,12 @@ class CustomsAdvisor:
         registry: OfficialSourceRegistry | None = None,
         tariff_engine: TariffEngine | None = None,
         control_engine: ImportControlEngine | None = None,
+        classification_engine: ClassificationEvidenceEngine | None = None,
     ) -> None:
         self.registry = registry or OfficialSourceRegistry()
         self.tariff_engine = tariff_engine
         self.control_engine = control_engine
+        self.classification_engine = classification_engine
 
     async def close(self) -> None:
         await self.registry.close()
@@ -983,10 +1137,16 @@ class CustomsAdvisor:
                         ),
                         retrieved_at=measure.retrieved_at,
                         source_updated_at=measure.valid_from,
+                        sha256=measure.archive_sha256,
                     )
                 )
         control_sources: list[EvidenceSource] = []
-        if self.control_engine and inquiry.candidate_gtip and len(inquiry.candidate_gtip) == 12:
+        if (
+            self.control_engine
+            and inquiry.candidate_gtip
+            and len(inquiry.candidate_gtip) == 12
+            and inquiry.exact_gtip_confirmed
+        ):
             control_lookup = await self.control_engine.lookup(inquiry.candidate_gtip)
             for index, match in enumerate(control_lookup.matches):
                 rule = match.rule
@@ -1003,9 +1163,38 @@ class CustomsAdvisor:
                         ),
                         retrieved_at=rule.retrieved_at,
                         source_updated_at=rule.official_gazette_date or rule.valid_from,
+                        sha256=rule.document_sha256,
                     )
                 )
-        sources = [*await self.registry.gather(inquiry), *tariff_sources, *control_sources]
+        classification_sources: list[EvidenceSource] = []
+        if self.classification_engine and inquiry.candidate_gtip:
+            classification_lookup = await self.classification_engine.search(
+                inquiry.product_description,
+                code_prefix=inquiry.candidate_gtip[:8],
+                limit=5,
+            )
+            for hit in classification_lookup.hits:
+                classification_sources.append(
+                    EvidenceSource(
+                        id=hit.id,
+                        title=hit.title,
+                        authority=hit.authority,
+                        url=hit.url,
+                        excerpt=(
+                            f"Kodlar: {', '.join(hit.codes) or 'sayfada ayrıştırılamadı'}. "
+                            f"Tüzük referansları: {', '.join(hit.regulation_references) or 'sayfada ayrıştırılamadı'}. "
+                            f"{hit.excerpt} {hit.legal_effect} Arşiv SHA-256: {hit.archive_sha256}."
+                        ),
+                        retrieved_at=hit.retrieved_at,
+                        sha256=hit.archive_sha256,
+                    )
+                )
+        sources = [
+            *await self.registry.gather(inquiry),
+            *tariff_sources,
+            *control_sources,
+            *classification_sources,
+        ]
         return CustomsEvidencePack(
             inquiry=inquiry,
             as_of=as_of,
@@ -1051,34 +1240,73 @@ class CustomsAdvisor:
         self,
         request: ProductClassificationRequest,
     ) -> ProductClassificationResult:
-        """Suggest up to three HS6/CN8 candidates and verify them in the official tariff snapshot."""
+        """Get independent Gemini/GLM opinions and score only deterministic evidence."""
         if not self.tariff_engine:
             raise RuntimeError("Resmî tarife motoru kullanıma hazır değil.")
-        response_text, resolved_model = await _openrouter_chat(
-            api_key=_openrouter_api_key(),
-            models=_openrouter_models("OPENROUTER_CUSTOMS_MODELS"),
-            messages=[
-                {"role": "system", "content": _CLASSIFICATION_PROMPT},
-                {
-                    "role": "user",
-                    "content": request.model_dump_json(
-                        indent=2,
-                        exclude={"origin_country"},
-                    ),
-                },
-            ],
-            response_schema=TariffClassificationModelResult.model_json_schema(),
-            schema_name="tariff_candidate_suggestions",
-            max_tokens=3000,
-        )
-        parsed = TariffClassificationModelResult.model_validate_json(response_text)
-        candidates: list[VerifiedTariffCandidate] = []
-        seen: set[str] = set()
-        for draft in parsed.candidates:
-            code = _normalise_gtip(draft.code) or ""
-            if len(code) not in {6, 8} or code in seen:
+        api_key = _openrouter_api_key()
+        configured_models = _openrouter_models("OPENROUTER_CUSTOMS_MODELS")
+        messages = [
+            {"role": "system", "content": _CLASSIFICATION_PROMPT},
+            {
+                "role": "user",
+                "content": request.model_dump_json(indent=2, exclude={"origin_country"}),
+            },
+        ]
+
+        async def model_opinion(model_chain: list[str]) -> tuple[TariffClassificationModelResult, str]:
+            response_text, resolved = await _openrouter_chat(
+                api_key=api_key,
+                models=model_chain,
+                messages=messages,
+                response_schema=TariffClassificationModelResult.model_json_schema(),
+                schema_name="tariff_candidate_suggestions",
+                max_tokens=3000,
+            )
+            return TariffClassificationModelResult.model_validate_json(response_text), resolved
+
+        primary_chain = [configured_models[0], *configured_models[2:]]
+        verifier_chain = [configured_models[1], *configured_models[2:]] if len(configured_models) > 1 else []
+        calls = [model_opinion(primary_chain)]
+        if verifier_chain:
+            calls.append(model_opinion(verifier_chain))
+        raw_results = await asyncio.gather(*calls, return_exceptions=True)
+        opinions: list[tuple[TariffClassificationModelResult, str]] = []
+        failures: list[str] = []
+        for result in raw_results:
+            if isinstance(result, BaseException):
+                failures.append(f"{type(result).__name__}: {str(result)[:220]}")
                 continue
-            seen.add(code)
+            opinions.append(result)
+        if not opinions:
+            raise RuntimeError("Bağımsız sınıflandırma modellerinden yanıt alınamadı. " + " | ".join(failures))
+
+        # A provider fallback may resolve both roles to the same concrete model.  It
+        # remains useful output, but is counted only once for agreement scoring.
+        distinct_opinions: list[tuple[TariffClassificationModelResult, str]] = []
+        seen_models: set[str] = set()
+        for parsed, model in opinions:
+            if model in seen_models:
+                continue
+            seen_models.add(model)
+            distinct_opinions.append((parsed, model))
+        opinions = distinct_opinions or opinions[:1]
+
+        drafts_by_code: dict[str, TariffCandidateDraft] = {}
+        report_codes: list[list[str]] = []
+        all_missing: list[str] = []
+        for parsed, _ in opinions:
+            codes: list[str] = []
+            all_missing.extend(parsed.missing_information)
+            for draft in parsed.candidates:
+                code = _normalise_gtip(draft.code) or ""
+                if len(code) not in {6, 8} or code in codes:
+                    continue
+                codes.append(code)
+                drafts_by_code.setdefault(code, draft)
+            report_codes.append(codes)
+
+        assets: dict[str, tuple[TariffLookupResult, list[ClassificationEvidenceHit]]] = {}
+        for code in drafts_by_code:
             lookup = await self.tariff_engine.lookup(
                 code,
                 origin_country=request.origin_country or None,
@@ -1086,6 +1314,118 @@ class CustomsAdvisor:
             )
             if lookup.matched_gtip_count < 1:
                 continue
+            evidence: list[ClassificationEvidenceHit] = []
+            if self.classification_engine:
+                evidence_result = await self.classification_engine.search(
+                    request.product_description,
+                    code_prefix=code,
+                    limit=3,
+                )
+                evidence = evidence_result.hits
+            assets[code] = (lookup, evidence)
+
+        primary_top = report_codes[0][0] if report_codes and report_codes[0] else ""
+        verifier_top = report_codes[1][0] if len(report_codes) > 1 and report_codes[1] else ""
+        top_disagreement = bool(primary_top and verifier_top and primary_top != verifier_top)
+        arbitrated = False
+        if top_disagreement and len(configured_models) > 2 and assets:
+            evidence_summary = {
+                code: {
+                    "official_gtip12_descendants": lookup.matched_gtip_count,
+                    "classification_evidence": [
+                        {
+                            "id": hit.id,
+                            "codes": hit.codes,
+                            "regulations": hit.regulation_references,
+                            "excerpt": hit.excerpt[:700],
+                        }
+                        for hit in evidence
+                    ],
+                }
+                for code, (lookup, evidence) in assets.items()
+            }
+            arbitration_messages = [
+                {"role": "system", "content": _CLASSIFICATION_PROMPT},
+                {
+                    "role": "user",
+                    "content": (
+                        "İki bağımsız modelin ilk tercihi ayrıştı. Yalnız aşağıdaki aday kodlar arasından, "
+                        "ürün evsafı ve resmî kanıt özetini kullanarak yeniden sırala; yeni kod üretme.\n"
+                        + json.dumps(
+                            {
+                                "product": request.model_dump(mode="json", exclude={"origin_country"}),
+                                "model_reports": [item.model_dump(mode="json") for item, _ in opinions],
+                                "official_evidence": evidence_summary,
+                            },
+                            ensure_ascii=False,
+                        )
+                    ),
+                },
+            ]
+            try:
+                arbitration_text, arbitration_model = await _openrouter_chat(
+                    api_key=api_key,
+                    models=configured_models[2:],
+                    messages=arbitration_messages,
+                    response_schema=TariffClassificationModelResult.model_json_schema(),
+                    schema_name="tariff_candidate_arbitration",
+                    max_tokens=3000,
+                )
+                arbitration = TariffClassificationModelResult.model_validate_json(arbitration_text)
+                allowed_codes = set(assets)
+                arbitration_codes = [
+                    code
+                    for item in arbitration.candidates
+                    if (code := (_normalise_gtip(item.code) or "")) in allowed_codes
+                ]
+                if arbitration_codes and arbitration_model not in seen_models:
+                    opinions.append((arbitration, arbitration_model))
+                    report_codes.append(list(dict.fromkeys(arbitration_codes)))
+                    seen_models.add(arbitration_model)
+                    all_missing.extend(arbitration.missing_information)
+                    arbitrated = True
+            except Exception as exc:
+                # Disagreement remains visible and confidence stays low/medium; a
+                # failed arbiter must not erase the two independent opinions.
+                logger.warning("Tarife sınıflandırma hakem modeli başarısız oldu: %s", type(exc).__name__)
+
+        candidates: list[VerifiedTariffCandidate] = []
+        scored: list[tuple[int, str, TariffCandidateDraft, TariffLookupResult, list[ClassificationEvidenceHit]]] = []
+        for code, draft in drafts_by_code.items():
+            if code not in assets:
+                continue
+            lookup, classification_evidence = assets[code]
+            exact_votes = sum(code in codes for codes in report_codes)
+            hs6_votes = sum(any(item[:6] == code[:6] for item in codes) for codes in report_codes)
+            decisive_missing = list(dict.fromkeys([*draft.decisive_missing_information, *all_missing]))
+            score = 25
+            score += 40 if exact_votes >= 2 else 15
+            score += 15 if classification_evidence else 0
+            score += 10 if hs6_votes >= 2 else 0
+            score += 10 if not decisive_missing else 0
+            score -= min(len(decisive_missing) * 4, 20)
+            score = max(0, min(score, 99))
+            scored.append((score, code, draft, lookup, classification_evidence))
+
+        scored.sort(key=lambda item: (-item[0], -sum(item[1] in codes for codes in report_codes), len(item[1]), item[1]))
+        for score, code, draft, lookup, classification_evidence in scored[:3]:
+            exact_votes = sum(code in codes for codes in report_codes)
+            hs6_votes = sum(any(item[:6] == code[:6] for item in codes) for codes in report_codes)
+            decisive_missing = list(dict.fromkeys([*draft.decisive_missing_information, *all_missing]))
+            if exact_votes >= 2:
+                agreement_status: Literal["exact", "same_hs6", "single_model", "disputed"] = "exact"
+            elif hs6_votes >= 2:
+                agreement_status = "same_hs6"
+            elif len(opinions) < 2:
+                agreement_status = "single_model"
+            else:
+                agreement_status = "disputed"
+            if score >= 80 and exact_votes >= 2 and classification_evidence and not decisive_missing:
+                confidence: Literal["low", "medium", "high"] = "high"
+            elif score >= 55 and (exact_votes >= 2 or hs6_votes >= 2):
+                confidence = "medium"
+            else:
+                confidence = "low"
             safe = lookup.unambiguous_rates
             if not request.origin_country:
                 rate_status: Literal["unambiguous", "ambiguous", "origin_required"] = "origin_required"
@@ -1093,10 +1433,22 @@ class CustomsAdvisor:
                 rate_status = "ambiguous"
             else:
                 rate_status = "unambiguous"
+            factors = [
+                "Aktif Türk tarife cetvelinde alt GTİP12 satırı bulundu.",
+                f"{exact_votes} bağımsız model bu kodu aynen önerdi.",
+            ]
+            if classification_evidence:
+                factors.append(f"{len(classification_evidence)} resmî AB sınıflandırma gerekçesi eşleşti.")
+            else:
+                factors.append("Ürün-özel AB sınıflandırma gerekçesi bulunamadı.")
+            if decisive_missing:
+                factors.append(f"{len(decisive_missing)} ayırt edici evsaf hâlâ eksik.")
             candidates.append(
                 VerifiedTariffCandidate(
-                    **draft.model_dump(exclude={"code"}),
+                    **draft.model_dump(exclude={"code", "confidence", "decisive_missing_information"}),
                     code=code,
+                    confidence=confidence,
+                    decisive_missing_information=decisive_missing,
                     level="HS6" if len(code) == 6 else "CN8",
                     matched_gtip_count=lookup.matched_gtip_count,
                     customs_duty_rate=safe.get("customs_duty"),
@@ -1104,17 +1456,35 @@ class CustomsAdvisor:
                     additional_financial_liability_rate=safe.get("additional_financial_liability"),
                     rate_variants=lookup.rate_variants,
                     rate_status=rate_status,
+                    classification_evidence=classification_evidence,
+                    confidence_score=score,
+                    model_votes=max(1, exact_votes),
+                    agreement_status=agreement_status,
+                    confidence_factors=factors,
                 )
             )
-            if len(candidates) == 3:
-                break
+
+        if len(opinions) < 2:
+            verification_status = "single_model_only"
+        elif primary_top == verifier_top and primary_top:
+            verification_status = "dual_agreement"
+        elif primary_top[:6] == verifier_top[:6] and primary_top and verifier_top:
+            verification_status = "dual_partial_agreement"
+        elif arbitrated:
+            verification_status = "arbitrated_disagreement"
+        else:
+            verification_status = "unresolved_disagreement"
+        resolved_models = [model for _, model in opinions]
+        summaries = [parsed.summary for parsed, _ in opinions if parsed.summary]
         return ProductClassificationResult(
             status="candidates_found" if candidates else "insufficient_information",
-            model=resolved_model,
+            model=" + ".join(resolved_models),
+            models=resolved_models,
+            verification_status=verification_status,
             candidates=candidates,
-            missing_information=parsed.missing_information,
+            missing_information=list(dict.fromkeys(all_missing)),
             summary=(
-                parsed.summary
+                " | ".join(dict.fromkeys(summaries))[:1200]
                 if candidates
                 else "Onaylanan evsaflarla resmî tarife cetvelinde doğrulanabilen bir HS6/CN8 adayı üretilemedi."
             ),
@@ -1133,6 +1503,7 @@ class CustomsAdvisor:
         if image_bytes is not None:
             clean_image, clean_media_type = validate_image(image_bytes, image_media_type or "")
         pack = await self.evidence_pack(inquiry)
+        expert_review_packet = _expert_review_packet(pack)
         usable_sources = [source for source in pack.sources if source.excerpt]
         models = _openrouter_models("OPENROUTER_CUSTOMS_MODELS")
         api_key = os.environ.get("OPENROUTER_API_KEY", "").strip()
@@ -1158,6 +1529,8 @@ class CustomsAdvisor:
                 sources=pack.sources,
                 legal_notice=pack.legal_notice,
                 safety_notes=safety_notes,
+                inquiry=inquiry,
+                expert_review_packet=expert_review_packet,
                 next_steps=["Eksik ürün bilgilerini tamamlayın.", "Kesin sınıflandırma için BTB veya yetkili gümrük müşaviri teyidi alın."],
             )
 
@@ -1203,4 +1576,6 @@ class CustomsAdvisor:
             sources=pack.sources,
             legal_notice=pack.legal_notice,
             safety_notes=safety_notes,
+            inquiry=inquiry,
+            expert_review_packet=expert_review_packet,
         )
