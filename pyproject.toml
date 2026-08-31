@@ -56,4 +56,7 @@ packages = ["semantic_search"]
 
 [tool.setuptools.data-files]
 "." = ["ticaret_sources.json", "customs_sources.json", "tariff_sources.json", "control_sources.json"]
-"benchmarks" = ["benchmarks/customs_classification_v1.jsonl"]
+"benchmarks" = [
+    "benchmarks/customs_classification_v1.jsonl",
+    "benchmarks/turkish_btb_gtip12_historical_v1.jsonl",
+]

@@ -87,7 +87,11 @@ Web arayüzündeki **Gümrükçe’ye Sor** sekmesi üç güvenlik aşaması kul
 
 Maliyet motoru gümrük vergisi ve İGV dışında ek mali yükümlülük, damping/sübvansiyon, KKDF, KDV, ÖTV ve gözetim kalemlerini de ayrı ayrı ister. Yapılandırılmış canlı kaynağa henüz bağlanmamış bir kalem otomatik olarak `0` kabul edilmez: kullanıcı resmî kaynaktan uygulanmadığını doğruladıysa `0` girmeli, aksi halde toplam maliyet bilinçli olarak eksik bırakılır. Sonuçtaki kapsam matrisi her kalemi `verified_snapshot`, `partial_snapshot`, `not_integrated` veya `user_confirmation_required` olarak açıkça gösterir.
 
-Sınıflandırma kalitesi [customs_classification_v1.jsonl](benchmarks/customs_classification_v1.jsonl) içindeki kaynak URL'si, sayfa, tüzük numarası ve arşiv SHA-256 değeri sabitlenmiş resmî AB karar örnekleriyle ölçülür. `customs_benchmark.py` Top-1/Top-3 HS6 ve CN8 metriklerini ayrı hesaplar. Bu başlangıç veri seti Türk GTİP12 performans iddiası değildir; doğrulanmış Türk BTB örnekleri hukuken kullanılabilir biçimde sağlandıkça ayrı bir GTİP12 test katmanı eklenmelidir.
+Sınıflandırma kalitesi [customs_classification_v1.jsonl](benchmarks/customs_classification_v1.jsonl) içindeki kaynak URL'si, sayfa, tüzük numarası ve arşiv SHA-256 değeri sabitlenmiş resmî AB karar örnekleriyle ölçülür. Ayrı [tarihsel Türk BTB takımı](benchmarks/turkish_btb_gtip12_historical_v1.jsonl), İstanbul Gümrük ve Ticaret Bölge Müdürlüğünün resmî bülteninde yayımlanan dört gerekçeli 2016 örneğini GTİP12 Top-1/Top-3 ölçümü için kullanır. `customs_benchmark.py` hedef derinliğine göre HS6, CN8 ve GTİP12 metriklerini ayrı hesaplar. Tarihsel takım güncel tarife geçerliliği veya BTB'nin hak sahibi dışındaki kişiler bakımından hukuki bağlayıcılığı iddiasında bulunmaz.
+
+```bash
+python customs_benchmark.py predictions.json --cases benchmarks/turkish_btb_gtip12_historical_v1.jsonl
+```
 
 * Fotoğraf tek başına kesin veya bağlayıcı GTİP üretmez. Kesin sınıflandırma için teknik belge ve gerektiğinde Bağlayıcı Tarife Bilgisi gerekir.
 * Güvenlik sorusu/CAPTCHA kullanan Bakanlık Tarife Arama Motoru otomatik aşılmaz; sonuçlarda yalnızca manuel doğrulama bağlantısı olarak yer alır.
