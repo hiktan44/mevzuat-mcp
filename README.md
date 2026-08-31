@@ -81,7 +81,9 @@ Mevzuat/Resmî Gazete sunucusu geçerli TLS uç sertifikasıyla birlikte zaman z
 
 Web arayüzündeki **Gümrükçe’ye Sor** sekmesi üç güvenlik aşaması kullanır. Fotoğraf cihazda önizlendikten sonra görünen **Ürünü Analiz Et** düğmesiyle kullanıcı analizi açıkça başlatır; görsel bu eylemden önce sunucuya gönderilmez. Fotoğraf yalnızca ürün evsafına çevrilir; tanım, görünen marka/model, ölçü, etiket metni, görünen ve belirsiz özellikler düzenlenebilir satırlara gelir. Kullanıcı bu alanları açıkça onaylamadan sınıflandırma başlamaz. En fazla beş **aday** kod gösterilir fakat ilk aday otomatik seçilmez. Her aday aktif Türk tarife satırında doğrulanır ve varsa resmî AB sınıflandırma tüzüğü sayfalarıyla desteklenir. Kullanıcı bir aday seçince resmî HS6 → CN8 → Türkiye 10 → GTİP12 ağacı adım adım açılır; TAREKS kapsam sorgusu yalnız doğrulanmış 12 haneli satırda çalışır. Vergi oranları, kısa kod altında bütün GTİP12 satırlarında ortaksa gösterilir; menşe/dipnot bakımından ayrışan oranlar kesin sonuç gibi sunulmaz.
 
-Çalışma masasında ayrıca **Tarife & Maliyet**, **Kontroller & Belgeler**, **Değişiklikler** ve **İşlem Rehberi** sekmeleri bulunur. Tarife ekranı resmî workbook/sheet/row ve arşiv checksum'unu; kontrol ekranı tebliğ Ek-1 satırını, yetkili sistemi ve risk uyarısını; değişiklik ekranı snapshot farklarını, cihazdaki GTİP izleme listesini ve kaydedilmiş ön değerlendirmeleri gösterir.
+Çalışma masasında ayrıca **Tarife & Maliyet**, **Kontroller & Belgeler**, **Değişiklikler**, **Gümrük Danışmanları** ve **İşlem Rehberi** sekmeleri bulunur. Tarife ekranı resmî workbook/sheet/row ve arşiv checksum'unu; kontrol ekranı tebliğ Ek-1 satırını, yetkili sistemi ve risk uyarısını; değişiklik ekranı snapshot farklarını, cihazdaki GTİP izleme listesini ve kaydedilmiş ön değerlendirmeleri gösterir.
+
+**Gümrük Danışmanları** alanında kullanıcı, oluşturduğu analiz paketini yönetici onaylı bağımsız bir mevzuat danışmanına kontrollü biçimde gönderebilir ve uygulama içinde mesajlaşabilir. Danışman kaydı ücretsizdir; profil değişiklikleri yeniden incelemeye alınır. Ürün görseli, Google e-postası ve mali tutarlar otomatik paylaşılmaz. Bu profiller gümrük müşavirliği yetkisi, gümrükte temsil veya fiilî gümrük işlemi hizmeti anlamına gelmez; bağlayıcı karar gereken durumda BTB ve mevzuatın gerektirdiği yetkili kanallar ayrıca kullanılmalıdır.
 
 Maliyet motoru gümrük vergisi ve İGV dışında ek mali yükümlülük, damping/sübvansiyon, KKDF, KDV, ÖTV ve gözetim kalemlerini de ayrı ayrı ister. Yapılandırılmış canlı kaynağa henüz bağlanmamış bir kalem otomatik olarak `0` kabul edilmez: kullanıcı resmî kaynaktan uygulanmadığını doğruladıysa `0` girmeli, aksi halde toplam maliyet bilinçli olarak eksik bırakılır. Sonuçtaki kapsam matrisi her kalemi `verified_snapshot`, `partial_snapshot`, `not_integrated` veya `user_confirmation_required` olarak açıkça gösterir.
 
@@ -118,7 +120,7 @@ Web araştırma uygulaması: `https://mevzuat-mcp.seymata.com/app`
 
 Arayüzde Ticaret Bakanlığının yedi bilgi katmanı canlı kayıt sayılarıyla ayrı gösterilir; kaynak, belge türü, yıl ve mülga durumu filtrelenebilir. Seçilen kaydın resmî kaynak zinciri, tam metni ve kopyalanabilir atfı aynı ekranda açılır. **Genel mevzuat** görünümü Bedesten resmî servisine bağlı ayrı arama alanıdır.
 
-> Coolify dağıtımı v1.7.0 sağlık, web arayüzü ve MCP araç taramasıyla doğrulanır. Snapshot verilerini kalıcı tutmak için uygulamada `/data` hedefine persistent volume bağlayın; imaj `MEVZUAT_DATA_DIR=/data` ile hazır gelir.
+> Coolify dağıtımı v1.8.0 sağlık, web arayüzü ve MCP araç taramasıyla doğrulanır. Snapshot verilerini kalıcı tutmak için uygulamada `/data` hedefine persistent volume bağlayın; imaj `MEVZUAT_DATA_DIR=/data` ile hazır gelir.
 
 ### Google ile giriş ve SEO
 

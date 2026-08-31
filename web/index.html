@@ -185,6 +185,7 @@
           <button type="button" data-customs-view="tariff">Tarife &amp; Maliyet</button>
           <button type="button" data-customs-view="controls">Kontroller &amp; Belgeler</button>
           <button type="button" data-customs-view="changes">Değişiklikler</button>
+          <button type="button" data-customs-view="consultants">Gümrük Danışmanları</button>
           <button type="button" data-customs-view="guide">İşlem Rehberi</button>
         </nav>
 
@@ -369,6 +370,38 @@
           <div class="tool-output" id="changesOutput" aria-live="polite"></div>
         </section>
 
+        <section class="customs-tool-panel consultant-panel" data-customs-panel="consultants" hidden aria-labelledby="consultantsPanelTitle">
+          <header class="tool-panel-head consultant-head"><span>UZMAN GÖRÜŞÜ</span><h2 id="consultantsPanelTitle">Gümrük mevzuatı danışmanları</h2><p>Ön değerlendirme dosyanızı bağımsız bir danışmana uygulama içinden iletin. Bu kişiler mevzuat ve sınıflandırma danışmanlığı verir; gümrük beyannamesi düzenlemez, sizi gümrükte temsil etmez ve fiilî gümrük işlemi yapmaz.</p></header>
+          <div class="consultant-handoff" role="note">
+            <div><span>Kontrollü dosya devri</span><strong>Analiz → kanıt izi → danışman görüşü</strong><p>Ürün görseli, iletişim bilgileriniz ve mali tutarlar otomatik paylaşılmaz. Gönderimden önce paylaşılacak özet size gösterilir.</p></div>
+            <button type="button" id="openConsultantApplication">Ücretsiz danışman kaydı</button>
+          </div>
+          <div class="consultant-directory-head"><div><h3>Yayındaki danışmanlar</h3><p>Profiller yönetici incelemesinden sonra yayımlanır.</p></div><button type="button" id="refreshConsultants">Listeyi yenile</button></div>
+          <div class="consultant-grid" id="consultantGrid" aria-live="polite"><p>Danışmanlar yükleniyor…</p></div>
+
+          <details class="consultant-application" id="consultantApplication">
+            <summary><span>Danışman olarak ücretsiz kaydol</span><small>Başvuru · yönetici incelemesi · ücretsiz yayın</small></summary>
+            <form id="consultantApplicationForm" class="consultant-form">
+              <div class="application-boundary"><b>Hizmet sınırı</b><p>Bu kayıt, gümrük müşavirliği yetkisi veya gümrükte temsil hakkı vermez. Profiliniz yalnızca mevzuat, tarife, ürün güvenliği ve dış ticaret danışmanlığı için yayımlanır.</p></div>
+              <label class="field"><span>Görünen adınız <b>*</b></span><input id="consultantName" required minlength="2" maxlength="80" autocomplete="name"></label>
+              <label class="field"><span>Danışmanlık alanı <b>*</b></span><select id="consultantTitle" required><option value="">Seçin</option><option>Gümrük mevzuatı danışmanı</option><option>Dış ticaret mevzuatı danışmanı</option><option>Ürün güvenliği ve TAREKS danışmanı</option><option>Tarife sınıflandırma danışmanı</option></select></label>
+              <label class="field"><span>Şehir</span><input id="consultantCity" maxlength="80" placeholder="Örn. İstanbul"></label>
+              <label class="field"><span>Hizmet biçimi</span><select id="consultantMode"><option value="online">Çevrim içi</option><option value="hybrid">Çevrim içi ve yüz yüze</option></select></label>
+              <label class="field"><span>İlgili deneyim yılı</span><input id="consultantExperience" type="number" min="0" max="60" step="1" value="0"></label>
+              <fieldset class="consultant-expertise"><legend>Uzmanlık alanları <b>*</b></legend><label><input type="checkbox" name="consultantExpertise" value="GTİP ve tarife sınıflandırma"> GTİP ve tarife sınıflandırma</label><label><input type="checkbox" name="consultantExpertise" value="İthalat vergileri ve ticaret önlemleri"> İthalat vergileri ve ticaret önlemleri</label><label><input type="checkbox" name="consultantExpertise" value="TAREKS ve ürün güvenliği"> TAREKS ve ürün güvenliği</label><label><input type="checkbox" name="consultantExpertise" value="TSE ve uygunluk belgeleri"> TSE ve uygunluk belgeleri</label><label><input type="checkbox" name="consultantExpertise" value="Kimyasallar ve çevre mevzuatı"> Kimyasallar ve çevre mevzuatı</label><label><input type="checkbox" name="consultantExpertise" value="İhracat ve devlet destekleri"> İhracat ve devlet destekleri</label></fieldset>
+              <label class="field consultant-bio"><span>Uzmanlık özeti <b>*</b></span><textarea id="consultantBio" required minlength="40" maxlength="1200" placeholder="Deneyiminizi, çalıştığınız ürün gruplarını ve hangi konularda görüş verdiğinizi açıkça yazın."></textarea></label>
+              <label class="consultant-terms"><input id="consultantTerms" type="checkbox" required><span>Yalnız danışmanlık vereceğimi; gümrük beyannamesi düzenleme, temsil veya fiilî gümrük işlemi hizmeti sunduğumu iddia etmeyeceğimi kabul ediyorum.</span></label>
+              <button class="analyse-button" type="submit"><span>Ücretsiz başvuruyu incelemeye gönder</span></button>
+              <p id="consultantApplicationStatus" class="application-status"></p>
+            </form>
+          </details>
+
+          <section class="consultation-inbox" id="consultationInbox">
+            <header><div><h3>Danışmanlık taleplerim</h3><p>Gönderdiğiniz ve danışman olarak aldığınız dosyalar yalnızca hesabınızda görünür.</p></div><button type="button" id="refreshConsultationRequests">Talepleri yenile</button></header>
+            <div id="consultationRequestList"><p>Giriş yaptığınızda talepleriniz burada görünür.</p></div>
+          </section>
+        </section>
+
         <section class="customs-tool-panel" data-customs-panel="guide" hidden aria-labelledby="guidePanelTitle">
           <header class="tool-panel-head"><span>04 / KONTROL LİSTESİ</span><h2 id="guidePanelTitle">İthalat öncesi güvenli işlem rehberi</h2><p>Bir ürün fotoğrafından gümrük beyannamesine kadar hangi bilgiyi hangi sırada doğrulamanız gerektiğini gösterir.</p></header>
           <div class="guide-grid">
@@ -442,6 +475,17 @@
       </section>
       <footer class="account-danger"><button type="button" id="deleteAccount">Hesabımı ve kayıtlı dosyalarımı sil</button><p>Silme işlemi geri alınamaz.</p></footer>
     </div>
+  </dialog>
+
+  <dialog class="consultation-dialog" id="consultationDialog" aria-labelledby="consultationDialogTitle">
+    <form id="consultationForm" class="consultation-dialog-shell">
+      <header><div><span class="eyebrow">Kontrollü dosya devri</span><h2 id="consultationDialogTitle">Danışmana gönder</h2><p id="consultationAdvisorName">Danışman seçilmedi.</p></div><button type="button" class="dialog-close" id="closeConsultationDialog" aria-label="Pencereyi kapat">×</button></header>
+      <div class="consultation-share-summary"><b>Paylaşılacak</b><p>Ürün açıklaması, seçilen aday kod, menşe, eksik bilgi listesi, uzman inceleme paketi ve resmî kaynak URL’leri.</p><b>Paylaşılmayacak</b><p>Ürün görseli, Google adınız/e-postanız, fatura/navlun/sigorta tutarları ve hesap bilgileriniz. Mesaja yazılan e-posta ve telefonlar da maskelenir.</p></div>
+      <label class="field"><span>Konu <b>*</b></span><input id="consultationSubject" required minlength="5" maxlength="160" placeholder="Örn. 6911.10 porselen fincan sınıflandırma görüşü"></label>
+      <label class="field"><span>Danışmana notunuz <b>*</b></span><textarea id="consultationMessage" required minlength="10" maxlength="2000" placeholder="Özellikle doğrulanmasını istediğiniz noktaları yazın."></textarea></label>
+      <label class="consultant-terms"><input id="consultationConsent" type="checkbox" required><span>Yukarıdaki analiz özetinin seçtiğim danışmanla paylaşılmasını onaylıyorum.</span></label>
+      <div class="consultation-dialog-actions"><button type="button" id="cancelConsultation">Vazgeç</button><button type="submit">Analiz dosyasını danışmana gönder</button></div>
+    </form>
   </dialog>
 
   <div class="toast" id="toast" role="status" aria-live="polite"></div>

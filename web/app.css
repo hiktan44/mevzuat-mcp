@@ -533,7 +533,7 @@ svg { display: block; fill: none; stroke: currentColor; stroke-width: 1.8; strok
 .followup-box { display: grid; grid-template-columns: minmax(0,1fr) 250px; gap: 10px; margin-top: 14px; padding: 16px; border: 1px solid var(--line); background: var(--surface); }
 .followup-box .analyse-button { min-height: 46px; margin: 24px 0 0; font-size: .86rem; }
 
-.customs-view-tabs { position: sticky; top: var(--header-h); z-index: 35; display: grid; grid-template-columns: repeat(5,minmax(0,1fr)); margin: 0 0 22px; border: 1px solid var(--line-strong); background: var(--surface); box-shadow: 0 8px 20px color-mix(in srgb, var(--ink) 7%, transparent); }
+.customs-view-tabs { position: sticky; top: var(--header-h); z-index: 35; display: grid; grid-template-columns: repeat(6,minmax(0,1fr)); margin: 0 0 22px; border: 1px solid var(--line-strong); background: var(--surface); box-shadow: 0 8px 20px color-mix(in srgb, var(--ink) 7%, transparent); }
 .customs-view-tabs button { min-height: 52px; padding: 8px 12px; border: 0; border-right: 1px solid var(--line); background: transparent; color: var(--ink-2); font-size: .68rem; font-weight: 700; }
 .customs-view-tabs button:last-child { border-right: 0; }
 .customs-view-tabs button:hover { background: var(--teal-soft); color: var(--ink); }
@@ -606,6 +606,39 @@ svg { display: block; fill: none; stroke: currentColor; stroke-width: 1.8; strok
 .subledger-title { margin: 24px 24px 0; padding-top: 20px; border-top: 1px solid var(--line); font-family: var(--display); font-size: 1rem; }
 .result-actions { display: flex; justify-content: flex-end; padding: 14px 24px; border-top: 1px solid var(--line); }
 .result-actions button { min-height: 42px; padding: 0 16px; border: 1px solid var(--ink); background: var(--ink); color: var(--surface); font-size: .62rem; font-weight: 700; }
+.result-actions .consultant-send-result { margin-right: 8px; border-color: var(--orange); background: var(--orange); color: #17120b; }
+.consultant-panel { overflow: hidden; }
+.consultant-head { background: linear-gradient(110deg,color-mix(in srgb,var(--orange) 8%,var(--surface)),var(--surface) 55%,var(--teal-soft)); }
+.consultant-handoff { display: grid; grid-template-columns: minmax(0,1fr) auto; gap: 24px; align-items: center; margin: 28px; padding: 22px 24px; border: 1px solid color-mix(in srgb,var(--orange) 60%,var(--line)); border-left: 9px solid var(--orange); background: color-mix(in srgb,var(--orange) 7%,var(--surface)); }
+.consultant-handoff span { color: var(--orange); font: 700 .58rem var(--mono); letter-spacing: .06em; text-transform: uppercase; }
+.consultant-handoff strong { display: block; margin-top: 6px; font: 700 1.15rem var(--display); }
+.consultant-handoff p { max-width: 72ch; margin: 7px 0 0; color: var(--ink-2); font-size: .66rem; line-height: 1.65; }
+.consultant-handoff button,.consultant-directory-head button,.consultation-inbox header button { min-height: 42px; padding: 0 15px; border: 1px solid var(--ink); background: var(--ink); color: var(--surface); font-size: .62rem; font-weight: 700; }
+.consultant-directory-head,.consultation-inbox > header { display: flex; align-items: center; justify-content: space-between; gap: 20px; margin: 0 28px 15px; padding-top: 8px; }
+.consultant-directory-head h3,.consultation-inbox h3 { margin: 0; font-family: var(--display); font-size: 1.25rem; }
+.consultant-directory-head p,.consultation-inbox header p { margin: 4px 0 0; color: var(--ink-3); font-size: .62rem; }
+.consultant-grid { display: grid; grid-template-columns: repeat(3,minmax(0,1fr)); gap: 14px; padding: 0 28px 28px; }
+.consultant-card { display: flex; flex-direction: column; min-height: 390px; border: 1px solid var(--line); background: var(--surface); box-shadow: 0 8px 24px color-mix(in srgb,var(--ink) 6%,transparent); }
+.consultant-card > header { display: grid; grid-template-columns: 48px minmax(0,1fr); gap: 11px; align-items: center; padding: 17px; border-bottom: 1px solid var(--line); background: var(--canvas); }
+.consultant-monogram { width: 48px; height: 48px; display: grid; place-items: center; grid-row: 1/3; background: var(--ink); color: var(--surface); font: 700 1.3rem var(--display); box-shadow: inset 0 -5px var(--orange); }
+.consultant-card h3 { margin: 0; font-family: var(--display); font-size: 1rem; }.consultant-card header p { margin: 3px 0 0; color: var(--teal); font-size: .61rem; }
+.consultant-card header > b { grid-column: 2; color: var(--ink-3); font: 700 .48rem var(--mono); letter-spacing: .05em; }
+.consultant-bio-text { flex: 1; margin: 0; padding: 17px; color: var(--ink-2); font-size: .64rem; line-height: 1.7; }
+.consultant-meta { display: flex; flex-wrap: wrap; gap: 5px; padding: 0 17px; }.consultant-meta span { padding: 5px 7px; background: var(--teal-soft); color: var(--teal); font-size: .51rem; font-weight: 700; }
+.consultant-card ul { display: flex; flex-wrap: wrap; gap: 5px; margin: 13px 0 0; padding: 0 17px; list-style: none; }.consultant-card li { padding: 5px 7px; border: 1px solid var(--line); color: var(--ink-2); font-size: .5rem; }
+.consultant-card footer { display: grid; gap: 10px; padding: 15px 17px 17px; }.consultant-card footer small { color: var(--ink-3); font-size: .51rem; }.consultant-card footer button { min-height: 42px; border: 1px solid var(--orange); background: var(--orange); color: #17120b; font-size: .61rem; font-weight: 800; }.consultant-card footer button:disabled { border-color: var(--line); background: var(--canvas); color: var(--ink-3); }
+.consultant-empty,.consultant-login-note { grid-column: 1/-1; padding: 24px; border: 1px dashed var(--line-strong); background: var(--canvas); color: var(--ink-2); }.consultant-empty b { color: var(--ink); font-family: var(--display); }.consultant-empty p { margin-bottom: 0; font-size: .65rem; }
+.consultant-application { margin: 0 28px 28px; border: 1px solid var(--line); background: var(--canvas); }.consultant-application summary { display: flex; justify-content: space-between; gap: 16px; padding: 18px 20px; cursor: pointer; font-size: .72rem; font-weight: 800; }.consultant-application summary small { color: var(--ink-3); font-size: .55rem; font-weight: 500; }
+.consultant-form { display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); gap: 14px; padding: 20px; border-top: 1px solid var(--line); background: var(--surface); }
+.application-boundary { grid-column: 1/-1; padding: 15px 17px; border-left: 5px solid var(--orange); background: color-mix(in srgb,var(--orange) 7%,var(--canvas)); }.application-boundary b { font-size: .66rem; }.application-boundary p { margin: 5px 0 0; color: var(--ink-2); font-size: .61rem; line-height: 1.6; }
+.consultant-expertise { grid-column: 1/-1; display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); gap: 8px 16px; padding: 15px; border: 1px solid var(--line); }.consultant-expertise legend { padding: 0 7px; font-size: .62rem; font-weight: 700; }.consultant-expertise label { color: var(--ink-2); font-size: .6rem; }
+.consultant-bio,.consultant-terms,.consultant-form .analyse-button,.application-status { grid-column: 1/-1; }.consultant-terms { display: flex; gap: 10px; align-items: flex-start; padding: 14px; border: 1px solid var(--line); background: var(--canvas); color: var(--ink-2); font-size: .6rem; line-height: 1.55; }.consultant-terms input { flex: 0 0 auto; margin-top: 2px; accent-color: var(--teal); }.application-status { margin: 0; color: var(--teal); font-size: .62rem; font-weight: 700; }
+.consultation-inbox { padding: 26px 0 30px; border-top: 1px solid var(--line); background: var(--canvas); }.consultation-inbox > #consultationRequestList { display: grid; gap: 10px; padding: 0 28px; }
+.consultation-request { border: 1px solid var(--line); background: var(--surface); }.consultation-request summary { display: flex; justify-content: space-between; gap: 18px; align-items: center; padding: 15px 17px; cursor: pointer; }.consultation-request summary div { min-width: 0; }.consultation-request summary span { display: block; color: var(--orange); font: 700 .48rem var(--mono); }.consultation-request summary b { display: block; margin-top: 3px; font-size: .68rem; }.consultation-request summary small { display: block; margin-top: 4px; color: var(--ink-3); font-size: .53rem; }.consultation-request summary em { flex: 0 0 auto; padding: 6px 8px; background: var(--teal-soft); color: var(--teal); font-size: .51rem; font-style: normal; font-weight: 700; }
+.consultation-request-body { display: grid; gap: 13px; padding: 17px; border-top: 1px solid var(--line); }.initial-message { margin: 0; padding-left: 13px; border-left: 3px solid var(--orange); color: var(--ink-2); font-size: .64rem; line-height: 1.65; }.shared-packet { display: grid; grid-template-columns: 1fr auto auto; gap: 5px 12px; padding: 14px; border: 1px solid var(--line); background: var(--canvas); }.shared-packet b,.shared-packet p,.shared-packet nav { grid-column: 1/-1; }.shared-packet p { margin: 0; color: var(--ink-2); font-size: .6rem; }.shared-packet code { color: var(--teal); }.shared-packet span { color: var(--ink-3); font-size: .57rem; }.shared-packet nav { display: flex; flex-wrap: wrap; gap: 7px; }.shared-packet nav a { color: var(--teal); font-size: .55rem; }
+.consultation-thread { display: grid; gap: 7px; }.consultation-message { width: min(78%,680px); padding: 10px 12px; background: var(--canvas); border: 1px solid var(--line); }.consultation-message.mine { justify-self: end; border-color: color-mix(in srgb,var(--teal) 45%,var(--line)); background: var(--teal-soft); }.consultation-message b { font-size: .55rem; }.consultation-message p { margin: 4px 0; color: var(--ink-2); font-size: .61rem; line-height: 1.55; }.consultation-message time { color: var(--ink-3); font-size: .48rem; }
+.consultation-reply { display: grid; grid-template-columns: minmax(0,1fr) auto; gap: 10px; align-items: end; }.consultation-reply button,.consultation-status-actions button { min-height: 40px; padding: 0 13px; border: 1px solid var(--ink); background: var(--ink); color: var(--surface); font-size: .58rem; font-weight: 700; }.reply-lock { margin: 0; color: var(--ink-3); font-size: .56rem; }.consultation-status-actions { display: flex; justify-content: flex-end; gap: 7px; }.consultation-status-actions .decline { background: var(--surface); color: var(--danger); border-color: var(--line); }
+.consultation-dialog { width: min(720px,calc(100vw - 32px)); max-height: calc(100vh - 32px); padding: 0; border: 1px solid var(--line); background: var(--surface); color: var(--ink); box-shadow: var(--shadow); }.consultation-dialog::backdrop { background: rgba(5,16,33,.62); backdrop-filter: blur(4px); }.consultation-dialog-shell > header { display: flex; justify-content: space-between; gap: 18px; padding: 22px 24px; border-bottom: 1px solid var(--line); background: linear-gradient(110deg,color-mix(in srgb,var(--orange) 10%,var(--surface)),var(--surface)); }.consultation-dialog h2 { margin: 3px 0; font-family: var(--display); font-size: 1.65rem; }.consultation-dialog header p { margin: 0; color: var(--ink-2); font-size: .62rem; }.consultation-dialog-shell { display: grid; gap: 14px; padding-bottom: 22px; }.consultation-dialog-shell > .field,.consultation-dialog-shell > .consultant-terms { margin: 0 24px; }.consultation-share-summary { display: grid; grid-template-columns: 115px minmax(0,1fr); gap: 8px 14px; margin: 0 24px; padding: 15px; border-left: 6px solid var(--orange); background: var(--canvas); }.consultation-share-summary b { font-size: .58rem; }.consultation-share-summary p { margin: 0; color: var(--ink-2); font-size: .58rem; line-height: 1.5; }.consultation-dialog-actions { display: flex; justify-content: flex-end; gap: 8px; padding: 0 24px; }.consultation-dialog-actions button { min-height: 42px; padding: 0 15px; border: 1px solid var(--ink); background: var(--surface); color: var(--ink); font-size: .61rem; font-weight: 700; }.consultation-dialog-actions button[type="submit"] { border-color: var(--orange); background: var(--orange); color: #17120b; }
 .account-dialog { width: min(1080px, calc(100vw - 32px)); max-height: calc(100vh - 32px); padding: 0; border: 1px solid var(--line); background: var(--surface); color: var(--ink); box-shadow: var(--shadow); }
 .account-dialog::backdrop { background: rgba(5,16,33,.62); backdrop-filter: blur(4px); }
 .account-shell { min-height: 620px; }
@@ -725,7 +758,7 @@ svg { display: block; fill: none; stroke: currentColor; stroke-width: 1.8; strok
   .customs-flow { grid-template-columns: repeat(4,1fr); }
   .customs-flow b { display: none; }
   .customs-flow span { white-space: normal; font-size: .5rem; }
-  .customs-view-tabs { top: calc(var(--header-h) + 46px); overflow-x: auto; grid-template-columns: repeat(5,minmax(150px,1fr)); }
+  .customs-view-tabs { top: calc(var(--header-h) + 46px); overflow-x: auto; grid-template-columns: repeat(6,minmax(150px,1fr)); }
   .customs-form { grid-template-columns: 1fr; }
   .readiness-card { position: static; }
   .readiness-card ul { grid-template-columns: 1fr 1fr; }
@@ -739,6 +772,7 @@ svg { display: block; fill: none; stroke: currentColor; stroke-width: 1.8; strok
   .tool-panel-head > span { grid-row: auto; }
   .control-card dl { grid-template-columns: 1fr 1fr; }
   .quota-grid,.pricing-grid { grid-template-columns: 1fr 1fr; }
+  .consultant-grid { grid-template-columns: repeat(2,minmax(0,1fr)); }
 }
 
 @media (max-width: 500px) {
@@ -782,6 +816,11 @@ svg { display: block; fill: none; stroke: currentColor; stroke-width: 1.8; strok
   .account-head,.account-panel { padding-left: 16px; padding-right: 16px; }
   .quota-grid,.pricing-grid { grid-template-columns: 1fr; }
   .dossier-item { grid-template-columns: 1fr; }
+  .consultant-handoff,.consultant-form,.consultant-grid,.consultant-expertise,.consultation-reply { grid-template-columns: 1fr; }
+  .consultant-handoff button { width: 100%; }
+  .consultant-directory-head,.consultation-inbox > header { align-items: flex-start; }
+  .consultation-message { width: 92%; }
+  .consultation-share-summary { grid-template-columns: 1fr; }
 }
 
 @media (prefers-reduced-motion: reduce) {

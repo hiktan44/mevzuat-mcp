@@ -753,6 +753,131 @@ async def web_billing_portal(request: Request):
         return JSONResponse({"error": str(exc)}, status_code=503 if not stripe_billing.configured else 422)
 
 
+@mcp.custom_route("/api/consultants", methods=["GET"])
+async def web_consultants(request: Request):
+    limited = _rate_limit_response(request, "consultants-list", limit=60, window_seconds=60)
+    if limited:
+        return limited
+    return JSONResponse({"items": account_service.list_consultants()}, headers={"Cache-Control": "no-store"})
+
+
+@mcp.custom_route("/api/consultants/me", methods=["GET"])
+async def web_consultant_profile(request: Request):
+    try:
+        user = _required_user(request)
+        return JSONResponse({"profile": account_service.consultant_profile(user)}, headers={"Cache-Control": "no-store"})
+    except AuthError as exc:
+        return _auth_error(exc)
+
+
+@mcp.custom_route("/api/consultants/me", methods=["POST"])
+async def web_apply_consultant(request: Request):
+    limited = _rate_limit_response(request, "consultant-application", limit=5, window_seconds=3600)
+    if limited:
+        return limited
+    try:
+        _trusted_request_origin(request)
+        user = _required_user(request)
+        body = await request.json()
+        if not isinstance(body, dict):
+            raise AccountError("Danışman başvurusu geçersiz.")
+        guard_data(body, path="danışman başvurusu")
+        body = redact_data(body, contact_data=True)
+        profile = account_service.apply_as_consultant(user, body)
+        return JSONResponse({"profile": profile}, status_code=201, headers={"Cache-Control": "no-store"})
+    except SecurityViolation as exc:
+        return _security_response(exc)
+    except AuthError as exc:
+        return _auth_error(exc)
+    except (AccountError, ValueError) as exc:
+        return JSONResponse({"error": str(exc)}, status_code=422)
+
+
+@mcp.custom_route("/api/consultation-requests", methods=["GET"])
+async def web_consultation_requests(request: Request):
+    try:
+        user = _required_user(request)
+        return JSONResponse(account_service.list_consultation_requests(user), headers={"Cache-Control": "no-store"})
+    except AuthError as exc:
+        return _auth_error(exc)
+
+
+@mcp.custom_route("/api/consultation-requests", methods=["POST"])
+async def web_create_consultation_request(request: Request):
+    limited = _rate_limit_response(request, "consultation-request", limit=10, window_seconds=86_400)
+    if limited:
+        return limited
+    try:
+        _trusted_request_origin(request)
+        user = _required_user(request)
+        body = await request.json()
+        if not isinstance(body, dict):
+            raise AccountError("Danışmanlık talebi geçersiz.")
+        guard_data(body, path="danışmanlık talebi")
+        body = redact_data(body, contact_data=True)
+        result = account_service.create_consultation_request(
+            user,
+            consultant_id=str(body.get("consultant_id", "")),
+            subject=str(body.get("subject", "")),
+            message=str(body.get("message", "")),
+            result=body.get("result") if isinstance(body.get("result"), dict) else {},
+            share_consent=body.get("share_consent") is True,
+            dossier_id=str(body.get("dossier_id", "")) or None,
+        )
+        return JSONResponse(result, status_code=201, headers={"Cache-Control": "no-store"})
+    except SecurityViolation as exc:
+        return _security_response(exc)
+    except AuthError as exc:
+        return _auth_error(exc)
+    except (AccountError, ValueError) as exc:
+        return JSONResponse({"error": str(exc)}, status_code=422)
+
+
+@mcp.custom_route("/api/consultation-requests/{request_id}", methods=["PATCH"])
+async def web_update_consultation_request(request: Request):
+    try:
+        _trusted_request_origin(request)
+        user = _required_user(request)
+        body = await request.json()
+        if not isinstance(body, dict):
+            raise AccountError("Danışmanlık talebi güncellemesi geçersiz.")
+        account_service.update_consultation_request(
+            user, request.path_params.get("request_id", ""), str(body.get("status", ""))
+        )
+        return JSONResponse({"updated": True})
+    except SecurityViolation as exc:
+        return _security_response(exc)
+    except AuthError as exc:
+        return _auth_error(exc)
+    except AccountError as exc:
+        return JSONResponse({"error": str(exc)}, status_code=422)
+
+
+@mcp.custom_route("/api/consultation-requests/{request_id}/messages", methods=["POST"])
+async def web_add_consultation_message(request: Request):
+    limited = _rate_limit_response(request, "consultation-message", limit=100, window_seconds=86_400)
+    if limited:
+        return limited
+    try:
+        _trusted_request_origin(request)
+        user = _required_user(request)
+        body = await request.json()
+        if not isinstance(body, dict):
+            raise AccountError("Danışman mesajı geçersiz.")
+        guard_data(body, path="danışman mesajı")
+        body = redact_data(body, contact_data=True)
+        result = account_service.add_consultation_message(
+            user, request.path_params.get("request_id", ""), str(body.get("body", ""))
+        )
+        return JSONResponse(result, status_code=201)
+    except SecurityViolation as exc:
+        return _security_response(exc)
+    except AuthError as exc:
+        return _auth_error(exc)
+    except AccountError as exc:
+        return JSONResponse({"error": str(exc)}, status_code=422)
+
+
 @mcp.custom_route("/api/admin/overview", methods=["GET"])
 async def web_admin_overview(request: Request):
     try:
@@ -773,6 +898,26 @@ async def web_admin_subscription(request: Request):
         account_service.admin_set_plan(
             actor, request.path_params.get("google_sub", ""),
             str(body.get("plan_code", "")), str(body.get("status", "")),
+        )
+        return JSONResponse({"updated": True})
+    except SecurityViolation as exc:
+        return _security_response(exc)
+    except AuthError as exc:
+        return _auth_error(exc, status_code=403)
+    except AccountError as exc:
+        return JSONResponse({"error": str(exc)}, status_code=422)
+
+
+@mcp.custom_route("/api/admin/consultants/{google_sub}", methods=["PUT"])
+async def web_admin_consultant(request: Request):
+    try:
+        _trusted_request_origin(request)
+        actor = _require_admin(request)
+        body = await request.json()
+        if not isinstance(body, dict):
+            raise AccountError("Danışman profili güncellemesi geçersiz.")
+        account_service.admin_set_consultant_status(
+            actor, request.path_params.get("google_sub", ""), str(body.get("status", ""))
         )
         return JSONResponse({"updated": True})
     except SecurityViolation as exc:
@@ -1321,7 +1466,7 @@ async def health_check(request):
     return JSONResponse({
         "status": "healthy",
         "service": "Mevzuat MCP Server",
-        "version": "1.7.0",
+        "version": "1.8.0",
         "tariff_ready": tariff_status.ready,
         "tariff_measures": tariff_status.measure_count,
         "controls_ready": control_status.ready,

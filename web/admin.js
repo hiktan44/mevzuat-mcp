@@ -12,6 +12,10 @@ async function load() {
     $("#adminStats").innerHTML = Object.entries(stats).map(([label, value]) => `<article class="quota-card"><header><b>${escapeHtml(label)}</b><span>bu ay</span></header><strong>${escapeHtml(value)}</strong></article>`).join("");
     $("#adminUsers").innerHTML = data.users.map((user) => `<tr data-user="${escapeHtml(user.google_sub)}"><td><b>${escapeHtml(user.name || "Adsız")}</b><small>${escapeHtml(user.email)}</small></td><td><select data-plan><option value="starter">Başlangıç</option><option value="expert">Uzman</option><option value="team">Ekip</option><option value="institutional">Kurumsal</option></select></td><td><select data-status><option value="active">Aktif</option><option value="pending">Bekliyor</option><option value="past_due">Ödeme gecikmiş</option><option value="cancelled">İptal</option></select></td><td>${escapeHtml(formatDate(user.last_login_at))}</td><td><button type="button" data-save>Kaydet</button></td></tr>`).join("");
     data.users.forEach((user) => { const row = $(`[data-user="${CSS.escape(user.google_sub)}"]`); row.querySelector("[data-plan]").value = user.plan_code; row.querySelector("[data-status]").value = user.subscription_status; });
+    const consultants = data.consultants || [];
+    $("#adminConsultantCount").textContent = consultants.length;
+    $("#adminConsultants").innerHTML = consultants.length ? consultants.map((item) => `<tr data-consultant="${escapeHtml(item.google_sub)}"><td><b>${escapeHtml(item.display_name)}</b><small>${escapeHtml(item.email)}</small></td><td><b>${escapeHtml(item.title)}</b><small>${escapeHtml(item.bio)}</small><small>${(item.expertise || []).map(escapeHtml).join(" · ")}</small></td><td>${escapeHtml(item.city || "—")}<small>${escapeHtml(item.experience_years)} yıl · ${escapeHtml(item.service_mode)}</small></td><td><select data-consultant-status><option value="pending">İncelemede</option><option value="active">Yayında</option><option value="suspended">Askıda</option></select></td><td><button type="button" data-save-consultant>Kaydet</button></td></tr>`).join("") : '<tr><td colspan="5">Danışman başvurusu yok.</td></tr>';
+    consultants.forEach((item) => { const row = $(`[data-consultant="${CSS.escape(item.google_sub)}"]`); row.querySelector("[data-consultant-status]").value = item.status; });
   } catch (error) { $("#adminUsers").innerHTML = `<tr><td colspan="5">${escapeHtml(error.message)}</td></tr>`; }
 }
 
@@ -19,6 +23,12 @@ $("#adminUsers").addEventListener("click", async (event) => {
   const button = event.target.closest("[data-save]"); if (!button) return;
   const row = button.closest("[data-user]"); button.disabled = true;
   try { await json(`/api/admin/subscriptions/${encodeURIComponent(row.dataset.user)}`, { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ plan_code: row.querySelector("[data-plan]").value, status: row.querySelector("[data-status]").value }) }); toast("Abonelik güncellendi ve denetim kaydı oluşturuldu."); }
+  catch (error) { toast(error.message); } finally { button.disabled = false; }
+});
+$("#adminConsultants").addEventListener("click", async (event) => {
+  const button = event.target.closest("[data-save-consultant]"); if (!button) return;
+  const row = button.closest("[data-consultant]"); button.disabled = true;
+  try { await json(`/api/admin/consultants/${encodeURIComponent(row.dataset.consultant)}`, { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ status: row.querySelector("[data-consultant-status]").value }) }); toast("Danışman profili güncellendi ve denetim kaydı oluşturuldu."); }
   catch (error) { toast(error.message); } finally { button.disabled = false; }
 });
 load();

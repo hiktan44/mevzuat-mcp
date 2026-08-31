@@ -23,6 +23,8 @@ const state = {
   customsClassificationAnswers: {},
   auth: null,
   currentCustomsResult: null,
+  selectedConsultant: null,
+  consultants: [],
 };
 
 const $ = (selector) => document.querySelector(selector);
@@ -915,7 +917,7 @@ function renderCustomsResult(data) {
       <section class="answer-section"><h3>Sonraki güvenli adımlar</h3><ol class="next-list">${(data.next_steps || []).map((item) => `<li>${escapeHtml(item)}</li>`).join("")}</ol></section>
       <section class="answer-section"><h3>Resmî kanıt defteri · ${(data.sources || []).length} kaynak</h3><div class="source-ledger">${sources}</div></section>
       <div class="legal-banner"><strong>Önemli:</strong> ${escapeHtml(data.legal_notice)}</div>
-      <div class="result-actions"><button id="saveScenario" type="button">Kanıt dosyasına kaydet</button></div>
+      <div class="result-actions"><button class="consultant-send-result" id="sendResultToConsultant" type="button">Danışmana gönder</button><button id="saveScenario" type="button">Kanıt dosyasına kaydet</button></div>
     </article>
     <form class="followup-box" id="followupForm"><label class="field"><span>Bu ürün için takip sorusu</span><input id="followupQuestion" maxlength="1500" placeholder="Örn. TAREKS başvurusunda hangi teknik dosyalar hazırlanmalı?"></label><button class="analyse-button" type="submit"><span>Takip sorusunu sor</span><svg viewBox="0 0 24 24"><path d="m5 12 14 0M14 6l6 6-6 6"/></svg></button></form>`;
   $("#followupForm")?.addEventListener("submit", (event) => {
@@ -953,6 +955,11 @@ function renderCustomsResult(data) {
     link.download = `gumrukce-uzman-dosyasi-${data.inquiry?.candidate_gtip || "gtip-belirsiz"}.json`;
     link.click();
     window.setTimeout(() => URL.revokeObjectURL(url), 1000);
+  });
+  $("#sendResultToConsultant")?.addEventListener("click", () => {
+    switchCustomsView("consultants");
+    $("#consultantsPanelTitle")?.scrollIntoView({ behavior: "smooth", block: "start" });
+    showToast("Bir danışman seçerek kontrollü dosya devrini başlatın.");
   });
 }
 
@@ -1679,6 +1686,108 @@ $("#customsForm").addEventListener("submit", async (event) => {
   }
 });
 
+function formatUnixDate(value) {
+  if (!value) return "—";
+  return new Intl.DateTimeFormat("tr-TR", { dateStyle: "medium", timeStyle: "short" }).format(new Date(Number(value) * 1000));
+}
+
+const consultationStatusLabels = {
+  sent: "Yanıt bekliyor", accepted: "Danışman kabul etti", declined: "Danışman kabul etmedi", closed: "Görüşme kapandı",
+};
+
+function consultantCard(item) {
+  const canSend = Boolean(state.currentCustomsResult);
+  return `<article class="consultant-card">
+    <header><span class="consultant-monogram">${escapeHtml((item.display_name || "D").slice(0, 1).toUpperCase())}</span><div><h3>${escapeHtml(item.display_name)}</h3><p>${escapeHtml(item.title)}</p></div><b>ONAYLI PROFİL</b></header>
+    <p class="consultant-bio-text">${escapeHtml(item.bio)}</p>
+    <div class="consultant-meta"><span>${escapeHtml(item.city || "Konum belirtilmedi")}</span><span>${item.service_mode === "hybrid" ? "Çevrim içi + yüz yüze" : "Çevrim içi"}</span><span>${escapeHtml(item.experience_years)} yıl deneyim</span></div>
+    <ul>${(item.expertise || []).map((entry) => `<li>${escapeHtml(entry)}</li>`).join("")}</ul>
+    <footer><small>Mevzuat danışmanlığı · fiilî gümrük işlemi değildir</small><button type="button" data-send-consultant="${escapeHtml(item.id)}" ${canSend ? "" : "disabled"}>${canSend ? "Analiz dosyasını gönder" : "Önce ürün analizi oluştur"}</button></footer>
+  </article>`;
+}
+
+async function loadConsultants() {
+  const target = $("#consultantGrid");
+  target.innerHTML = "<p>Danışmanlar yükleniyor…</p>";
+  try {
+    const publicData = await fetchJson("/api/consultants");
+    state.consultants = publicData.items || [];
+    target.innerHTML = publicData.items.length
+      ? publicData.items.map(consultantCard).join("")
+      : '<div class="consultant-empty"><b>İlk danışman başvuruları bekleniyor</b><p>Ücretsiz başvuru yapabilir; yönetici incelemesinden sonra bu dizinde yer alabilirsiniz.</p></div>';
+    if (state.auth?.authenticated) {
+      const [profileData] = await Promise.all([
+        fetchJson("/api/consultants/me"), loadConsultationRequests(),
+      ]);
+      if (profileData.profile) fillConsultantApplication(profileData.profile);
+    } else {
+      $("#consultationRequestList").innerHTML = '<p class="consultant-login-note">Taleplerinizi görmek veya danışman olmak için <a href="/auth/google">Google ile giriş yapın</a>.</p>';
+    }
+  } catch (error) {
+    target.innerHTML = `<div class="answer-error"><p>${escapeHtml(error.message)}</p></div>`;
+  }
+}
+
+function fillConsultantApplication(profile) {
+  $("#consultantName").value = profile.display_name || "";
+  $("#consultantTitle").value = profile.title || "";
+  $("#consultantCity").value = profile.city || "";
+  $("#consultantMode").value = profile.service_mode || "online";
+  $("#consultantExperience").value = profile.experience_years ?? 0;
+  $("#consultantBio").value = profile.bio || "";
+  $$('[name="consultantExpertise"]').forEach((input) => { input.checked = (profile.expertise || []).includes(input.value); });
+  const labels = { pending: "Başvurunuz yönetici incelemesinde.", active: "Profiliniz yayında. Değişiklik yaparsanız yeniden incelemeye alınır.", suspended: "Profiliniz yayında değil; yönetici incelemesi gerekiyor." };
+  $("#consultantApplicationStatus").textContent = labels[profile.status] || "";
+  $("#consultantApplicationStatus").dataset.status = profile.status || "pending";
+}
+
+function requestCard(item) {
+  const packet = item.packet || {};
+  const party = item.direction === "incoming" ? "Başvuru sahibi" : item.consultant_name;
+  const sourceLinks = (packet.official_source_urls || []).slice(0, 12).map((url, index) => `<a href="${safeUrl(url)}" target="_blank" rel="noreferrer">Resmî kaynak ${index + 1} ↗</a>`).join("");
+  const messages = (item.messages || []).map((message) => `<div class="consultation-message${message.mine ? " mine" : ""}"><b>${message.mine ? "Siz" : "Karşı taraf"}</b><p>${escapeHtml(message.body)}</p><time>${escapeHtml(formatUnixDate(message.created_at))}</time></div>`).join("");
+  const mayReply = item.status === "accepted";
+  const statusActions = item.direction === "incoming" && item.status === "sent"
+    ? `<button type="button" data-request-status="accepted">Talebi kabul et</button><button type="button" data-request-status="declined" class="decline">Kabul etme</button>`
+    : !["declined", "closed"].includes(item.status) ? '<button type="button" data-request-status="closed" class="decline">Görüşmeyi kapat</button>' : "";
+  return `<details class="consultation-request" data-request-id="${escapeHtml(item.id)}">
+    <summary><div><span>${item.direction === "incoming" ? "GELEN" : "GÖNDERİLEN"}</span><b>${escapeHtml(item.subject)}</b><small>${escapeHtml(party || "Kullanıcı")} · ${escapeHtml(formatUnixDate(item.created_at))}</small></div><em data-status="${escapeHtml(item.status)}">${escapeHtml(consultationStatusLabels[item.status] || item.status)}</em></summary>
+    <div class="consultation-request-body"><p class="initial-message">${escapeHtml(item.message)}</p>
+      <div class="shared-packet"><b>Paylaşılan analiz özeti</b><p>${escapeHtml(packet.summary || "Özet bulunmuyor.")}</p><code>${escapeHtml(packet.inquiry?.candidate_gtip || "GTİP belirsiz")}</code><span>${escapeHtml(packet.inquiry?.origin_country || "Menşe belirtilmedi")}</span><nav>${sourceLinks || "Resmî kaynak URL’si bulunmuyor."}</nav></div>
+      <div class="consultation-thread">${messages || "<p>Henüz ek mesaj yok.</p>"}</div>
+      ${mayReply ? `<form class="consultation-reply"><label class="field"><span>Görüşme mesajı</span><textarea required minlength="2" maxlength="2000" placeholder="Yanıtınızı veya ek sorunuzu yazın."></textarea></label><button type="submit">Mesajı gönder</button></form>` : item.status === "sent" ? '<p class="reply-lock">Mesajlaşma, danışman talebi kabul ettikten sonra açılır.</p>' : ""}
+      <div class="consultation-status-actions">${statusActions}</div>
+    </div>
+  </details>`;
+}
+
+async function loadConsultationRequests() {
+  const target = $("#consultationRequestList");
+  if (!state.auth?.authenticated) return;
+  target.innerHTML = "<p>Danışmanlık talepleri yükleniyor…</p>";
+  try {
+    const data = await fetchJson("/api/consultation-requests");
+    const items = [...(data.incoming || []), ...(data.outgoing || [])];
+    target.innerHTML = items.length ? items.map(requestCard).join("") : "<p>Henüz danışmanlık talebiniz yok.</p>";
+  } catch (error) { target.innerHTML = `<div class="answer-error"><p>${escapeHtml(error.message)}</p></div>`; }
+}
+
+function openConsultationDialog(consultant) {
+  if (!state.auth?.authenticated) {
+    showToast("Danışmana dosya göndermek için Google hesabınızla giriş yapın.");
+    window.setTimeout(() => { location.href = "/auth/google"; }, 700);
+    return;
+  }
+  if (!state.currentCustomsResult) return showToast("Önce Ürüne Sor alanında bir analiz oluşturun.");
+  state.selectedConsultant = consultant;
+  $("#consultationAdvisorName").textContent = `${consultant.display_name} · ${consultant.title}`;
+  const inquiry = state.currentCustomsResult.inquiry || {};
+  $("#consultationSubject").value = `${inquiry.candidate_gtip || "GTİP"} için sınıflandırma ve mevzuat görüşü`;
+  $("#consultationMessage").value = "Analizdeki aday GTİP, ticaret önlemleri ve ürün güvenliği kapsamını resmî kaynaklarıyla değerlendirmenizi rica ederim.";
+  $("#consultationConsent").checked = false;
+  $("#consultationDialog").showModal();
+}
+
 function switchCustomsView(view) {
   $$('[data-customs-view]').forEach((button) => button.classList.toggle("active", button.dataset.customsView === view));
   $$('[data-customs-panel]').forEach((panel) => { panel.hidden = panel.dataset.customsPanel !== view; });
@@ -1686,9 +1795,108 @@ function switchCustomsView(view) {
     renderWatchList();
     loadChanges();
   }
+  if (view === "consultants") loadConsultants();
 }
 
 $$('[data-customs-view]').forEach((button) => button.addEventListener("click", () => switchCustomsView(button.dataset.customsView)));
+
+$("#refreshConsultants").addEventListener("click", loadConsultants);
+$("#refreshConsultationRequests").addEventListener("click", () => {
+  if (!state.auth?.authenticated) return showToast("Talepler için Google hesabınızla giriş yapın.");
+  loadConsultationRequests();
+});
+$("#openConsultantApplication").addEventListener("click", () => {
+  if (!state.auth?.authenticated) {
+    showToast("Ücretsiz danışman kaydı için Google hesabınızla giriş yapın.");
+    window.setTimeout(() => { location.href = "/auth/google"; }, 700);
+    return;
+  }
+  $("#consultantApplication").open = true;
+  $("#consultantApplication").scrollIntoView({ behavior: "smooth", block: "start" });
+});
+$("#consultantGrid").addEventListener("click", (event) => {
+  const button = event.target.closest("[data-send-consultant]");
+  if (!button || button.disabled) return;
+  const consultant = state.consultants.find((item) => item.id === button.dataset.sendConsultant);
+  if (consultant) openConsultationDialog(consultant);
+});
+$("#consultantApplicationForm").addEventListener("submit", async (event) => {
+  event.preventDefault();
+  if (!state.auth?.authenticated) return showToast("Başvuru için Google hesabınızla giriş yapın.");
+  const button = event.currentTarget.querySelector('button[type="submit"]');
+  button.disabled = true;
+  try {
+    const data = await fetchJson("/api/consultants/me", {
+      method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({
+        display_name: $("#consultantName").value.trim(), title: $("#consultantTitle").value,
+        city: $("#consultantCity").value.trim(), service_mode: $("#consultantMode").value,
+        experience_years: Number($("#consultantExperience").value || 0),
+        bio: $("#consultantBio").value.trim(),
+        expertise: $$('[name="consultantExpertise"]:checked').map((input) => input.value),
+        advisory_only_accepted: $("#consultantTerms").checked,
+      }),
+    });
+    fillConsultantApplication(data.profile);
+    showToast("Ücretsiz danışman başvurunuz incelemeye gönderildi.");
+  } catch (error) { showToast(error.message); }
+  finally { button.disabled = false; }
+});
+
+function closeConsultationDialog() { $("#consultationDialog").close(); state.selectedConsultant = null; }
+$("#closeConsultationDialog").addEventListener("click", closeConsultationDialog);
+$("#cancelConsultation").addEventListener("click", closeConsultationDialog);
+$("#consultationDialog").addEventListener("click", (event) => { if (event.target === $("#consultationDialog")) closeConsultationDialog(); });
+$("#consultationForm").addEventListener("submit", async (event) => {
+  event.preventDefault();
+  const consultant = state.selectedConsultant;
+  if (!consultant || !state.currentCustomsResult) return showToast("Danışman veya analiz dosyası bulunamadı.");
+  const button = event.currentTarget.querySelector('button[type="submit"]');
+  button.disabled = true;
+  try {
+    await fetchJson("/api/consultation-requests", {
+      method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({
+        consultant_id: consultant.id, subject: $("#consultationSubject").value.trim(),
+        message: $("#consultationMessage").value.trim(), share_consent: $("#consultationConsent").checked,
+        result: state.currentCustomsResult,
+      }),
+    });
+    closeConsultationDialog();
+    await loadConsultationRequests();
+    $("#consultationInbox").scrollIntoView({ behavior: "smooth", block: "start" });
+    showToast("Analiz özeti danışmana güvenle gönderildi.");
+  } catch (error) { showToast(error.message); }
+  finally { button.disabled = false; }
+});
+
+$("#consultationRequestList").addEventListener("click", async (event) => {
+  const button = event.target.closest("[data-request-status]");
+  if (!button) return;
+  const requestNode = button.closest("[data-request-id]");
+  button.disabled = true;
+  try {
+    await fetchJson(`/api/consultation-requests/${encodeURIComponent(requestNode.dataset.requestId)}`, {
+      method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ status: button.dataset.requestStatus }),
+    });
+    await loadConsultationRequests();
+    showToast("Danışmanlık talebi güncellendi.");
+  } catch (error) { showToast(error.message); button.disabled = false; }
+});
+$("#consultationRequestList").addEventListener("submit", async (event) => {
+  const form = event.target.closest(".consultation-reply");
+  if (!form) return;
+  event.preventDefault();
+  const requestNode = form.closest("[data-request-id]");
+  const textarea = form.querySelector("textarea");
+  const button = form.querySelector('button[type="submit"]');
+  button.disabled = true;
+  try {
+    await fetchJson(`/api/consultation-requests/${encodeURIComponent(requestNode.dataset.requestId)}/messages`, {
+      method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ body: textarea.value.trim() }),
+    });
+    await loadConsultationRequests();
+    showToast("Mesaj görüşmeye eklendi.");
+  } catch (error) { showToast(error.message); button.disabled = false; }
+});
 
 function tariffRows(items) {
   if (!items?.length) return '<tr><td colspan="5">Bu menşe sütunu için uygulanabilir satır bulunamadı.</td></tr>';

@@ -68,6 +68,18 @@ _OFFICIAL_HOSTS = {
     "www.mevzuat.gov.tr", "data.europa.eu", "eur-lex.europa.eu",
 }
 _GTIP_RE = re.compile(r"^\d{4}(?:\d{2}){0,4}$")
+_CONSULTANT_TITLES = {
+    "Gümrük mevzuatı danışmanı",
+    "Dış ticaret mevzuatı danışmanı",
+    "Ürün güvenliği ve TAREKS danışmanı",
+    "Tarife sınıflandırma danışmanı",
+}
+_CONSULTANT_EXPERTISE = {
+    "GTİP ve tarife sınıflandırma", "İthalat vergileri ve ticaret önlemleri",
+    "TAREKS ve ürün güvenliği", "TSE ve uygunluk belgeleri",
+    "Kimyasallar ve çevre mevzuatı", "İhracat ve devlet destekleri",
+}
+_CONSULTATION_STATUSES = {"sent", "accepted", "declined", "closed"}
 
 
 def _now() -> int:
@@ -190,6 +202,32 @@ class AccountService:
                     action TEXT NOT NULL, target_type TEXT NOT NULL, target_id TEXT,
                     details_json TEXT NOT NULL, created_at INTEGER NOT NULL
                 );
+                CREATE TABLE IF NOT EXISTS consultant_profiles (
+                    google_sub TEXT PRIMARY KEY REFERENCES users(google_sub) ON DELETE CASCADE,
+                    id TEXT NOT NULL UNIQUE, display_name TEXT NOT NULL, title TEXT NOT NULL,
+                    bio TEXT NOT NULL, expertise_json TEXT NOT NULL, city TEXT NOT NULL DEFAULT '',
+                    service_mode TEXT NOT NULL DEFAULT 'online', experience_years INTEGER NOT NULL DEFAULT 0,
+                    status TEXT NOT NULL DEFAULT 'pending', advisory_only INTEGER NOT NULL DEFAULT 1,
+                    terms_accepted_at INTEGER NOT NULL, created_at INTEGER NOT NULL, updated_at INTEGER NOT NULL
+                );
+                CREATE INDEX IF NOT EXISTS consultant_status_updated ON consultant_profiles(status, updated_at DESC);
+                CREATE TABLE IF NOT EXISTS consultation_requests (
+                    id TEXT PRIMARY KEY,
+                    requester_sub TEXT NOT NULL REFERENCES users(google_sub) ON DELETE CASCADE,
+                    consultant_sub TEXT NOT NULL REFERENCES users(google_sub) ON DELETE CASCADE,
+                    dossier_id TEXT REFERENCES dossiers(id) ON DELETE SET NULL,
+                    subject TEXT NOT NULL, message TEXT NOT NULL, packet_json TEXT NOT NULL,
+                    status TEXT NOT NULL DEFAULT 'sent', created_at INTEGER NOT NULL, updated_at INTEGER NOT NULL
+                );
+                CREATE INDEX IF NOT EXISTS consultation_requester_created ON consultation_requests(requester_sub, created_at DESC);
+                CREATE INDEX IF NOT EXISTS consultation_consultant_created ON consultation_requests(consultant_sub, created_at DESC);
+                CREATE TABLE IF NOT EXISTS consultation_messages (
+                    id TEXT PRIMARY KEY,
+                    request_id TEXT NOT NULL REFERENCES consultation_requests(id) ON DELETE CASCADE,
+                    sender_sub TEXT NOT NULL REFERENCES users(google_sub) ON DELETE CASCADE,
+                    body TEXT NOT NULL, created_at INTEGER NOT NULL
+                );
+                CREATE INDEX IF NOT EXISTS consultation_message_thread ON consultation_messages(request_id, created_at);
                 """
             )
         self.db_path.chmod(0o600)
@@ -495,7 +533,19 @@ class AccountService:
                 "SELECT operation,SUM(quantity) quantity FROM usage_ledger WHERE period_key=? GROUP BY operation", (_period_key(),)
             ).fetchall()
             dossier_count = int(connection.execute("SELECT COUNT(*) FROM dossiers").fetchone()[0])
-        return {"users": [dict(row) for row in users], "usage": {row["operation"]: row["quantity"] for row in usage}, "dossier_count": dossier_count}
+            consultants = connection.execute(
+                "SELECT c.google_sub,c.id,c.display_name,c.title,c.bio,c.expertise_json,c.city,c.service_mode,c.experience_years,c.status,c.updated_at,u.email "
+                "FROM consultant_profiles c JOIN users u ON u.google_sub=c.google_sub "
+                "ORDER BY CASE c.status WHEN 'pending' THEN 0 WHEN 'active' THEN 1 ELSE 2 END,c.updated_at DESC LIMIT 500"
+            ).fetchall()
+        return {
+            "users": [dict(row) for row in users],
+            "usage": {row["operation"]: row["quantity"] for row in usage},
+            "dossier_count": dossier_count,
+            "consultants": [
+                {**dict(row), "expertise": json.loads(row["expertise_json"])} for row in consultants
+            ],
+        }
 
     def admin_set_plan(self, actor: dict[str, Any], google_sub: str, plan_code: str, status: str) -> None:
         if plan_code not in PLANS or status not in {"active", "pending", "past_due", "cancelled"}:
@@ -513,6 +563,232 @@ class AccountService:
                 "INSERT INTO audit_log(actor_sub,actor_email,action,target_type,target_id,details_json,created_at) VALUES(?,?,?,?,?,?,?)",
                 (str(actor.get("sub", "")), str(actor.get("email", "")), "subscription.set", "user", google_sub,
                  _json({"plan_code": plan_code, "status": status}, max_bytes=5_000), now),
+            )
+
+    @staticmethod
+    def _public_consultant(row: sqlite3.Row | dict[str, Any]) -> dict[str, Any]:
+        item = dict(row)
+        item["expertise"] = json.loads(item.pop("expertise_json"))
+        item["advisory_only"] = bool(item.get("advisory_only", 1))
+        for private_key in ("google_sub", "email", "terms_accepted_at"):
+            item.pop(private_key, None)
+        return item
+
+    def list_consultants(self) -> list[dict[str, Any]]:
+        with self._connect() as connection:
+            rows = connection.execute(
+                "SELECT id,display_name,title,bio,expertise_json,city,service_mode,experience_years,advisory_only,updated_at "
+                "FROM consultant_profiles WHERE status='active' ORDER BY updated_at DESC LIMIT 200"
+            ).fetchall()
+        return [self._public_consultant(row) for row in rows]
+
+    def consultant_profile(self, user: dict[str, Any]) -> dict[str, Any] | None:
+        with self._connect() as connection:
+            row = connection.execute(
+                "SELECT * FROM consultant_profiles WHERE google_sub=?", (str(user["sub"]),)
+            ).fetchone()
+        if not row:
+            return None
+        item = dict(row)
+        item["expertise"] = json.loads(item.pop("expertise_json"))
+        item["advisory_only"] = bool(item["advisory_only"])
+        return item
+
+    def apply_as_consultant(self, user: dict[str, Any], profile: dict[str, Any]) -> dict[str, Any]:
+        display_name = str(profile.get("display_name", "")).strip()[:80]
+        title = str(profile.get("title", "")).strip()
+        bio = str(profile.get("bio", "")).strip()[:1_200]
+        city = str(profile.get("city", "")).strip()[:80]
+        service_mode = str(profile.get("service_mode", "online"))
+        try:
+            experience_years = int(profile.get("experience_years", 0))
+        except (TypeError, ValueError) as exc:
+            raise AccountError("Deneyim yılı geçerli bir sayı olmalıdır.") from exc
+        expertise_raw = profile.get("expertise")
+        expertise = list(dict.fromkeys(str(item).strip() for item in expertise_raw)) if isinstance(expertise_raw, list) else []
+        if not (2 <= len(display_name) <= 80):
+            raise AccountError("Danışman adı 2–80 karakter olmalıdır.")
+        if title not in _CONSULTANT_TITLES:
+            raise AccountError("Danışmanlık alanı geçersiz.")
+        if not (40 <= len(bio) <= 1_200):
+            raise AccountError("Uzmanlık özeti en az 40 karakter olmalıdır.")
+        if not expertise or len(expertise) > 6 or any(item not in _CONSULTANT_EXPERTISE for item in expertise):
+            raise AccountError("En az bir geçerli uzmanlık alanı seçin.")
+        if service_mode not in {"online", "hybrid"} or not 0 <= experience_years <= 60:
+            raise AccountError("Hizmet biçimi veya deneyim yılı geçersiz.")
+        if profile.get("advisory_only_accepted") is not True:
+            raise AccountError("Danışmanlığın fiilî gümrük işlemi olmadığını kabul etmelisiniz.")
+        now = _now()
+        with self._connect() as connection:
+            existing = connection.execute(
+                "SELECT id,created_at FROM consultant_profiles WHERE google_sub=?", (str(user["sub"]),)
+            ).fetchone()
+            profile_id = str(existing["id"]) if existing else str(uuid.uuid4())
+            created_at = int(existing["created_at"]) if existing else now
+            connection.execute(
+                "INSERT INTO consultant_profiles(google_sub,id,display_name,title,bio,expertise_json,city,service_mode,experience_years,status,advisory_only,terms_accepted_at,created_at,updated_at) "
+                "VALUES(?,?,?,?,?,?,?,?,?,'pending',1,?,?,?) "
+                "ON CONFLICT(google_sub) DO UPDATE SET display_name=excluded.display_name,title=excluded.title,bio=excluded.bio,expertise_json=excluded.expertise_json,city=excluded.city,service_mode=excluded.service_mode,experience_years=excluded.experience_years,status='pending',advisory_only=1,terms_accepted_at=excluded.terms_accepted_at,updated_at=excluded.updated_at",
+                (str(user["sub"]), profile_id, display_name, title, bio,
+                 _json(expertise, max_bytes=5_000), city, service_mode, experience_years, now, created_at, now),
+            )
+        return self.consultant_profile(user) or {}
+
+    @staticmethod
+    def _consultation_packet(result: dict[str, Any]) -> dict[str, Any]:
+        inquiry = result.get("inquiry") if isinstance(result.get("inquiry"), dict) else {}
+        safe_inquiry = {
+            key: inquiry.get(key) for key in (
+                "question", "product_description", "candidate_gtip", "origin_country",
+                "composition", "intended_use", "target_user", "declared_product_type",
+            ) if inquiry.get(key) not in (None, "")
+        }
+        packet = {
+            "as_of": result.get("as_of"), "status": result.get("status"),
+            "summary": result.get("summary"), "inquiry": safe_inquiry,
+            "candidate_gtips": result.get("candidate_gtips", [])[:5] if isinstance(result.get("candidate_gtips"), list) else [],
+            "missing_information": result.get("missing_information", [])[:30] if isinstance(result.get("missing_information"), list) else [],
+            "expert_review_packet": result.get("expert_review_packet") if isinstance(result.get("expert_review_packet"), dict) else {},
+            "official_source_urls": collect_official_sources(result, limit=50),
+            "legal_notice": result.get("legal_notice"),
+        }
+        # Images, contact details, invoice values and deterministic cost fields are intentionally excluded.
+        return packet
+
+    def create_consultation_request(
+        self, user: dict[str, Any], *, consultant_id: str, subject: str, message: str,
+        result: dict[str, Any], share_consent: bool, dossier_id: str | None = None,
+    ) -> dict[str, Any]:
+        if not share_consent:
+            raise AccountError("Danışmanla paylaşılacak alanları onaylamalısınız.")
+        subject = subject.strip()[:160]
+        message = message.strip()[:2_000]
+        if not (5 <= len(subject) <= 160) or not (10 <= len(message) <= 2_000):
+            raise AccountError("Konu en az 5, mesaj en az 10 karakter olmalıdır.")
+        if not isinstance(result, dict):
+            raise AccountError("Danışmana gönderilecek analiz dosyası eksik.")
+        now = _now()
+        request_id = str(uuid.uuid4())
+        packet_json = _json(self._consultation_packet(result), max_bytes=180_000)
+        with self._connect() as connection:
+            consultant = connection.execute(
+                "SELECT google_sub FROM consultant_profiles WHERE id=? AND status='active'", (consultant_id,)
+            ).fetchone()
+            if not consultant:
+                raise AccountError("Seçilen danışman artık yayında değil.")
+            if str(consultant["google_sub"]) == str(user["sub"]):
+                raise AccountError("Kendi danışman profilinize dosya gönderemezsiniz.")
+            recent = int(connection.execute(
+                "SELECT COUNT(*) FROM consultation_requests WHERE requester_sub=? AND created_at>?",
+                (str(user["sub"]), now - 86_400),
+            ).fetchone()[0])
+            if recent >= 10:
+                raise AccountError("24 saatlik danışman talebi sınırına ulaştınız.")
+            if dossier_id and not connection.execute(
+                "SELECT 1 FROM dossiers WHERE id=? AND google_sub=?", (dossier_id, str(user["sub"]))
+            ).fetchone():
+                raise AccountError("Paylaşılacak kanıt dosyası bu hesaba ait değil.")
+            connection.execute(
+                "INSERT INTO consultation_requests(id,requester_sub,consultant_sub,dossier_id,subject,message,packet_json,status,created_at,updated_at) "
+                "VALUES(?,?,?,?,?,?,?,'sent',?,?)",
+                (request_id, str(user["sub"]), str(consultant["google_sub"]), dossier_id, subject, message, packet_json, now, now),
+            )
+        return {"id": request_id, "status": "sent", "created_at": now}
+
+    def list_consultation_requests(self, user: dict[str, Any]) -> dict[str, list[dict[str, Any]]]:
+        google_sub = str(user["sub"])
+        with self._connect() as connection:
+            rows = connection.execute(
+                "SELECT r.*,cp.id consultant_id,cp.display_name consultant_name "
+                "FROM consultation_requests r JOIN consultant_profiles cp ON cp.google_sub=r.consultant_sub "
+                "WHERE r.requester_sub=? OR r.consultant_sub=? ORDER BY r.created_at DESC LIMIT 200",
+                (google_sub, google_sub),
+            ).fetchall()
+            outgoing, incoming = [], []
+            for row in rows:
+                item = dict(row)
+                item["packet"] = json.loads(item.pop("packet_json"))
+                item["direction"] = "outgoing" if item["requester_sub"] == google_sub else "incoming"
+                messages = connection.execute(
+                    "SELECT m.id,m.sender_sub,m.body,m.created_at FROM consultation_messages m "
+                    "WHERE m.request_id=? ORDER BY m.created_at LIMIT 200",
+                    (item["id"],),
+                ).fetchall()
+                item["messages"] = [
+                    {**dict(message), "mine": str(message["sender_sub"]) == google_sub}
+                    for message in messages
+                ]
+                for message in item["messages"]:
+                    message.pop("sender_sub", None)
+                item.pop("requester_sub", None)
+                item.pop("consultant_sub", None)
+                (outgoing if item["direction"] == "outgoing" else incoming).append(item)
+        return {"outgoing": outgoing, "incoming": incoming}
+
+    def update_consultation_request(self, user: dict[str, Any], request_id: str, status: str) -> None:
+        if status not in {"accepted", "declined", "closed"}:
+            raise AccountError("Danışmanlık talebi durumu geçersiz.")
+        with self._connect() as connection:
+            row = connection.execute("SELECT * FROM consultation_requests WHERE id=?", (request_id,)).fetchone()
+            if not row:
+                raise AccountError("Danışmanlık talebi bulunamadı.")
+            is_consultant = str(row["consultant_sub"]) == str(user["sub"])
+            is_requester_closing = str(row["requester_sub"]) == str(user["sub"]) and status == "closed"
+            if not (is_consultant or is_requester_closing):
+                raise AccountError("Bu talebi güncelleme yetkiniz yok.")
+            current = str(row["status"])
+            valid_transition = (
+                (is_consultant and current == "sent" and status in {"accepted", "declined"})
+                or (current == "accepted" and status == "closed" and (is_consultant or is_requester_closing))
+            )
+            if not valid_transition:
+                raise AccountError("Danışmanlık talebi bu duruma geçirilemez.")
+            connection.execute(
+                "UPDATE consultation_requests SET status=?,updated_at=? WHERE id=?", (status, _now(), request_id)
+            )
+
+    def add_consultation_message(self, user: dict[str, Any], request_id: str, body: str) -> dict[str, Any]:
+        body = body.strip()[:2_000]
+        if not (2 <= len(body) <= 2_000):
+            raise AccountError("Mesaj 2–2.000 karakter olmalıdır.")
+        google_sub = str(user["sub"])
+        now = _now()
+        message_id = str(uuid.uuid4())
+        with self._connect() as connection:
+            request_row = connection.execute(
+                "SELECT requester_sub,consultant_sub,status FROM consultation_requests WHERE id=?", (request_id,)
+            ).fetchone()
+            if not request_row or google_sub not in {str(request_row["requester_sub"]), str(request_row["consultant_sub"])}:
+                raise AccountError("Danışmanlık görüşmesi bulunamadı.")
+            if str(request_row["status"]) != "accepted":
+                raise AccountError("Mesajlaşma yalnızca kabul edilmiş danışmanlık görüşmesinde kullanılabilir.")
+            recent = int(connection.execute(
+                "SELECT COUNT(*) FROM consultation_messages WHERE sender_sub=? AND created_at>?",
+                (google_sub, now - 86_400),
+            ).fetchone()[0])
+            if recent >= 100:
+                raise AccountError("24 saatlik danışman mesajı sınırına ulaştınız.")
+            connection.execute(
+                "INSERT INTO consultation_messages(id,request_id,sender_sub,body,created_at) VALUES(?,?,?,?,?)",
+                (message_id, request_id, google_sub, body, now),
+            )
+            connection.execute("UPDATE consultation_requests SET updated_at=? WHERE id=?", (now, request_id))
+        return {"id": message_id, "created_at": now}
+
+    def admin_set_consultant_status(self, actor: dict[str, Any], google_sub: str, status: str) -> None:
+        if status not in {"pending", "active", "suspended"}:
+            raise AccountError("Danışman profili durumu geçersiz.")
+        now = _now()
+        with self._connect() as connection:
+            cursor = connection.execute(
+                "UPDATE consultant_profiles SET status=?,updated_at=? WHERE google_sub=?", (status, now, google_sub)
+            )
+            if cursor.rowcount != 1:
+                raise AccountError("Danışman profili bulunamadı.")
+            connection.execute(
+                "INSERT INTO audit_log(actor_sub,actor_email,action,target_type,target_id,details_json,created_at) VALUES(?,?,?,?,?,?,?)",
+                (str(actor.get("sub", "")), str(actor.get("email", "")), "consultant.status", "consultant", google_sub,
+                 _json({"status": status}, max_bytes=5_000), now),
             )
 
     def delete_account(self, user: dict[str, Any]) -> bool:

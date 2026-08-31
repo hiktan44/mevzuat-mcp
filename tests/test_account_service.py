@@ -73,6 +73,58 @@ class AccountServiceTests(unittest.TestCase):
             self.assertEqual(connection.execute("SELECT COUNT(*) FROM usage_ledger WHERE google_sub='user-1'").fetchone()[0], 0)
             self.assertEqual(connection.execute("SELECT COUNT(*) FROM subscriptions WHERE google_sub='user-1'").fetchone()[0], 0)
 
+    def test_consultant_application_requires_review_and_is_advisory_only(self):
+        profile = self.accounts.apply_as_consultant(user("user-2", "other@example.com"), {
+            "display_name": "Ayşe Uzman", "title": "Gümrük mevzuatı danışmanı",
+            "bio": "Tarife sınıflandırma ve ithalat mevzuatı alanında ürün bazlı görüş veriyorum.",
+            "expertise": ["GTİP ve tarife sınıflandırma", "İthalat vergileri ve ticaret önlemleri"],
+            "city": "İstanbul", "service_mode": "online", "experience_years": 8,
+            "advisory_only_accepted": True,
+        })
+        self.assertEqual(profile["status"], "pending")
+        self.assertTrue(profile["advisory_only"])
+        self.assertEqual(self.accounts.list_consultants(), [])
+        self.accounts.admin_set_consultant_status(user("admin", "admin@example.com"), "user-2", "active")
+        public = self.accounts.list_consultants()[0]
+        self.assertEqual(public["display_name"], "Ayşe Uzman")
+        self.assertNotIn("google_sub", public)
+        self.assertNotIn("email", public)
+
+    def test_consultation_packet_excludes_image_cost_and_contact_data(self):
+        self.accounts.apply_as_consultant(user("user-2", "other@example.com"), {
+            "display_name": "Ayşe Uzman", "title": "Tarife sınıflandırma danışmanı",
+            "bio": "Tarife kararları ve ürün evsafı üzerinden bağımsız sınıflandırma görüşü veriyorum.",
+            "expertise": ["GTİP ve tarife sınıflandırma"], "city": "Ankara",
+            "service_mode": "hybrid", "experience_years": 10, "advisory_only_accepted": True,
+        })
+        self.accounts.admin_set_consultant_status(user("admin", "admin@example.com"), "user-2", "active")
+        consultant_id = self.accounts.list_consultants()[0]["id"]
+        created = self.accounts.create_consultation_request(
+            user(), consultant_id=consultant_id, subject="Porselen fincan sınıflandırması",
+            message="Aday kodu ve ürün güvenliği kapsamını değerlendirir misiniz?", share_consent=True,
+            result={
+                "summary": "Ön değerlendirme", "as_of": "2026-08-31",
+                "inquiry": {"product_description": "Porselen fincan", "candidate_gtip": "691110", "origin_country": "Çin", "invoice_value": 9999},
+                "image_data": "data:image/png;base64,SECRET", "deterministic_cost": {"total": 9999},
+                "expert_review_packet": {"risk_level": "high"},
+                "sources": [{"url": "https://ticaret.gov.tr/gumruk"}],
+            },
+        )
+        incoming = self.accounts.list_consultation_requests(user("user-2", "other@example.com"))["incoming"][0]
+        self.assertEqual(incoming["id"], created["id"])
+        serialized = json.dumps(incoming["packet"])
+        self.assertNotIn("SECRET", serialized)
+        self.assertNotIn("invoice_value", serialized)
+        self.assertNotIn("deterministic_cost", serialized)
+        self.assertEqual(incoming["packet"]["official_source_urls"], ["https://ticaret.gov.tr/gumruk"])
+        self.accounts.update_consultation_request(user("user-2", "other@example.com"), created["id"], "accepted")
+        self.accounts.add_consultation_message(user("user-2", "other@example.com"), created["id"], "Kod gerekçesini teknik belgeyle doğrulayın.")
+        outgoing = self.accounts.list_consultation_requests(user())["outgoing"][0]
+        self.assertEqual(outgoing["status"], "accepted")
+        self.assertEqual(outgoing["messages"][0]["body"], "Kod gerekçesini teknik belgeyle doğrulayın.")
+        with self.assertRaises(AccountError):
+            self.accounts.add_consultation_message(user("admin", "admin@example.com"), created["id"], "Yetkisiz mesaj")
+
     def test_stripe_checkout_and_subscription_webhook_update_plan(self):
         payment = self.accounts.create_payment_session(user(), "expert", "monthly")
         self.accounts.attach_payment_token(payment["id"], "cs_test_checkout1")
