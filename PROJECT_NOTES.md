@@ -82,6 +82,39 @@ Yerelde çalıştırma: `scripts/dev.sh` (anahtar gerekmez; veri `.dev-data/` al
 12. Playwright tabanlı görsel duman testi (`scratchpad/shoot.py` benzeri) `tests/`
     altına alınabilir; şu an yalnızca oturum içi kullanıldı.
 
+## 2 Eylül 2026 (akşam) — kullanıcı gibi tam özellik turu
+İki hesapla (müşteri + yönetici/danışman) her kontrol tıklandı. Çalıştığı doğrulananlar:
+açılış sayfası etkileşimleri (ürün sekmeleri, aylık/yıllık, SSS), hızlı rotalar, kaynak /
+belge türü / yıl / mülga filtreleri, sayfalama (26 sayfa ileri-geri), belge okuyucu (metin
+içi arama ve vurgulama, atıf kopyalama, resmî bağlantılar, 300 bin karakterlik Gümrük
+Kanunu'nda 112 bölümlük içindekiler), genel mevzuat başlık/içerik/numara modları ve tür +
+tarih filtreleri, MCP adresi kopyalama, tema kalıcılığı, görsel yükleme (80×80 altı görsel
+için açık hata), aday kod → tarife ağacı → dal seçimi, ön değerlendirme + takip sorusu +
+uzman paketi indirme + kanıt dosyası kaydı, izleme listesine ekleme/kaldırma, değişiklik
+defteri, işlem rehberi, danışman başvurusu → yönetici onayı → talep gönderme → kabul →
+karşılıklı mesaj → kapatma, yönetici panelinde paket değişikliği, Hesabım'da kota, JSON
+indirme (110 KB), dosya silme, güvenli çıkış, hesap silme, admin erişim kontrolü (303/403).
+
+### Bu turda bulunan eksikler (plana eklendi)
+- **Tarife doğrulama yarışı**: GTİP yazıp hemen "GTİP bul" düğmesine basınca "doğrulanmasını
+  bekleyin" uyarısı çıkıyor; doğrulama bitince analiz kendiliğinden başlamalı (P1).
+- **Vergi oranları maliyete akmıyor**: Tarife aracı %12 GV ve %39 İGV'yi buluyor ama ön
+  değerlendirmede maliyet için kullanıcıdan aynı oranların elle "doğrulanmış" girilmesi
+  isteniyor; "bulunan oranı kullan" düğmesi gerekli (P1).
+- **Danışmanlık formu min. uzunluk**: konu 5, mesaj 10 karakter altında yalnızca tarayıcı
+  balonu çıkıyor; alan altına görünür ipucu ve sayaç eklenmeli (P2).
+- **Danışman bildirimi yok**: yeni talep yalnızca Danışmanlar sekmesi açılınca görünüyor;
+  sekmede okunmamış rozeti ve e-posta gerekli (P2, mevcut madde 5 ile birleşti).
+- **Kurumsal paket düğmesi pasif**: Hesabım › Paketler'de "Satış ekibiyle görüşün" tıklanamıyor;
+  açılış sayfasındaki gibi mailto bağlantısı olmalı. Stripe kapalıyken "Stripe ayarı
+  bekleniyor" yerine kullanıcıya anlamlı bir metin ("Yakında") gösterilmeli (P2).
+- **404 sayfası**: bilinmeyen adresler düz metin "Not Found" döndürüyor; markalı 404 (P3).
+- **Görsel boyut ipucu**: yükleme kutusunda 80×80 alt sınırı yazmıyor (P3).
+- **Silinen kanıt dosyası kotayı iade etmiyor** (4/10 kalıyor); bilinçli tasarımsa Hesabım'da
+  açıklanmalı (P3).
+- **Kaynak filtre + belge türü + yıl** birlikte çoğu zaman 0 sonuç veriyor; boş sonuçta
+  hangi filtrenin daralttığını gösteren "filtreyi kaldır" çipleri yararlı olur (P3).
+
 ## Önemli kimlikler / seçiciler
 - Oturum çerezi: `tbm_session` (HMAC imzalı, `auth_service.GoogleAuthService`).
 - Kapsam sekmeleri: `[data-scope=customs|ticaret|general]`; Gümrükçe alt sekmeleri
