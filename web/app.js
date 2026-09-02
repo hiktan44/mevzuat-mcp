@@ -16,6 +16,9 @@ const state = {
   customsClassificationResult: null,
   customsAutoGtip: null,
   customsGtipSelectionConfirmed: false,
+  customsPendingSubmit: false,
+  tariffRateSources: {},
+  consultationBadge: 0,
   customsExactGtipConfirmed: false,
   customsApplyingTariffSelection: false,
   customsTariffTree: null,
@@ -150,6 +153,24 @@ function setStatus(title, message, isError = false) {
   statusNote.querySelector("p").textContent = message;
 }
 
+function activeTicaretFilters() {
+  const chips = [];
+  if (state.activeKind) chips.push({ key: "kind", label: `Katman: ${kindLabels[state.activeKind] || state.activeKind}` });
+  const source = $("#sourceFilter");
+  if (source.value) chips.push({ key: "source", label: `Kaynak: ${source.selectedOptions[0]?.textContent || source.value}` });
+  if ($("#documentType").value) chips.push({ key: "type", label: `Belge türü: ${$("#documentType").value}` });
+  if ($("#yearFilter").value) chips.push({ key: "year", label: `Yıl: ${$("#yearFilter").value}` });
+  if (!$("#includeRepealed").checked) chips.push({ key: "repealed", label: "Mülga kayıtlar gizli" });
+  return chips;
+}
+
+function renderActiveFilterChips() {
+  const chips = activeTicaretFilters();
+  const container = statusNote.querySelector("p");
+  if (!chips.length) { container.insertAdjacentHTML("beforeend", " Şu anda hiçbir filtre uygulanmıyor."); return; }
+  container.insertAdjacentHTML("beforeend", `<span class="filter-chips">${chips.map((chip) => `<button type="button" class="filter-chip" data-clear-filter="${chip.key}"><span>${escapeHtml(chip.label)}</span><i aria-hidden="true">×</i></button>`).join("")}${chips.length > 1 ? '<button type="button" class="filter-chip clear-all" data-clear-filter="all">Tümünü kaldır</button>' : ""}</span>`);
+}
+
 function updatePagination(total, current, hasNext) {
   const page = state.scope === "ticaret" ? Math.floor(current / state.limit) + 1 : current;
   const pages = Math.max(1, Math.ceil(total / state.limit));
@@ -170,7 +191,8 @@ function renderTicaretResults(data) {
   updatePagination(data.total, data.offset, data.has_next);
 
   if (!data.documents.length) {
-    setStatus("Bu dosyada kayıt bulunamadı.", "Daha kısa bir ifade deneyin veya kaynak ve yıl filtrelerini kaldırın.");
+    setStatus("Bu dosyada kayıt bulunamadı.", "Daha kısa bir ifade deneyin veya aşağıdaki filtrelerden birini kaldırın.");
+    renderActiveFilterChips();
     resultCount.textContent = "0";
     return;
   }
@@ -574,6 +596,7 @@ async function loadAuthState() {
     $("#appLogin").hidden = true;
     $("#appAccountButton").hidden = false;
     $("#appAccountButton").textContent = `${firstName} · Hesabım`;
+    refreshConsultationBadge();
     if (new URLSearchParams(location.search).get("account")) openAccount();
   } catch (_) {
     // The application remains usable as a guest if account state is unavailable.
@@ -617,6 +640,7 @@ async function openAccount(tab = "summary") {
     const [account, plans] = await Promise.all([fetchJson("/api/account"), fetchJson("/api/plans")]);
     state.auth.account = account;
     state.auth.billing_enabled = plans.billing_enabled;
+    state.salesEmail = plans.sales_email || state.salesEmail;
     renderAccount(state.auth);
     renderPlans(plans.plans, plans.billing_enabled);
   } catch (error) { showToast(error.message); }
@@ -626,7 +650,14 @@ function renderPlans(plans, billingEnabled) {
   $("#pricingGrid").innerHTML = plans.map((plan) => {
     const monthly = plan.monthly_price_try == null ? "Teklif" : plan.monthly_price_try === 0 ? "Ücretsiz" : `${numberFormat.format(plan.monthly_price_try)} TL`;
     const purchasable = ["expert", "team"].includes(plan.code);
-    return `<article class="price-card${plan.code === "expert" ? " featured" : ""}"><span>${escapeHtml(plan.code)}</span><h3>${escapeHtml(plan.name)}</h3><div class="price">${escapeHtml(monthly)}${plan.monthly_price_try ? "<small> + KDV / ay</small>" : ""}</div><ul>${plan.features.map((item) => `<li>${escapeHtml(item)}</li>`).join("")}</ul><div class="price-actions">${purchasable ? `<button type="button" data-buy-plan="${escapeHtml(plan.code)}" data-buy-cycle="monthly" ${billingEnabled ? "" : "disabled"}>${billingEnabled ? "Stripe ile aylık başlat" : "Stripe ayarı bekleniyor"}</button><button class="yearly" type="button" data-buy-plan="${escapeHtml(plan.code)}" data-buy-cycle="yearly" ${billingEnabled ? "" : "disabled"}>Yıllık · ${numberFormat.format(plan.yearly_price_try)} TL + KDV</button>` : `<button type="button" disabled>${plan.code === "starter" ? "Mevcut ücretsiz paket" : "Satış ekibiyle görüşün"}</button>`}</div></article>`;
+    const salesHref = `mailto:${escapeHtml(state.salesEmail || "")}?subject=${encodeURIComponent(`Ticaret Bilgi Masası · ${plan.name} paketi`)}`;
+    const salesLink = `<a class="price-link" href="${salesHref}">Satış ekibiyle görüşün</a>`;
+    const actions = purchasable
+      ? (billingEnabled
+        ? `<button type="button" data-buy-plan="${escapeHtml(plan.code)}" data-buy-cycle="monthly">Aylık başlat</button><button class="yearly" type="button" data-buy-plan="${escapeHtml(plan.code)}" data-buy-cycle="yearly">Yıllık · ${numberFormat.format(plan.yearly_price_try)} TL + KDV</button>`
+        : `<p class="price-soon">Çevrim içi ödeme yakında açılıyor. Yıllık: ${numberFormat.format(plan.yearly_price_try)} TL + KDV.</p>${salesLink}`)
+      : plan.code === "starter" ? '<button type="button" disabled>Mevcut ücretsiz paket</button>' : salesLink;
+    return `<article class="price-card${plan.code === "expert" ? " featured" : ""}"><span>${escapeHtml(plan.code)}</span><h3>${escapeHtml(plan.name)}</h3><div class="price">${escapeHtml(monthly)}${plan.monthly_price_try ? "<small> + KDV / ay</small>" : ""}</div><ul>${plan.features.map((item) => `<li>${escapeHtml(item)}</li>`).join("")}</ul><div class="price-actions">${actions}</div></article>`;
   }).join("");
 }
 
@@ -639,6 +670,21 @@ async function loadDossiers() {
   } catch (error) { target.innerHTML = `<p>${escapeHtml(error.message)}</p>`; }
 }
 
+statusNote.addEventListener("click", (event) => {
+  const chip = event.target.closest("[data-clear-filter]");
+  if (!chip) return;
+  const key = chip.dataset.clearFilter;
+  const clear = {
+    kind: () => selectSourceKind("", { run: false, focus: false }),
+    source: () => { $("#sourceFilter").value = ""; },
+    type: () => { $("#documentType").value = ""; },
+    year: () => { $("#yearFilter").value = ""; },
+    repealed: () => { $("#includeRepealed").checked = true; },
+  };
+  if (key === "all") Object.values(clear).forEach((fn) => fn()); else clear[key]?.();
+  runTicaretSearch();
+});
+
 $("#appAccountButton").addEventListener("click", () => openAccount());
 $("#closeAccount").addEventListener("click", () => $("#accountDialog").close());
 $("#accountDialog").addEventListener("click", (event) => { if (event.target === $("#accountDialog")) $("#accountDialog").close(); });
@@ -649,7 +695,9 @@ $("#dossierList").addEventListener("click", async (event) => {
   if (!button || !confirm("Bu kanıt dosyası kalıcı olarak silinsin mi?")) return;
   try {
     await fetchJson(`/api/dossiers/${encodeURIComponent(button.dataset.deleteDossier)}`, { method: "DELETE" });
-    await loadDossiers(); showToast("Kanıt dosyası silindi.");
+    await loadDossiers();
+    try { state.auth.account = await fetchJson("/api/account"); renderAccount(state.auth); } catch { /* kota görünümü bir sonraki açılışta yenilenir */ }
+    showToast("Kanıt dosyası silindi; kanıt dosyası kotanız güncellendi.");
   } catch (error) { showToast(error.message); }
 });
 
@@ -905,7 +953,7 @@ function renderCustomsResult(data) {
         <time>${escapeHtml(formatDate(data.as_of, true))}</time>
       </header>
       <section class="answer-section"><h3>Aday GTİP / CN kodları</h3>${candidates}</section>
-      ${data.tariff_lookup ? `<section class="answer-section"><h3>Resmî tarife snapshot eşleşmesi</h3>${tariffMatchSummary(data.tariff_lookup)}${renderMeasureCoverage(data.tariff_lookup.measure_coverage)}<table class="evidence-table"><thead><tr><th>GTİP / Önlem</th><th>Oran</th><th>Menşe sütunu</th><th>Kaynak satırı</th><th>Kanıt</th></tr></thead><tbody>${tariffRows(data.tariff_lookup.measures)}</tbody></table>${(data.tariff_lookup.warnings || []).length ? `<div class="result-caution">${data.tariff_lookup.warnings.map((item) => escapeHtml(item)).join(" · ")}</div>` : ""}</section>` : ""}
+      ${data.tariff_lookup ? `<section class="answer-section"><h3>Resmî tarife snapshot eşleşmesi</h3>${tariffMatchSummary(data.tariff_lookup)}${renderMeasureCoverage(data.tariff_lookup.measure_coverage)}<table class="evidence-table"><thead><tr><th>GTİP / Önlem</th><th>Oran</th><th>Menşe sütunu</th><th>Kaynak satırı</th><th>Kanıt</th></tr></thead><tbody>${tariffRows(data.tariff_lookup.measures)}</tbody></table>${applyRatesButton(data.tariff_lookup, "precheck")}${(data.tariff_lookup.warnings || []).length ? `<div class="result-caution">${data.tariff_lookup.warnings.map((item) => escapeHtml(item)).join(" · ")}</div>` : ""}</section>` : ""}
       ${data.control_lookup ? `<section class="answer-section"><h3>Resmî kontrol tebliği Ek-1 eşleşmeleri</h3>${renderControlTool(data.control_lookup)}</section>` : ""}
       <section class="answer-section"><h3>Eksik veya teyit edilmesi gereken bilgiler</h3><ul class="missing-list">${(data.missing_information?.length ? data.missing_information : ["Kritik eksik alan bildirilmedi."]).map((item) => `<li>${escapeHtml(item)}</li>`).join("")}</ul></section>
       <section class="answer-section"><h3>TAREKS · TSE · kimyasal · laboratuvar kontrolleri</h3>${renderFindings(data.controls, sourceMap)}</section>
@@ -1401,7 +1449,7 @@ async function setProductImage(file) {
     $("#uploadZone").classList.remove("has-image");
     $("#attributeReview").hidden = true;
     $("#uploadTitle").textContent = "Ürün fotoğrafı ekle";
-    $("#uploadHint").textContent = "JPEG, PNG veya WebP · en fazla 8 MB";
+    $("#uploadHint").textContent = "JPEG, PNG veya WebP · en az 80×80 piksel · en fazla 8 MB";
     $("#productFileStatus").dataset.state = "waiting";
     $("#productFileStatus").textContent = "Görsel analizi tamamlandığında temel evsaflar önce bu ürün dosyasına işlenir.";
     updateVisionAnalyseButton("idle");
@@ -1571,9 +1619,19 @@ $("#candidateGtip").addEventListener("input", () => {
             state.customsGtipSelectionConfirmed = true;
             state.customsExactGtipConfirmed = tree.exact_gtip_selected;
             updateReadiness();
-            showToast(`${current} aktif resmî tarife ağacında doğrulandı.`);
+            if (state.customsPendingSubmit) {
+              state.customsPendingSubmit = false;
+              showToast(`${current} doğrulandı; analiz başlatılıyor.`);
+              $("#customsForm").requestSubmit();
+            } else {
+              showToast(`${current} aktif resmî tarife ağacında doğrulandı.`);
+            }
+          } else if (state.customsPendingSubmit) {
+            state.customsPendingSubmit = false;
+            showToast("Kod resmî tarife ağacında bulunamadı; analiz başlatılmadı.");
           }
         } catch (error) {
+          state.customsPendingSubmit = false;
           renderTariffTreeError(error.message || "Elle girilen kod doğrulanamadı.");
         }
       }, 650);
@@ -1655,9 +1713,11 @@ $("#customsForm").addEventListener("submit", async (event) => {
     return;
   }
   if (selectedTariffCode && !state.customsGtipSelectionConfirmed) {
-    showToast("Elle girilen kodun resmî tarife ağacında doğrulanmasını bekleyin.");
+    state.customsPendingSubmit = true;
+    showToast("Kod resmî tarife ağacında doğrulanıyor; analiz doğrulama biter bitmez kendiliğinden başlayacak.");
     return;
   }
+  state.customsPendingSubmit = false;
   if (selectedTariffCode && selectedTariffCode.length < 12) {
     showToast("Üst tarife koduyla yalnız ortak oranlar gösterilir; TAREKS kapsamı GTİP12 seçilmeden kesinleşmez.");
   }
@@ -1761,12 +1821,40 @@ function requestCard(item) {
   </details>`;
 }
 
+function consultationAttentionCount(data) {
+  const needsMe = (item) => {
+    if (item.direction === "incoming" && item.status === "sent") return true;
+    if (item.status !== "accepted") return false;
+    const last = (item.messages || []).at(-1);
+    return Boolean(last && !last.mine);
+  };
+  return [...(data.incoming || []), ...(data.outgoing || [])].filter(needsMe).length;
+}
+
+function renderConsultationBadge(count) {
+  state.consultationBadge = count;
+  const tab = $('[data-customs-view="consultants"]');
+  if (!tab) return;
+  let badge = tab.querySelector(".tab-badge");
+  if (!count) { badge?.remove(); return; }
+  if (!badge) { badge = document.createElement("i"); badge.className = "tab-badge"; tab.append(badge); }
+  badge.textContent = String(count);
+  badge.setAttribute("aria-label", `${count} bekleyen danışmanlık talebi`);
+}
+
+async function refreshConsultationBadge() {
+  if (!state.auth?.authenticated) return renderConsultationBadge(0);
+  try { renderConsultationBadge(consultationAttentionCount(await fetchJson("/api/consultation-requests"))); }
+  catch { /* rozet bilgilendirme amaçlıdır */ }
+}
+
 async function loadConsultationRequests() {
   const target = $("#consultationRequestList");
   if (!state.auth?.authenticated) return;
   target.innerHTML = "<p>Danışmanlık talepleri yükleniyor…</p>";
   try {
     const data = await fetchJson("/api/consultation-requests");
+    renderConsultationBadge(consultationAttentionCount(data));
     const items = [...(data.incoming || []), ...(data.outgoing || [])];
     target.innerHTML = items.length ? items.map(requestCard).join("") : "<p>Henüz danışmanlık talebiniz yok.</p>";
   } catch (error) { target.innerHTML = `<div class="answer-error"><p>${escapeHtml(error.message)}</p></div>`; }
@@ -1840,6 +1928,34 @@ $("#consultantApplicationForm").addEventListener("submit", async (event) => {
     showToast("Ücretsiz danışman başvurunuz incelemeye gönderildi.");
   } catch (error) { showToast(error.message); }
   finally { button.disabled = false; }
+});
+
+function updateFieldCounter(input) {
+  const hint = document.querySelector(`[data-counter-for="${input.id}"]`);
+  if (!hint) return;
+  const length = input.value.trim().length;
+  const min = Number(input.getAttribute("minlength") || 0);
+  const max = Number(input.getAttribute("maxlength") || 0);
+  const short = length < min;
+  hint.textContent = short ? `${length} / ${max} · en az ${min} karakter${length ? ` (${min - length} daha)` : ""}` : `${length} / ${max}`;
+  hint.classList.toggle("short", short && length > 0);
+}
+["#consultationSubject", "#consultationMessage"].forEach((selector) => {
+  const input = $(selector);
+  if (!input) return;
+  input.addEventListener("input", () => updateFieldCounter(input));
+  updateFieldCounter(input);
+});
+$("#consultationForm button[type=submit]")?.addEventListener("click", (event) => {
+  const form = $("#consultationForm");
+  if (form.checkValidity()) return;
+  event.preventDefault();
+  const invalid = form.querySelector(":invalid");
+  const label = invalid?.closest("label")?.querySelector("span")?.textContent?.replace("*", "").trim() || "Form";
+  const min = invalid?.getAttribute("minlength");
+  showToast(invalid?.type === "checkbox" ? "Paylaşım onayı kutusunu işaretleyin." : min ? `${label}: en az ${min} karakter yazın.` : `${label} alanı zorunludur.`);
+  invalid?.focus();
+  form.reportValidity();
 });
 
 function closeConsultationDialog() { $("#consultationDialog").close(); state.selectedConsultant = null; }
@@ -1926,6 +2042,32 @@ function tariffMatchSummary(tariff) {
   return `<div class="result-caution"><strong>${escapeHtml(tariff.gtip.length)} haneli kodla ön ek araması:</strong> ${escapeHtml(tariff.matched_gtip_count || 0)} adet 12 haneli Türk GTİP satırı bulundu.${variants ? `<ul>${variants}</ul>` : ""}</div>`;
 }
 
+const rateFieldByMeasure = {
+  customs_duty: "#customsDutyRate",
+  additional_duty: "#additionalDutyRate",
+  additional_financial_liability: "#additionalFinancialLiabilityRate",
+};
+
+function applicableTariffRates(tariff) {
+  if (!tariff) return {};
+  const ambiguous = new Set(tariff.ambiguous_measure_types || []);
+  const rates = {};
+  (tariff.measures || []).forEach((item) => {
+    if (item.rate == null || !rateFieldByMeasure[item.measure_type] || ambiguous.has(item.measure_type)) return;
+    if (!(item.measure_type in rates)) rates[item.measure_type] = Number(item.rate);
+  });
+  return rates;
+}
+
+function applyRatesButton(tariff, source) {
+  const rates = applicableTariffRates(tariff);
+  const keys = Object.keys(rates);
+  state.tariffRateSources[source] = rates;
+  if (!keys.length) return "";
+  const summary = keys.map((key) => `${tariffMeasureLabels[key] || key} %${numberFormat.format(rates[key])}`).join(" · ");
+  return `<div class="apply-rates"><div><b>Bulunan oranları maliyet hesabına aktar</b><small>${escapeHtml(summary)} · ${escapeHtml(tariff.gtip)}${tariff.origin_country ? ` · ${escapeHtml(tariff.origin_country)}` : ""}</small></div><button type="button" data-apply-rates="${escapeHtml(source)}">Bu oranları kullan</button></div>`;
+}
+
 function renderTariffTool(data) {
   const tariff = data.tariff || data;
   const cost = data.cost;
@@ -1936,11 +2078,41 @@ function renderTariffTool(data) {
   return `<div class="answer-head"><span class="answer-status${tariff.status === "matched" ? "" : " warning"}">${escapeHtml(tariff.status)}</span><div><h2>${escapeHtml(tariff.gtip)} · ${escapeHtml(tariff.origin_country || "menşe seçilmedi")}</h2><p>Ülke grubu: ${escapeHtml(tariff.resolved_country_group || "çözümlenmedi")} · ${escapeHtml(tariff.as_of)}</p></div></div>
     ${tariffMatchSummary(tariff)}
     <table class="evidence-table"><thead><tr><th>GTİP / Önlem</th><th>Oran</th><th>Menşe sütunu</th><th>Kaynak satırı</th><th>Kanıt</th></tr></thead><tbody>${tariffRows(tariff.measures)}</tbody></table>
+    ${applyRatesButton(tariff, "tool")}
     ${tariff.conditional_measures?.length ? `<details class="advanced-fields"><summary><span>Şarta bağlı askıya alma / nihai kullanım satırları</span><small>${tariff.conditional_measures.length} kayıt</small></summary><table class="evidence-table"><tbody>${tariffRows(tariff.conditional_measures)}</tbody></table></details>` : ""}
     ${costLedger}
     ${warnings.length ? `<div class="result-caution">${warnings.map((item) => escapeHtml(item)).join(" · ")}</div>` : ""}
     ${data.legal_notice ? `<div class="legal-banner"><strong>Önemli:</strong> ${escapeHtml(data.legal_notice)}</div>` : ""}`;
 }
+
+document.addEventListener("click", (event) => {
+  const button = event.target.closest("[data-apply-rates]");
+  if (!button) return;
+  const rates = state.tariffRateSources[button.dataset.applyRates] || {};
+  const applied = [];
+  Object.entries(rates).forEach(([key, value]) => {
+    const field = $(rateFieldByMeasure[key]);
+    if (!field) return;
+    field.value = String(value);
+    field.dispatchEvent(new Event("input", { bubbles: true }));
+    applied.push(tariffMeasureLabels[key] || key);
+  });
+  if (!applied.length) return showToast("Aktarılabilir doğrulanmış oran bulunamadı.");
+  if (button.dataset.applyRates === "tool") {
+    const code = $("#tariffGtip").value.trim();
+    const origin = $("#tariffOrigin").value.trim();
+    if (code && !$("#candidateGtip").value.trim()) { $("#candidateGtip").value = code; $("#candidateGtip").dispatchEvent(new Event("input", { bubbles: true })); }
+    if (origin && !$("#originCountry").value.trim()) $("#originCountry").value = origin;
+    const invoice = $("#tariffInvoice").value.trim();
+    if (invoice && !$("#invoiceValue").value.trim()) { $("#invoiceValue").value = invoice; $("#freight").value = $("#tariffFreight").value || $("#freight").value; $("#insurance").value = $("#tariffInsurance").value || $("#insurance").value; $("#currency").value = $("#tariffCurrency").value; }
+    switchCustomsView("assistant");
+  }
+  const costDetails = $("#costDetails");
+  if (costDetails && "open" in costDetails) costDetails.open = true;
+  $("#customsDutyRate")?.scrollIntoView({ behavior: "smooth", block: "center" });
+  updateReadiness();
+  showToast(`${applied.join(", ")} oranı maliyet alanlarına aktarıldı; analizi yeniden çalıştırın.`);
+});
 
 $("#tariffForm").addEventListener("submit", async (event) => {
   event.preventDefault();
@@ -2075,4 +2247,5 @@ $("#themeToggle").addEventListener("click", () => {
 
 loadCatalogStatus();
 loadAuthState();
+if (new URLSearchParams(location.search).get("scope") === "customs" || location.hash === "#customs") switchScope("customs");
 runTicaretSearch({ offset: 0 });

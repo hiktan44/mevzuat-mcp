@@ -365,10 +365,17 @@ class AccountService:
         return result
 
     def delete_dossier(self, user: dict[str, Any], dossier_id: str) -> bool:
+        """Delete an owned dossier and return its quota entry to the user's monthly allowance."""
         with self._connect() as connection:
+            connection.execute("BEGIN IMMEDIATE")
             cursor = connection.execute(
                 "DELETE FROM dossiers WHERE id=? AND google_sub=?", (dossier_id, str(user["sub"]))
             )
+            if cursor.rowcount > 0:
+                connection.execute(
+                    "DELETE FROM usage_ledger WHERE google_sub=? AND dossier_id=? AND operation='dossier'",
+                    (str(user["sub"]), dossier_id),
+                )
         return cursor.rowcount > 0
 
     def create_payment_session(self, user: dict[str, Any], plan_code: str, billing_cycle: str) -> dict[str, str]:

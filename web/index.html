@@ -203,7 +203,7 @@
                   <input id="productImage" type="file" accept="image/jpeg,image/png,image/webp">
                   <span class="upload-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 16V4m0 0L7 9m5-5 5 5"/><path d="M4 15v5h16v-5"/></svg></span>
                   <b id="uploadTitle">Ürün fotoğrafı ekle</b>
-                  <small id="uploadHint">JPEG, PNG veya WebP · en fazla 8 MB</small>
+                  <small id="uploadHint">JPEG, PNG veya WebP · en az 80×80 piksel · en fazla 8 MB</small>
                   <img id="imagePreview" alt="Yüklenen ürün önizlemesi" hidden>
                 </label>
                 <button class="vision-analyse-button" id="analyseImageButton" type="button" aria-controls="attributeReview" hidden>
@@ -463,6 +463,7 @@
       <section class="account-panel" data-account-panel="summary">
         <div class="current-plan"><span>Etkin paket</span><strong id="currentPlanName">—</strong><small id="currentPlanStatus">—</small></div>
         <div class="quota-grid" id="quotaGrid"></div>
+        <p class="quota-note">Kotalar her ay yenilenir. Sildiğiniz kanıt dosyaları kanıt dosyası kotanıza geri döner; görsel analiz ve ön değerlendirme kullanımları iade edilmez.</p>
         <div class="account-links"><button type="button" id="manageBilling" hidden>Aboneliği Stripe’da yönet</button><a id="adminLink" href="/admin" hidden>Yönetim panelini aç</a><form action="/auth/logout" method="post"><button type="submit">Güvenli çıkış</button></form></div>
       </section>
       <section class="account-panel" data-account-panel="dossiers" hidden>
@@ -481,8 +482,8 @@
     <form id="consultationForm" class="consultation-dialog-shell">
       <header><div><span class="eyebrow">Kontrollü dosya devri</span><h2 id="consultationDialogTitle">Danışmana gönder</h2><p id="consultationAdvisorName">Danışman seçilmedi.</p></div><button type="button" class="dialog-close" id="closeConsultationDialog" aria-label="Pencereyi kapat">×</button></header>
       <div class="consultation-share-summary"><b>Paylaşılacak</b><p>Ürün açıklaması, seçilen aday kod, menşe, eksik bilgi listesi, uzman inceleme paketi ve resmî kaynak URL’leri.</p><b>Paylaşılmayacak</b><p>Ürün görseli, Google adınız/e-postanız, fatura/navlun/sigorta tutarları ve hesap bilgileriniz. Mesaja yazılan e-posta ve telefonlar da maskelenir.</p></div>
-      <label class="field"><span>Konu <b>*</b></span><input id="consultationSubject" required minlength="5" maxlength="160" placeholder="Örn. 6911.10 porselen fincan sınıflandırma görüşü"></label>
-      <label class="field"><span>Danışmana notunuz <b>*</b></span><textarea id="consultationMessage" required minlength="10" maxlength="2000" placeholder="Özellikle doğrulanmasını istediğiniz noktaları yazın."></textarea></label>
+      <label class="field"><span>Konu <b>*</b></span><input id="consultationSubject" required minlength="5" maxlength="160" placeholder="Örn. 6911.10 porselen fincan sınıflandırma görüşü" aria-describedby="consultationSubjectHint"><small class="field-hint" id="consultationSubjectHint" data-counter-for="consultationSubject">0 / 160 · en az 5 karakter</small></label>
+      <label class="field"><span>Danışmana notunuz <b>*</b></span><textarea id="consultationMessage" required minlength="10" maxlength="2000" placeholder="Özellikle doğrulanmasını istediğiniz noktaları yazın." aria-describedby="consultationMessageHint"></textarea><small class="field-hint" id="consultationMessageHint" data-counter-for="consultationMessage">0 / 2000 · en az 10 karakter</small></label>
       <label class="consultant-terms"><input id="consultationConsent" type="checkbox" required><span>Yukarıdaki analiz özetinin seçtiğim danışmanla paylaşılmasını onaylıyorum.</span></label>
       <div class="consultation-dialog-actions"><button type="button" id="cancelConsultation">Vazgeç</button><button type="submit">Analiz dosyasını danışmana gönder</button></div>
     </form>

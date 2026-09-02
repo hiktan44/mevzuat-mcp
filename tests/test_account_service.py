@@ -54,6 +54,19 @@ class AccountServiceTests(unittest.TestCase):
         with self.assertRaises(AccountError):
             self.accounts.get_dossier(user("user-2", "other@example.com"), dossier["id"])
 
+    def test_deleting_a_dossier_returns_its_quota_entry(self):
+        kwargs = dict(
+            product_name="Porselen fincan", gtip="691110", origin_country="Çin", effective_date="2026-08-30",
+            checked_at="2026-08-30T10:00:00+00:00", payload={"sources": []}, evidence={},
+        )
+        first = self.accounts.create_dossier(user(), title="Bir", **kwargs)
+        self.accounts.create_dossier(user(), title="İki", **kwargs)
+        self.assertEqual(self.accounts.account(user())["quotas"]["dossier"]["used"], 2)
+        self.assertTrue(self.accounts.delete_dossier(user(), first["id"]))
+        self.assertEqual(self.accounts.account(user())["quotas"]["dossier"]["used"], 1)
+        self.assertFalse(self.accounts.delete_dossier(user("user-2", "other@example.com"), first["id"]))
+        self.assertEqual(self.accounts.account(user())["quotas"]["dossier"]["used"], 1)
+
     def test_admin_plan_changes_are_audited(self):
         self.assertTrue(self.accounts.is_admin(user("admin", "admin@example.com")))
         self.accounts.admin_set_plan(user("admin", "admin@example.com"), "user-1", "expert", "active")

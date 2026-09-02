@@ -43,6 +43,7 @@ from tariff_engine import LandedCostInput
 logger = logging.getLogger(__name__)
 WEB_DIR = Path(__file__).resolve().parent / "web"
 PUBLIC_BASE_URL = os.environ.get("PUBLIC_BASE_URL", "https://mevzuat-mcp.seymata.com").rstrip("/")
+SALES_CONTACT_EMAIL = os.environ.get("SALES_CONTACT_EMAIL", "hiktan44@gmail.com").strip()
 google_auth = GoogleAuthService()
 account_service = AccountService(google_auth.data_dir)
 stripe_billing = StripeBilling()
@@ -523,6 +524,7 @@ async def web_plans(request: Request):
             "billing_enabled": stripe_billing.configured,
             "billing_provider": "stripe",
             "billing_mode": stripe_billing.mode,
+            "sales_email": SALES_CONTACT_EMAIL,
         }
     )
 
@@ -1522,7 +1524,20 @@ class McpRateLimitMiddleware:
 
 # Create ASGI app directly from FastMCP server and protect the public MCP
 # endpoint without buffering its streaming responses.
-app = McpRateLimitMiddleware(mcp.http_app())
+_mcp_http_app = mcp.http_app()
+
+
+async def _not_found(request: Request, exc: Exception):
+    """Branded 404 for browser paths; JSON for API and MCP clients."""
+    path = request.url.path
+    if path.startswith(("/api/", "/mcp")) or "text/html" not in request.headers.get("accept", ""):
+        return JSONResponse({"error": "Kaynak bulunamadı.", "path": path}, status_code=404)
+    page = (WEB_DIR / "404.html").read_text(encoding="utf-8")
+    return HTMLResponse(page, status_code=404, headers={"Cache-Control": "no-store"})
+
+
+_mcp_http_app.add_exception_handler(404, _not_found)
+app = McpRateLimitMiddleware(_mcp_http_app)
 
 # Endpoints:
 # - / - Web search interface

@@ -63,8 +63,8 @@ Yerelde çalıştırma: `scripts/dev.sh` (anahtar gerekmez; veri `.dev-data/` al
    yalnızca "yok" diyor; ne yapılacağını gösteren kısa bir yönlendirme kartı eklenmeli.
 
 ### P2 — Eksik/yeni bölümler
-5. **Danışman pazaryeri**: yönetici onay akışı var ama danışmana e-posta bildirimi yok;
-   talep geldiğinde bildirim ve okunmamış sayacı eklenmeli.
+5. **Danışman e-posta bildirimi**: uygulama içi rozet eklendi; e-posta için SMTP/sağlayıcı
+   (ör. Resend) yapılandırması ve şablon gerekli.
 6. **Kanıt dosyası paylaşımı**: Ekip paketi "paylaşılan ürün dosyaları" vadediyor ama
    `/api/dossiers` yalnızca kullanıcıya özel. Ekip/kuruluş kavramı gerekiyor.
 7. **Değişiklik takibi bildirimi**: izleme listesi cihazda (localStorage) tutuluyor;
@@ -95,7 +95,25 @@ defteri, işlem rehberi, danışman başvurusu → yönetici onayı → talep g�
 karşılıklı mesaj → kapatma, yönetici panelinde paket değişikliği, Hesabım'da kota, JSON
 indirme (110 KB), dosya silme, güvenli çıkış, hesap silme, admin erişim kontrolü (303/403).
 
-### Bu turda bulunan eksikler (plana eklendi)
+### Bu turda bulunan eksikler — 2 Eylül akşamı hepsi uygulandı
+Aşağıdaki dokuz madde aynı gün kapatıldı (Playwright ile doğrulandı, 104 test geçiyor):
+1. Tarife doğrulama yarışı → `state.customsPendingSubmit`: doğrulama bitince analiz kendiliğinden başlıyor.
+2. "Bu oranları kullan" düğmesi → hem Tarife & Maliyet aracında hem ön değerlendirme sonucunda
+   (`applyRatesButton`); belirsiz (alt GTİP'e göre değişen) oranlar aktarılmaz.
+3. Danışmanlık formunda karakter sayacı + en az uzunluk ipucu; geçersiz gönderimde toast.
+4. Danışmanlar sekmesinde bekleyen talep rozeti (`refreshConsultationBadge`, girişte ve her
+   yüklemede). E-posta bildirimi hâlâ yok: SMTP/sağlayıcı yapılandırması gerekir (bekleyen iş).
+5. Paketler: Stripe kapalıyken "Çevrim içi ödeme yakında" metni + `SALES_CONTACT_EMAIL`
+   (varsayılan hiktan44@gmail.com) ile "Satış ekibiyle görüşün" mailto bağlantısı; `/api/plans`
+   `sales_email` döndürür.
+6. Markalı 404: `web/404.html`; `/api/*`, `/mcp` ve HTML istemeyen istekler JSON 404 alır.
+   `/app?scope=customs` ve `#customs` doğrudan Gümrükçe'yi açar.
+7. Görsel yükleme ipucunda 80×80 alt sınırı.
+8. Kanıt dosyası silinince kota iadesi (`AccountService.delete_dossier` usage_ledger satırını
+   siler; test eklendi) ve Hesabım'da kota açıklaması.
+9. Sıfır sonuçta aktif filtre çipleri ("Tümünü kaldır" dahil), tıklayınca arama yenilenir.
+
+### Önceki liste (arşiv)
 - **Tarife doğrulama yarışı**: GTİP yazıp hemen "GTİP bul" düğmesine basınca "doğrulanmasını
   bekleyin" uyarısı çıkıyor; doğrulama bitince analiz kendiliğinden başlamalı (P1).
 - **Vergi oranları maliyete akmıyor**: Tarife aracı %12 GV ve %39 İGV'yi buluyor ama ön
