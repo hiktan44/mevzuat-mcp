@@ -279,3 +279,25 @@ button { cursor: pointer; }
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { scroll-behavior: auto !important; animation-duration: .01ms !important; animation-iteration-count: 1 !important; transition-duration: .01ms !important; }
 }
+
+/* ---------------------------------------------------------------------------
+   Yumuşak yüzey katmanı (Eylül 2026) — köşeler, gölgeler ve çizgi rengi.
+--------------------------------------------------------------------------- */
+:root { --radius-sm: 10px; --radius-md: 14px; --radius-lg: 22px; --line: #d3e0ea; --line-dark: #aac0cf; --soft-shadow: 0 1px 2px rgba(8,35,61,.05), 0 14px 36px rgba(8,35,61,.08); }
+.button, .button-small, .google-button, .billing-toggle button, .product-tabs button { border-radius: var(--radius-sm); }
+.button-primary { box-shadow: 0 8px 22px color-mix(in srgb, var(--orange) 35%, transparent); }
+.button-primary:hover { box-shadow: 0 10px 26px color-mix(in srgb, var(--orange) 45%, transparent); }
+.google-button:hover { box-shadow: var(--soft-shadow); }
+.brand-mark { border-radius: 8px; }
+.brand-mark b { border-radius: 2px; }
+.eyebrow span, .popular, .section-number, .trust-strip i { border-radius: 999px; }
+.radar-shell { border-radius: var(--radius-lg); overflow: hidden; box-shadow: var(--soft-shadow); }
+.product-tabs { overflow: hidden; }
+.product-file { border-radius: var(--radius-md); box-shadow: var(--soft-shadow); }
+.radar-node, .radar-result, .signal { border-radius: var(--radius-sm); }
+.live-ledger, .risk-stack article, .workflow-track li, .source-ledger article, .difference-grid article, .price-grid article, .faq-list details, .login-box, .safety-mark { border-radius: var(--radius-md); }
+.price-grid article, .risk-stack article, .login-box { box-shadow: var(--soft-shadow); }
+.price-grid article.featured { border-radius: var(--radius-lg); }
+.billing-toggle { border-radius: 999px; overflow: hidden; }
+.billing-toggle button { border-radius: 999px; }
+.workflow-track li > span, .risk-stack article > span, .source-ledger article > b, .difference-grid span { border-radius: var(--radius-sm); }

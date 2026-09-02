@@ -169,3 +169,8 @@ CLAUDE.md
 
 # Data directory (cache, embeddings, etc.)
 data/
+
+# yerel geliştirme verisi
+.dev-data/
+# yerel Claude Code başlatma yapılandırması
+.claude/
