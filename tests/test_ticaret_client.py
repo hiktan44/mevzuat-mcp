@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import asyncio
 import subprocess
+import time
 import unittest
 from unittest.mock import AsyncMock, Mock, patch
 
@@ -78,6 +79,9 @@ class TicaretClientParsingTests(unittest.TestCase):
             documents=[retained, previous_page],
         )
         self.client._last_full_sync_monotonic = 1.0
+        # Age the snapshot past the 60 s reuse window so the merge path runs on a
+        # freshly booted machine too, where time.monotonic() is still small.
+        self.client._catalog_monotonic = time.monotonic() - 3600
         self.client._crawl_source = AsyncMock(return_value=(40, [updated_page], []))
 
         catalog = asyncio.run(self.client.refresh_catalog(core_only=True))
