@@ -11,10 +11,10 @@ Bu proje; Adalet Bakanlığı Mevzuat Bilgi Sistemi, Bedesten Mevzuat servisi ve
 🎯 **Temel Özellikler**
 
 * Adalet Bakanlığı Mevzuat Bilgi Sistemi'ne programatik erişim için standart bir MCP arayüzü.
-* **39 farklı tool** ile kapsamlı mevzuat, tarife ve Ticaret Bakanlığı bilgi erişimi (üç resmî kaynak ailesi):
+* **44 farklı tool** ile kapsamlı mevzuat, tarife ve Ticaret Bakanlığı bilgi erişimi (üç resmî kaynak ailesi):
     * **mevzuat.gov.tr** üzerinden 21 araç (türe özel arama ve içerik)
     * **bedesten.adalet.gov.tr** üzerinden 5 araç (birleşik arama, gerekçe, içindekiler)
-    * **ticaret.gov.tr** ve bağlı resmî alt alanlardan 13 araç (canlı katalog, belge okuma, resmî tarife/İGV, maliyet, ürün kontrol tebliğleri ve gümrük ön değerlendirme kanıtı)
+    * **ticaret.gov.tr** ve bağlı resmî alt alanlardan 18 araç (canlı katalog, belge okuma, resmî tarife/İGV, maliyet, ürün kontrol tebliğleri, ürün fotoğrafı evsaf çıkarımı ve gümrük ön değerlendirme kanıtı)
 * Desteklenen 12 mevzuat türü:
     * **Kanun** - Türkiye Cumhuriyeti kanunları
     * **KHK** - Kanun Hükmünde Kararnameler
@@ -68,6 +68,7 @@ Yeni araçlar:
 * `get_ticaret_document`: resmî HTML/PDF/DOCX/XLSX/CSV/ZIP içeriklerini güvenli sınırlar içinde getirir.
 * `search_ticaret_content`: seçilen en fazla 25 belgenin tam metninde bağlamlı arama yapar.
 * `get_ticaret_catalog_status`: son yenileme, sonraki tarama, kapsam parmak izi ve kaynak hatalarını verir.
+* `describe_product_image`: ürün fotoğrafından yalnızca görünür evsafları (malzeme ipuçları, renkler, bileşenler, etiket metni, ambalaj) ve sınıflandırmayı Engelleyen eksik soruları çıkarır. Sonuç GTİP değildir; kullanıcı evsafı onayladıktan sonra `suggest_candidate_tariff_codes` çağrılır.
 * `prepare_customs_precheck`: ürün, aday GTİP, menşe ve maliyet girdileri için TAREKS/TSE, ürün güvenliği, kimyasallar, gümrük kıymeti, vergi ve ticaret politikası önlemlerine ilişkin tarihli resmî kanıt paketi hazırlar.
 * `sync_official_tariff_data`, `lookup_tariff_measures`, `resolve_turkish_tariff_tree`, `calculate_import_landed_cost`, `compare_tariff_snapshots`: 2026 İthalat Rejimi ve İGV arşivlerini SHA-256 ile sürümler; GTİP/menşe sütununu kaynak dosya, sayfa ve satır düzeyinde gösterir. Karar ağacı HS6 → CN8 → Türkiye 10 → GTİP12 dallarını otomatik seçim yapmadan açar; kısa kodda oran yalnız bütün alt GTİP12 satırlarında ortaksa güvenli oran olarak döner.
 * `sync_classification_evidence`, `search_classification_evidence`: DG TAXUD'un geçerli AB sınıflandırma tüzükleri konsolide listesini metin olarak SHA-256 ile sürümler; CN kodu, tüzük referansı, sayfa ve gerekçe parçalarını aranabilir yapar. Bu veri yalnız karşılaştırmalı sınıflandırma kanıtıdır; Türkiye GTİP12 veya Türkiye vergi oranı değildir. EBTI sonuç sayfaları ve açık kullanım hakkı doğrulanmamış başvuru fotoğrafları otomatik taranmaz.
@@ -167,7 +168,7 @@ Stripe webhook adresi `https://mevzuat-mcp.seymata.com/api/billing/stripe/webhoo
 
 Landing page; canonical, Open Graph/Twitter kartları, `SoftwareApplication` ve `FAQPage` yapılandırılmış verisi, `/robots.txt`, `/sitemap.xml`, manifest ve indekslenmeyen `/app` çalışma alanıyla hazırdır. Google Search Console tarafında alan adı doğrulandıktan sonra `https://mevzuat-mcp.seymata.com/sitemap.xml` gönderilmelidir; indeks kararı ve sıralama Google'a aittir.
 
-ChatGPT'de geliştirici modu açıkken **Ayarlar → Uygulamalar → Oluştur** ekranında bu adresi endpoint olarak verin, kimlik doğrulamayı **Yok** seçin ve **Araçları tara** ile 39 aracı yükleyin. Tarife, maliyet, ithalat kontrolü ve Gümrükçe araçları MCP Apps yapılandırılmış sonuç görünümünü destekler. Codex için:
+ChatGPT'de geliştirici modu açıkken **Ayarlar → Uygulamalar → Oluştur** ekranında bu adresi endpoint olarak verin, kimlik doğrulamayı **Yok** seçin ve **Araçları tara** ile 44 aracı yükleyin. Tarife, maliyet, ithalat kontrolü ve Gümrükçe araçları MCP Apps yapılandırılmış sonuç görünümünü destekler. Codex için:
 
 ```bash
 codex mcp add mevzuat-mcp --url https://mevzuat-mcp.seymata.com/mcp

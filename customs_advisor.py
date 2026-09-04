@@ -531,6 +531,22 @@ def validate_image(image_bytes: bytes, media_type: str) -> tuple[bytes, str]:
         raise ValueError("Görsel dosyası doğrulanamadı.") from exc
 
 
+_DATA_URL_RE = re.compile(r"^data:(image/(?:jpeg|png|webp));base64,([A-Za-z0-9+/=\r\n]+)$")
+
+
+def decode_image_data_url(value: Any) -> tuple[bytes, str]:
+    """Decode a base64 image data URL before handing it to validate_image."""
+    if not isinstance(value, str) or len(value) > 11_500_000:
+        raise ValueError("Görsel verisi çok büyük veya geçersiz.")
+    match = _DATA_URL_RE.fullmatch(value)
+    if not match:
+        raise ValueError("Görsel JPEG, PNG veya WebP olmalıdır.")
+    try:
+        return base64.b64decode(match.group(2), validate=True), match.group(1)
+    except (ValueError, TypeError) as exc:
+        raise ValueError("Görsel verisi çözümlenemedi.") from exc
+
+
 def _parse_json_object(value: str) -> dict[str, Any]:
     """Parse the first JSON object from a model response without trusting prose/fences."""
     text = (value or "").strip()

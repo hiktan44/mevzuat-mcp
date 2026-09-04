@@ -7,7 +7,7 @@ import asyncio
 import logging
 from contextlib import asynccontextmanager
 from pydantic import Field
-from typing import Literal, Optional
+from typing import Any, Literal, Optional
 
 from fastmcp import FastMCP
 
@@ -30,8 +30,10 @@ from customs_advisor import (
     CustomsAdvisor,
     CustomsEvidencePack,
     CustomsInquiry,
+    ProductAttributeAnalysis,
     ProductClassificationRequest,
     ProductClassificationResult,
+    decode_image_data_url,
 )
 from tariff_engine import (
     LandedCostInput,
@@ -46,7 +48,7 @@ from classification_evidence import (
     ClassificationEvidenceSearchResult,
     ClassificationEvidenceStatus,
 )
-from security_firewall import guard_data, guard_text
+from security_firewall import guard_data, guard_text, redact_data
 
 # Semantic search (optional, requires OPENROUTER_API_KEY)
 from semantic_search.embedder import is_openrouter_available
@@ -140,10 +142,13 @@ app = FastMCP(
     "Solr operators: \"exact\", +required, -prohibited, wildcard*, fuzzy~, \"proximity\"~N, boost^N. "
     "NOTE: AND/OR/NOT do NOT work in search_mevzuat - use +term1 +term2 instead. "
     "\n\n"
-    "== Ticaret Bakanlığı, Gümrükçe, resmî tarife ve ithalat kontrolü tools (14 tools) ==\n"
+    "== Ticaret Bakanlığı, Gümrükçe, resmî tarife ve ithalat kontrolü tools (18 tools) ==\n"
     "Use list_ticaret_sources to see source coverage and content kinds. Use search_ticaret_catalog for current "
     "Ministry metadata, get_ticaret_document for bounded full text, search_ticaret_content for bounded multi-document "
     "full-text search, and get_ticaret_catalog_status for freshness. Results always include official source URLs. "
+    "For photo intake call describe_product_image first, confirm the visible attributes with the user, then call "
+    "suggest_candidate_tariff_codes with the approved textual attributes and walk resolve_turkish_tariff_tree "
+    "branch by branch until the user picks a GTIP12 line. "
     "For legal analysis, distinguish current and repealed material, cite the exact official source, state uncertainty, "
     "and treat the output as informational rather than a substitute for professional legal advice. "
     "Use prepare_customs_precheck before answering product-specific import questions. It returns a dated official "
@@ -2475,6 +2480,41 @@ async def search_classification_evidence(
 ) -> ClassificationEvidenceSearchResult:
     """Retrieve official classification-regulation pages by code and product terms."""
     return await classification_engine.search(query, code_prefix=code_prefix, limit=limit)
+
+
+@app.tool(
+    app=True,
+    annotations={
+        "title": "Ürün fotoğrafından görünür evsafları çıkar",
+        "readOnlyHint": True,
+        "destructiveHint": False,
+        "idempotentHint": False,
+        "openWorldHint": True,
+    },
+)
+async def describe_product_image(
+    image_data_url: str = Field(
+        ...,
+        min_length=28,
+        max_length=11_500_000,
+        description=(
+            "Ürün fotoğrafı: yalnızca data:image/jpeg, data:image/png veya data:image/webp "
+            "tipinde base64 data URL. Ham görsel en fazla 8 MB olabilir."
+        ),
+    ),
+) -> dict[str, Any]:
+    """Extract editable visible product attributes from a photo; the result is never a GTIP.
+
+    Call this BEFORE suggest_candidate_tariff_codes when the user supplies a photo.
+    The output lists only what is visible: material cues, colours, components, label
+    text, packaging and the questions still blocking classification. Confirm or repair
+    the attributes with the user, then pass the approved textual attributes to
+    suggest_candidate_tariff_codes. Never treat the description as a GTIP, tax rate
+    or control finding.
+    """
+    image_bytes, media_type = decode_image_data_url(image_data_url)
+    result = await customs_advisor_service.describe_image(image_bytes, media_type)
+    return redact_data(result.model_dump(mode="json"), contact_data=True)
 
 
 @app.tool(

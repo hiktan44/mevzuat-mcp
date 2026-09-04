@@ -1,3 +1,4 @@
+import os
 import sqlite3
 import sys
 import tempfile
@@ -48,6 +49,8 @@ class ConsultationApiE2ETests(unittest.TestCase):
         web_app.google_auth = self.auth
         web_app.account_service = self.accounts
         web_app.rate_limiter = web_app.FixedWindowRateLimiter()
+        self.original_marketplace_flag = os.environ.get("CONSULTANTS_MARKETPLACE_ENABLED")
+        os.environ.pop("CONSULTANTS_MARKETPLACE_ENABLED", None)
         self.client = TestClient(web_app.app, base_url=PUBLIC_ORIGIN)
 
     def tearDown(self):
@@ -55,6 +58,10 @@ class ConsultationApiE2ETests(unittest.TestCase):
         web_app.google_auth = self.original_auth
         web_app.account_service = self.original_accounts
         web_app.rate_limiter = self.original_limiter
+        if self.original_marketplace_flag is None:
+            os.environ.pop("CONSULTANTS_MARKETPLACE_ENABLED", None)
+        else:
+            os.environ["CONSULTANTS_MARKETPLACE_ENABLED"] = self.original_marketplace_flag
         self.temp.cleanup()
 
     def request(self, method: str, path: str, user: dict[str, str] | None = None, **kwargs):
@@ -66,6 +73,9 @@ class ConsultationApiE2ETests(unittest.TestCase):
         return self.client.request(method, path, headers=headers, **kwargs)
 
     def test_application_approval_packet_handoff_acceptance_and_messaging(self):
+        # Varsayılan: pazaryeri kapalıdır; dizin profilleri herkese görünmez.
+        self.assertEqual(self.request("GET", "/api/consultants").json(), {"items": [], "enabled": False})
+        os.environ["CONSULTANTS_MARKETPLACE_ENABLED"] = "1"
         application = self.request(
             "POST",
             "/api/consultants/me",
@@ -83,7 +93,7 @@ class ConsultationApiE2ETests(unittest.TestCase):
         )
         self.assertEqual(application.status_code, 201, application.text)
         self.assertEqual(application.json()["profile"]["status"], "pending")
-        self.assertEqual(self.request("GET", "/api/consultants").json(), {"items": []})
+        self.assertEqual(self.request("GET", "/api/consultants").json(), {"items": [], "enabled": True})
 
         approval = self.request(
             "PUT",

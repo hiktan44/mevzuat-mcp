@@ -941,3 +941,9 @@ svg { display: block; fill: none; stroke: currentColor; stroke-width: 1.8; strok
 .not-found-links { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 22px; }
 .not-found-links a { min-height: 42px; display: inline-flex; align-items: center; padding: 0 16px; border: 1px solid var(--line-strong); border-radius: var(--radius-sm); color: var(--ink); font-size: .66rem; font-weight: 700; text-decoration: none; }
 .not-found-links a:first-child { border-color: var(--teal); background: var(--teal); color: #fff; }
+
+/* Danışman pazaryeri yalnız sunucu onayıyla açılır (CONSULTANTS_MARKETPLACE_ENABLED=1). */
+body:not(.marketplace-enabled) [data-customs-view="consultants"] { display: none; }
+body:not(.marketplace-enabled) .consultant-send-result { display: none; }
+/* Resmî tarife satırından önerilen ve kullanıcı onayı bekleyen vergi oranları. */
+.rate-suggested { border-color: var(--teal) !important; box-shadow: 0 0 0 2px var(--teal-soft); }

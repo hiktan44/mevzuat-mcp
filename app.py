@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import base64
 import html
 import hmac
 import json
@@ -11,7 +10,7 @@ import os
 import re
 import threading
 import time
-from datetime import UTC, datetime
+from datetime import UTC, date, datetime
 from pathlib import Path
 from typing import Any
 from urllib.parse import urlsplit
@@ -24,7 +23,7 @@ from starlette.responses import FileResponse, HTMLResponse, JSONResponse, PlainT
 from auth_service import AuthError, GoogleAuthService
 from account_service import PLANS, AccountError, AccountService, QuotaExceeded
 from billing_service import BillingError, StripeBilling
-from customs_advisor import CustomsInquiry, ProductClassificationRequest
+from customs_advisor import CustomsInquiry, ProductClassificationRequest, decode_image_data_url
 from mevzuat_mcp_server import (
     _BED_VALID_TYPES,
     bedesten_client,
@@ -185,21 +184,6 @@ def _enforce_quota(request: Request, operation: str) -> dict[str, Any] | None:
 def _record_usage(user: dict[str, Any] | None, operation: str) -> None:
     if user:
         account_service.consume(user, operation)
-
-
-_DATA_URL_RE = re.compile(r"^data:(image/(?:jpeg|png|webp));base64,([A-Za-z0-9+/=\r\n]+)$")
-
-
-def _decode_image_data_url(value: Any) -> tuple[bytes, str]:
-    if not isinstance(value, str) or len(value) > 11_500_000:
-        raise ValueError("Görsel verisi çok büyük veya geçersiz.")
-    match = _DATA_URL_RE.fullmatch(value)
-    if not match:
-        raise ValueError("Görsel JPEG, PNG veya WebP olmalıdır.")
-    try:
-        return base64.b64decode(match.group(2), validate=True), match.group(1)
-    except (ValueError, TypeError) as exc:
-        raise ValueError("Görsel verisi çözümlenemedi.") from exc
 
 
 def _normalise_date(value: Any) -> str | None:
@@ -760,7 +744,14 @@ async def web_consultants(request: Request):
     limited = _rate_limit_response(request, "consultants-list", limit=60, window_seconds=60)
     if limited:
         return limited
-    return JSONResponse({"items": account_service.list_consultants()}, headers={"Cache-Control": "no-store"})
+    # The marketplace stays hidden until real consultant profiles exist; demo or
+    # seed rows must never look like a live directory (CONSULTANTS_MARKETPLACE_ENABLED=1 to open).
+    if os.environ.get("CONSULTANTS_MARKETPLACE_ENABLED", "0") != "1":
+        return JSONResponse({"items": [], "enabled": False}, headers={"Cache-Control": "no-store"})
+    return JSONResponse(
+        {"items": account_service.list_consultants(), "enabled": True},
+        headers={"Cache-Control": "no-store"},
+    )
 
 
 @mcp.custom_route("/api/consultants/me", methods=["GET"])
@@ -980,13 +971,41 @@ async def web_search(request: Request):
 
     return JSONResponse(
         {
-            "documents": [_document_json(document) for document in result.documents],
+            "documents": _deprioritise_future_gazette_dates(
+                [_document_json(document) for document in result.documents]
+            ),
             "total": result.total_results,
             "page": page,
             "page_size": page_size,
             "has_next": page * page_size < result.total_results,
         }
     )
+
+
+def _deprioritise_future_gazette_dates(documents: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    """Sort-order guard: a future gazette date is a source data error, not news.
+
+    The official API sorts by gazette date descending, so one bad date from the
+    source would permanently top the list. Such records keep their data (source
+    fidelity) but move to the end of the page and carry an explicit warning.
+    """
+    today = datetime.now(UTC).date()
+    clean: list[dict[str, Any]] = []
+    flagged: list[dict[str, Any]] = []
+    for document in documents:
+        raw_date = str(document.get("gazette_date") or "")
+        try:
+            is_future = bool(raw_date) and date.fromisoformat(raw_date) > today
+        except ValueError:
+            is_future = False
+        if is_future:
+            document["date_warning"] = (
+                "Resmî kaynak bu kayıt için gelecek bir tarih gösteriyor; tarih kaynak hatası olabilir."
+            )
+            flagged.append(document)
+        else:
+            clean.append(document)
+    return clean + flagged
 
 
 @mcp.custom_route("/api/document/{mevzuat_id}", methods=["GET"])
@@ -1176,7 +1195,7 @@ async def web_customs_describe_image(request: Request):
         body = await request.json()
         if not isinstance(body, dict) or not body.get("image_data_url"):
             return JSONResponse({"error": "Analiz edilecek ürün görselini yükleyin."}, status_code=422)
-        image_bytes, image_media_type = _decode_image_data_url(body["image_data_url"])
+        image_bytes, image_media_type = decode_image_data_url(body["image_data_url"])
         result = await customs_advisor_service.describe_image(image_bytes, image_media_type)
         _record_usage(quota_user, "vision")
     except RuntimeError as exc:

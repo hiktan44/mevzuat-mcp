@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import base64
 import io
 import json
 import os
@@ -23,6 +24,7 @@ from customs_advisor import (
     ProductClassificationRequest,
     TaxFinding,
     _deterministic_cost,
+    decode_image_data_url,
     _evidence_prompt,
     _expert_review_packet,
     _missing_information,
@@ -279,6 +281,48 @@ class CustomsAdvisorSafetyTests(unittest.TestCase):
         self.assertNotIn("candidate_gtip", result.model_dump())
         self.assertEqual(result.required_user_inputs, ["Menşe ülke", "Etiket bileşimi"])
         self.assertTrue(result.user_confirmation_required)
+
+    def test_image_data_url_round_trip(self) -> None:
+        buffer = io.BytesIO()
+        Image.new("RGB", (120, 90), "white").save(buffer, format="JPEG")
+        payload = base64.b64encode(buffer.getvalue()).decode("ascii")
+        image_bytes, media_type = decode_image_data_url(f"data:image/jpeg;base64,{payload}")
+        self.assertEqual(media_type, "image/jpeg")
+        self.assertEqual(image_bytes, buffer.getvalue())
+
+    def test_image_data_url_rejects_non_images_and_garbage(self) -> None:
+        with self.assertRaises(ValueError):
+            decode_image_data_url("data:text/plain;base64,aGVsbG8=")
+        with self.assertRaises(ValueError):
+            decode_image_data_url("data:image/jpeg;base64,!!!")
+        with self.assertRaises(ValueError):
+            decode_image_data_url("x" * 11_500_001)
+        with self.assertRaises(ValueError):
+            decode_image_data_url(42)
+
+
+class DescribeImageTests(unittest.IsolatedAsyncioTestCase):
+    async def test_describe_image_keeps_server_controlled_fields_only(self) -> None:
+        buffer = io.BytesIO()
+        Image.new("RGB", (120, 90), "white").save(buffer, format="JPEG")
+        advisor = CustomsAdvisor()
+        raw = {
+            "product_name": "Porselen fincan takımı",
+            "label_text": "İletişim: 0538 000 00 00",
+            "candidate_gtip": "69111000",
+            "confidence": "medium",
+        }
+        with patch(
+            "customs_advisor._request_openrouter_vision_analysis",
+            new=AsyncMock(return_value=(raw, "google/gemini-flash-latest")),
+        ), patch("customs_advisor._openrouter_api_key", return_value="test-key"):
+            result = await advisor.describe_image(buffer.getvalue(), "image/jpeg")
+        dumped = result.model_dump()
+        self.assertEqual(result.provider, "openrouter")
+        self.assertEqual(result.model, "google/gemini-flash-latest")
+        self.assertNotIn("candidate_gtip", dumped)
+        self.assertTrue(result.user_confirmation_required)
+        self.assertIn("GTİP değildir", result.warning)
 
 
 class OfficialSourceRegistryTests(unittest.IsolatedAsyncioTestCase):

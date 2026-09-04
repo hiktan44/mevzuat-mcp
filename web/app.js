@@ -241,7 +241,7 @@ function renderGeneralResults(data) {
       <span class="result-node" aria-hidden="true"></span>
       <span class="result-main"><strong class="result-title">${escapeHtml(doc.title)}</strong><span class="result-subline">${meta.map((value) => `<span>${escapeHtml(value)}</span>`).join("")}</span></span>
       <span class="result-source">${escapeHtml(doc.type_label || "Mevzuat")}</span>
-      <span class="result-date">${escapeHtml(doc.gazette_date ? formatDate(doc.gazette_date) : "—")}</span>
+      <span class="result-date"${doc.date_warning ? ` title="${escapeHtml(doc.date_warning)}"` : ""}>${doc.gazette_date ? `${escapeHtml(formatDate(doc.gazette_date))}${doc.date_warning ? " ⚠" : ""}` : "—"}</span>
       <span class="result-arrow" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="m9 5 7 7-7 7"/></svg></span>`;
     item.addEventListener("click", () => openGeneralDocument(doc, item));
     resultList.append(item);
@@ -1321,9 +1321,33 @@ function renderTariffTree(tree, candidate = state.customsSelectedCandidate) {
     const code = button.dataset.tariffChild;
     const exact = button.dataset.tariffFinal === "true";
     setSelectedTariffCode(code, { exact });
+    if (exact) prefillVerifiedRates(code);
     await loadTariffTree(code, candidate).catch((error) => renderTariffTreeError(error.message));
     showToast(exact ? `${code} GTİP12 adayı kullanıcı seçimiyle doğrulandı.` : `${code} dalı seçildi; bir alt seviye açıldı.`);
   }));
+
+async function prefillVerifiedRates(code) {
+  const origin = $("#originCountry").value.trim();
+  if (!origin) return;
+  try {
+    const tariff = await fetchJson("/api/tariff/lookup", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ gtip: code, origin_country: origin }),
+    });
+    const safe = tariff.unambiguous_rates || {};
+    let filled = 0;
+    [["#customsDutyRate", safe.customs_duty], ["#additionalDutyRate", safe.additional_duty]].forEach(([selector, value]) => {
+      const input = $(selector);
+      if (value == null || !input || input.value.trim() !== "") return;
+      input.value = String(value);
+      input.classList.add("rate-suggested");
+      input.title = "Resmî tarife satırından önerildi; onaylamadan veya düzeltmeden maliyet hesabı yapılmaz.";
+      filled += 1;
+    });
+    if (filled) showToast("Vergi oranları resmî satırdan önerildi; doğrulayıp onaylayın.");
+  } catch (error) { /* oran önerisi başarısız olsa da kod seçimi geçerli kalır */ }
+}
   updateReadiness();
 }
 
@@ -1772,6 +1796,9 @@ async function loadConsultants() {
   try {
     const publicData = await fetchJson("/api/consultants");
     state.consultants = publicData.items || [];
+    const marketplaceEnabled = publicData.enabled !== false;
+    state.consultantsMarketplace = marketplaceEnabled;
+    document.body.classList.toggle("marketplace-enabled", marketplaceEnabled);
     target.innerHTML = publicData.items.length
       ? publicData.items.map(consultantCard).join("")
       : '<div class="consultant-empty"><b>İlk danışman başvuruları bekleniyor</b><p>Ücretsiz başvuru yapabilir; yönetici incelemesinden sonra bu dizinde yer alabilirsiniz.</p></div>';
@@ -2228,7 +2255,16 @@ async function loadChanges() {
   try {
     const data = await fetchJson("/api/changes");
     const controlRows = data.controls || [];
-    const tariffSummaries = Object.entries(data.tariff || {}).map(([name, value]) => `<article class="candidate-card"><code>${escapeHtml(name)}</code><b>${escapeHtml(value.status || (value.changes?.length ? "değişiklik" : "tek sürüm"))}</b><p>${escapeHtml(value.message || `${value.changes?.length || 0} satır farkı`)}</p></article>`).join("");
+    const changeSourceLabels = { import_regime: "İthalat Rejimi Kararı", additional_duty: "İlave Gümrük Vergisi (İGV) Kararı" };
+    const changeStatusLabels = { no_previous_snapshot: "İlk sürüm arşivlendi", compared: "İki sürüm karşılaştırıldı" };
+    const tariffSummaries = Object.entries(data.tariff || {}).map(([name, value]) => {
+      const sourceLabel = changeSourceLabels[name] || name;
+      const statusText = changeStatusLabels[value.status] || value.status || (value.changes?.length ? "değişiklik var" : "tek sürüm");
+      const note = value.status === "no_previous_snapshot"
+        ? "Karşılaştırılacak ikinci resmî sürüm henüz arşivlenmedi; sonraki sürüm güncellemesinden sonra satır farkları burada listelenir."
+        : (value.message || `${value.changes?.length || 0} satır farkı`);
+      return `<article class="candidate-card"><code>${escapeHtml(sourceLabel)}</code><b>${escapeHtml(statusText)}</b><p>${escapeHtml(note)}</p></article>`;
+    }).join("");
     output.innerHTML = `<div class="candidate-grid">${tariffSummaries || '<p class="missing-list">Tarife sürümü henüz yok.</p>'}</div>
       <div class="formula-ledger"><h3>Kontrol tebliği değişiklikleri</h3>${controlRows.length ? controlRows.map((item) => `<div class="formula-line"><span><strong>${escapeHtml(item.code)}</strong> · ${escapeHtml(item.title)}<br><small>${escapeHtml(item.changed_at)}</small></span><code>${item.scope_count_delta > 0 ? "+" : ""}${escapeHtml(item.scope_count_delta)}</code></div>`).join("") : '<p class="missing-list">Karşılaştırılabilir ikinci tebliğ sürümü henüz oluşmadı.</p>'}</div>`;
   } catch (error) { output.innerHTML = `<div class="answer-error"><p>${escapeHtml(error.message)}</p></div>`; }
