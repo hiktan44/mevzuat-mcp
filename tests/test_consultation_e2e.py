@@ -14,7 +14,7 @@ from account_service import AccountService
 from auth_service import GoogleAuthService
 
 
-PUBLIC_ORIGIN = "https://mevzuat-mcp.seymata.com"
+PUBLIC_ORIGIN = "https://gumruksor.com"
 
 
 def profile(sub: str, email: str, name: str) -> dict[str, str]:

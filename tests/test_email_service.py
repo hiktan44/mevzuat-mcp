@@ -14,7 +14,7 @@ from auth_service import GoogleAuthService
 from customs_advisor import CustomsPrecheckResult
 from email_service import MailError, ResendEmailSender, render_precheck_email
 
-PUBLIC_ORIGIN = "https://mevzuat-mcp.seymata.com"
+PUBLIC_ORIGIN = "https://gumruksor.com"
 
 SAMPLE_RESULT = {
     "status": "evidence_only",

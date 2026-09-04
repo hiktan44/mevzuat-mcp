@@ -674,7 +674,7 @@ def _openrouter_headers(api_key: str) -> dict[str, str]:
     headers = {
         "Authorization": f"Bearer {api_key}",
         "Content-Type": "application/json",
-        "HTTP-Referer": "https://mevzuat-mcp.seymata.com/",
+        "HTTP-Referer": "https://gumruksor.com/",
         "X-OpenRouter-Title": "Gumrukce",
     }
     for name, value in headers.items():
