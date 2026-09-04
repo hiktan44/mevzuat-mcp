@@ -216,6 +216,7 @@ class LandedCostInput(BaseModel):
     sct_amount: float | None = Field(None, ge=0, le=1_000_000_000)
     surveillance_unit_value: float | None = Field(None, ge=0, le=1_000_000_000)
     has_surveillance_certificate: bool | None = None
+    payment_method: str | None = Field(None, max_length=100)
 
     @field_validator("currency")
     @classmethod
@@ -232,11 +233,12 @@ class LandedCostResult(BaseModel):
     lines: list[dict[str, Any]]
     customs_value: float
     vat_base: float | None = None
+    total_taxes: float | None = None
     landed_total: float | None = None
     unit_landed_cost: float | None = None
     missing_rates: list[str] = Field(default_factory=list)
     warnings: list[str] = Field(default_factory=list)
-    formula_version: str = "tr-landed-cost-v2"
+    formula_version: str = "tr-landed-cost-v3"
 
 
 @dataclass(slots=True)
@@ -1156,7 +1158,21 @@ def calculate_landed_cost(data: LandedCostInput) -> LandedCostResult:
         lines.append({"code": "anti_dumping", "label": "Damping karşıtı vergi", "base": None, "rate": None, "amount": None, "formula": "uygulanabilirlik doğrulanmadı"})
     else:
         lines.append({"code": "anti_dumping", "label": "Damping karşıtı vergi", "base": None, "rate": None, "amount": round(data.anti_dumping_amount, 2), "formula": "doğrulanmış sabit/toplam tutar"})
-    kkdf = percentage("kkdf", "KKDF oranı", data.invoice_value, data.kkdf_rate)
+    kkdf = data.kkdf_rate
+    payment_key = _key(data.payment_method)
+    deferred_payment = bool(payment_key) and any(token in payment_key for token in ("mal mukabili", "vadeli", "kredi"))
+    cash_payment = bool(payment_key) and "pesin" in payment_key and not deferred_payment
+    if kkdf is None and deferred_payment:
+        kkdf = 6.0
+        warnings.append("Kredili/vadeli ödemede KKDF %6 önerildi; finansman yapınıza göre doğrulayın. Peşin ödemeyi seçerseniz bu kalem %0 olur.")
+    elif kkdf is None and cash_payment:
+        kkdf = 0.0
+        warnings.append("Peşin ödemede KKDF uygulanmaz; KKDF %0 olarak önerildi, onaylayın.")
+    elif kkdf is None and payment_key:
+        warnings.append("Ödeme şekli anlaşılamadı; KKDF oranını kendiniz doğrulayıp girin (peşin %0, kredili/vadeli %6).")
+    if kkdf is None and not payment_key:
+        missing.append("Ödeme şekli (peşin ise KKDF %0, kredili/vadeli ise %6)")
+    kkdf_amount = percentage("kkdf", "KKDF oranı", data.invoice_value, kkdf)
     if data.sct_amount is None:
         missing.append("ÖTV tutarı (uygulanmıyorsa 0)")
         lines.append({"code": "sct", "label": "ÖTV", "base": None, "rate": None, "amount": None, "formula": "uygulanabilirlik doğrulanmadı"})
@@ -1165,12 +1181,12 @@ def calculate_landed_cost(data: LandedCostInput) -> LandedCostResult:
 
     pre_vat_known = all(
         value is not None
-        for value in (duty, additional, emy, data.anti_dumping_amount, kkdf, data.sct_amount, data.surveillance_unit_value)
+        for value in (duty, additional, emy, data.anti_dumping_amount, kkdf_amount, data.sct_amount, data.surveillance_unit_value)
     )
     vat_base = None
     vat = None
     if pre_vat_known:
-        vat_base = customs_value + duty + additional + emy + data.anti_dumping_amount + kkdf + data.sct_amount + data.other_costs
+        vat_base = customs_value + duty + additional + emy + data.anti_dumping_amount + kkdf_amount + data.sct_amount + data.other_costs
         vat = percentage("vat", "KDV oranı", vat_base, data.vat_rate)
     else:
         if data.vat_rate is None:
@@ -1178,10 +1194,18 @@ def calculate_landed_cost(data: LandedCostInput) -> LandedCostResult:
         lines.append({"code": "vat", "label": "KDV", "base": None, "rate": data.vat_rate, "amount": None, "formula": "önceki vergi oranları eksik"})
     total = vat_base + vat if vat_base is not None and vat is not None else None
     unit = total / data.quantity if total is not None and data.quantity else None
+    tax_components = (duty, additional, emy, data.anti_dumping_amount, kkdf_amount, data.sct_amount, vat)
+    total_taxes = sum(component for component in tax_components if component is not None) if all(
+        component is not None for component in tax_components
+    ) else None
+    warnings.append(
+        "Gümrük beyannamesi başına sabit işlem harcı ayrıca uygulanır; tutarı her yıl yeniden belirlendiği için güncel miktarı teyit edin."
+    )
     status: Literal["complete", "partial", "blocked"] = "complete" if total is not None and not missing else "partial"
     return LandedCostResult(
         status=status, currency=data.currency, lines=lines, customs_value=round(customs_value, 2),
         vat_base=round(vat_base, 2) if vat_base is not None else None,
+        total_taxes=round(total_taxes, 2) if total_taxes is not None else None,
         landed_total=round(total, 2) if total is not None else None,
         unit_landed_cost=round(unit, 4) if unit is not None else None,
         missing_rates=list(dict.fromkeys(missing)), warnings=warnings,

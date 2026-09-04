@@ -22,7 +22,11 @@ Atez TARIFF rekabet analizindeki Faz 1-2 maddeleri uygulandı (109 test OK):
   10 MB / 6 bin karakter sınırı; metin kullanıcı onayına sunulup ürün tanımına eklenir.
 - **PDF çıktısı**: ön değerlendirme dosyasında "PDF olarak kaydet" (tarayıcı yazdırma görünümü, print CSS).
 
-E-posta gönderimi SMTP anahtarı bekliyor; EN/DE arayüz ve AB TARIC varış tarifesi ayrı oturum konusu.
+E-posta gönderimi: `/api/email/precheck` transactional API ile (env: `RESEND_API_KEY` + `MAIL_FROM`,
+Coolify'da girilince açılır; yalnız giriş yapan kullanıcının kendi adresine, 5/saat limiti, HTML sunucuda
+şablonlanır). Maliyet motoruna ödeme şekli bağlandı: peşin → KKDF %0, kredili/vadeli → %6 önerisi + uyarı;
+`total_taxes` ara toplamı ve sabit beyanname harcı uyarısı eklendi (formula_version v3).
+EN/DE arayüz ve AB TARIC varış tarifesi ayrı oturum konusu.
 
 ## Proje nedir
 FastMCP tabanlı Türkiye mevzuat + Ticaret Bakanlığı bilgi sunucusu ve üstündeki web uygulaması

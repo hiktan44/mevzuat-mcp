@@ -929,6 +929,7 @@ def _deterministic_cost(
             additional_financial_liability_rate=emy_rate,
             anti_dumping_amount=inquiry.anti_dumping_amount,
             kkdf_rate=inquiry.kkdf_rate,
+            payment_method=inquiry.payment_method,
             vat_rate=inquiry.vat_rate,
             sct_amount=inquiry.sct_amount,
             surveillance_unit_value=inquiry.surveillance_unit_value,

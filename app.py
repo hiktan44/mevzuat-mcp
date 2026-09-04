@@ -28,7 +28,8 @@ from starlette.responses import FileResponse, HTMLResponse, JSONResponse, PlainT
 from auth_service import AuthError, GoogleAuthService
 from account_service import PLANS, AccountError, AccountService, QuotaExceeded
 from billing_service import BillingError, StripeBilling
-from customs_advisor import CustomsInquiry, ProductClassificationRequest, decode_image_data_url
+from customs_advisor import CustomsInquiry, CustomsPrecheckResult, ProductClassificationRequest, decode_image_data_url
+from email_service import MailError, ResendEmailSender, render_precheck_email
 from mevzuat_mcp_server import (
     _BED_VALID_TYPES,
     bedesten_client,
@@ -52,6 +53,7 @@ SALES_CONTACT_EMAIL = os.environ.get("SALES_CONTACT_EMAIL", "hiktan44@gmail.com"
 google_auth = GoogleAuthService()
 account_service = AccountService(google_auth.data_dir)
 stripe_billing = StripeBilling()
+email_sender = ResendEmailSender()
 agent_identity = AgentTokenVerifier()
 
 
@@ -1461,6 +1463,50 @@ async def web_customs_precheck(request: Request):
             status_code=502,
         )
     return JSONResponse(redact_data(result.model_dump(mode="json"), contact_data=True))
+
+
+@mcp.custom_route("/api/email/precheck", methods=["POST"])
+async def web_email_precheck(request: Request):
+    """Send the signed-in user their own precheck dossier by e-mail."""
+    limited = _rate_limit_response(request, "email-precheck", limit=5, window_seconds=3600)
+    if limited:
+        return limited
+    try:
+        _trusted_request_origin(request)
+        _agent_or_browser_identity(request)
+        user = _required_user(request)
+    except SecurityViolation as exc:
+        return _security_response(exc)
+    except AuthError as exc:
+        return _auth_error(exc)
+    try:
+        if not email_sender.configured:
+            raise MailError("E-posta gönderimi henüz yapılandırılmadı.")
+        body = await request.json()
+        if not isinstance(body, dict):
+            raise ValueError("E-posta isteği bir nesne olmalıdır.")
+        guard_data(body, path="e-posta dosyası")
+        result = CustomsPrecheckResult.model_validate(body)
+        recipient = str(user.get("email") or "").strip()
+        if "@" not in recipient:
+            raise ValueError("Hesabınızda geçerli bir e-posta adresi bulunamadı.")
+        subject = f"İthalat ön değerlendirme dosyası · {result.as_of[:10]}"
+        message_id = await email_sender.send(to=recipient, subject=subject, html_body=render_precheck_email(result, PUBLIC_BASE_URL))
+        return JSONResponse({"sent": True, "recipient": recipient, "message_id": message_id})
+    except SecurityViolation as exc:
+        return _security_response(exc)
+    except AuthError as exc:
+        return _auth_error(exc)
+    except MailError as exc:
+        return JSONResponse({"error": str(exc)}, status_code=503)
+    except ValidationError as exc:
+        message = exc.errors(include_url=False)[0].get("msg", "Dosya verisi doğrulanamadı.")
+        return JSONResponse({"error": f"Dosya verisi doğrulanamadı: {message}"}, status_code=422)
+    except ValueError as exc:
+        return JSONResponse({"error": str(exc)}, status_code=422)
+    except Exception:
+        logger.exception("Precheck e-mail delivery failed")
+        return JSONResponse({"error": "E-posta şu anda gönderilemedi; kısa süre sonra yeniden deneyin."}, status_code=502)
 
 
 @mcp.custom_route("/api/tariff/status", methods=["GET"])

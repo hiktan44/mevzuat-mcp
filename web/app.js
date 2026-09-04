@@ -966,7 +966,7 @@ function renderCustomsResult(data) {
       <section class="answer-section"><h3>Sonraki güvenli adımlar</h3><ol class="next-list">${(data.next_steps || []).map((item) => `<li>${escapeHtml(item)}</li>`).join("")}</ol></section>
       <section class="answer-section"><h3>Resmî kanıt defteri · ${(data.sources || []).length} kaynak</h3><div class="source-ledger">${sources}</div></section>
       <div class="legal-banner"><strong>Önemli:</strong> ${escapeHtml(data.legal_notice)}</div>
-      <div class="result-actions"><button class="consultant-send-result" id="sendResultToConsultant" type="button">Danışmana gönder</button><button id="saveScenario" type="button">Kanıt dosyasına kaydet</button><button id="printPrecheck" type="button">PDF olarak kaydet</button></div>
+      <div class="result-actions"><button class="consultant-send-result" id="sendResultToConsultant" type="button">Danışmana gönder</button><button id="saveScenario" type="button">Kanıt dosyasına kaydet</button><button id="printPrecheck" type="button">PDF olarak kaydet</button><button id="emailPrecheck" type="button">E-posta ile gönder</button></div>
     </article>
     <form class="followup-box" id="followupForm"><label class="field"><span>Bu ürün için takip sorusu</span><input id="followupQuestion" maxlength="1500" placeholder="Örn. TAREKS başvurusunda hangi teknik dosyalar hazırlanmalı?"></label><button class="analyse-button" type="submit"><span>Takip sorusunu sor</span><svg viewBox="0 0 24 24"><path d="m5 12 14 0M14 6l6 6-6 6"/></svg></button></form>`;
   $("#followupForm")?.addEventListener("submit", (event) => {
@@ -2102,7 +2102,9 @@ function renderTariffTool(data) {
   const warnings = [...(tariff.warnings || []), ...(cost?.warnings || [])];
   const costLedger = cost ? `<div class="formula-ledger"><h3>Maliyet formülü · ${escapeHtml(cost.status)}</h3>
     ${(cost.lines || []).map((line) => `<div class="formula-line"><span>${escapeHtml(line.label)} <small>${escapeHtml(line.formula)}</small></span><code>${line.amount == null ? "—" : `${numberFormat.format(line.amount)} ${escapeHtml(cost.currency)}`}</code></div>`).join("")}
-    <div class="formula-line"><strong>İthal edilmiş toplam</strong><code>${cost.landed_total == null ? "Oran eksik" : `${numberFormat.format(cost.landed_total)} ${escapeHtml(cost.currency)}`}</code></div></div>` : "";
+    <div class="formula-line"><strong>Toplam vergi</strong><code>${cost.total_taxes == null ? "Oran eksik" : `${numberFormat.format(cost.total_taxes)} ${escapeHtml(cost.currency)}`}</code></div>
+    <div class="formula-line"><strong>Genel toplam (vergiler dahil)</strong><code>${cost.landed_total == null ? "Oran eksik" : `${numberFormat.format(cost.landed_total)} ${escapeHtml(cost.currency)}`}</code></div>
+    <p class="rate-warning">Toplamlar sabit beyanname harcını içermez; kredili/vadeli ödemede KKDF eklenir, peşin ödemede bu kalem %0'dır. Kesin tutar için beyan öncesi gümrük müşaviri teyidi alın.</p></div>` : "";
   return `<div class="answer-head"><span class="answer-status${tariff.status === "matched" ? "" : " warning"}">${escapeHtml(tariff.status)}</span><div><h2>${escapeHtml(tariff.gtip)} · ${escapeHtml(tariff.origin_country || "menşe seçilmedi")}</h2><p>Ülke grubu: ${escapeHtml(tariff.resolved_country_group || "çözümlenmedi")} · ${escapeHtml(tariff.as_of)}</p></div></div>
     ${tariffMatchSummary(tariff)}
     <table class="evidence-table"><thead><tr><th>GTİP / Önlem</th><th>Oran</th><th>Menşe sütunu</th><th>Kaynak satırı</th><th>Kanıt</th></tr></thead><tbody>${tariffRows(tariff.measures)}</tbody></table>
@@ -2156,7 +2158,7 @@ $("#tariffForm").addEventListener("submit", async (event) => {
       : await fetchJson("/api/tariff/cost", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({
           ...common, invoice_value: invoice, freight: nullableNumber("#tariffFreight") || 0,
           insurance: nullableNumber("#tariffInsurance") || 0, currency: $("#tariffCurrency").value,
-          vat_rate: nullableNumber("#tariffVat"),
+          vat_rate: nullableNumber("#tariffVat"), payment_method: $("#tariffPayment").value || null,
         }) });
     output.innerHTML = renderTariffTool(data);
     const scenarioBox = $("#scenarioBox");
@@ -2217,6 +2219,27 @@ document.addEventListener("click", (event) => {
   };
   window.addEventListener("afterprint", cleanup);
   window.print();
+});
+
+document.addEventListener("click", async (event) => {
+  const button = event.target.closest("#emailPrecheck");
+  if (!button) return;
+  const result = state.currentCustomsResult;
+  if (!result) { showToast("Gönderilecek ön değerlendirme dosyası bulunamadı."); return; }
+  if (!state.auth?.authenticated) { showToast("E-posta ile göndermek için Google ile giriş yapın; dosya kendi adresinize gider."); return; }
+  button.disabled = true;
+  try {
+    const data = await fetchJson("/api/email/precheck", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(result),
+    });
+    showToast(`${data.recipient} adresine gönderildi; spam klasörünü de kontrol edin.`);
+  } catch (error) {
+    showToast(error.message || "E-posta gönderilemedi.");
+  } finally {
+    button.disabled = false;
+  }
 });
 
 $("#ingestSource")?.addEventListener("click", async () => {
