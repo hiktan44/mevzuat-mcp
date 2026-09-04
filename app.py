@@ -48,7 +48,12 @@ from tariff_engine import LandedCostInput
 
 logger = logging.getLogger(__name__)
 WEB_DIR = Path(__file__).resolve().parent / "web"
-PUBLIC_BASE_URL = os.environ.get("PUBLIC_BASE_URL", "https://mevzuat-mcp.seymata.com").rstrip("/")
+PUBLIC_BASE_URL = os.environ.get("PUBLIC_BASE_URL", "https://gumruksor.com").rstrip("/")
+ADDITIONAL_ALLOWED_ORIGINS = tuple(
+    origin.strip().rstrip("/")
+    for origin in os.environ.get("ADDITIONAL_ALLOWED_ORIGINS", "").split(",")
+    if origin.strip()
+)
 SALES_CONTACT_EMAIL = os.environ.get("SALES_CONTACT_EMAIL", "hiktan44@gmail.com").strip()
 google_auth = GoogleAuthService()
 account_service = AccountService(google_auth.data_dir)
@@ -118,14 +123,19 @@ def _security_response(exc: SecurityViolation) -> JSONResponse:
     return JSONResponse({"error": str(exc), "code": exc.code}, status_code=403)
 
 
+def _origin_key(value: str) -> tuple[str | None, str | None, int | None]:
+    parts = urlsplit(value)
+    return (parts.scheme, parts.hostname, parts.port)
+
+
 def _trusted_request_origin(request: Request) -> None:
     """Reject cross-site browser POSTs while preserving non-browser MCP/API clients."""
     supplied = request.headers.get("origin") or ""
     if not supplied:
         return
-    expected = urlsplit(PUBLIC_BASE_URL)
-    actual = urlsplit(supplied)
-    if (actual.scheme, actual.hostname, actual.port) != (expected.scheme, expected.hostname, expected.port):
+    trusted = {_origin_key(PUBLIC_BASE_URL)}
+    trusted.update(_origin_key(extra) for extra in ADDITIONAL_ALLOWED_ORIGINS)
+    if _origin_key(supplied) not in trusted:
         raise SecurityViolation("Bu istek güvenilir uygulama adresinden gelmiyor.", code="origin_denied")
 
 

@@ -372,7 +372,7 @@ class ImportControlEngine:
         self._attachment_http = httpx.AsyncClient(
             verify=attachment_ssl,
             headers={
-                "User-Agent": "Mozilla/5.0 (compatible; MevzuatMCP/1.4; +https://mevzuat-mcp.seymata.com/)",
+                "User-Agent": "Mozilla/5.0 (compatible; MevzuatMCP/1.4; +https://gumruksor.com/)",
                 "Accept": "application/zip,application/octet-stream;q=0.9,*/*;q=0.8",
             },
             follow_redirects=False,

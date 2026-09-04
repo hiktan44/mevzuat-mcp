@@ -117,11 +117,11 @@ Her çağrı katı JSON şeması ve `require_parameters=true` kullanır; bu nede
 
 ## ChatGPT ve Codex bağlantısı
 
-Uzak MCP adresi: `https://mevzuat-mcp.seymata.com/mcp`
+Uzak MCP adresi: `https://gumruksor.com/mcp`
 
-Tanıtım ve fiyatlandırma sayfası: `https://mevzuat-mcp.seymata.com/`
+Tanıtım ve fiyatlandırma sayfası: `https://gumruksor.com/`
 
-Web araştırma uygulaması: `https://mevzuat-mcp.seymata.com/app`
+Web araştırma uygulaması: `https://gumruksor.com/app`
 
 Arayüzde Ticaret Bakanlığının yedi bilgi katmanı canlı kayıt sayılarıyla ayrı gösterilir; kaynak, belge türü, yıl ve mülga durumu filtrelenebilir. Seçilen kaydın resmî kaynak zinciri, tam metni ve kopyalanabilir atfı aynı ekranda açılır. **Genel mevzuat** görünümü Bedesten resmî servisine bağlı ayrı arama alanıdır.
 
@@ -132,13 +132,14 @@ Arayüzde Ticaret Bakanlığının yedi bilgi katmanı canlı kayıt sayılarıy
 Google OAuth istemcisinde **Web application** türü seçilir ve yetkili yönlendirme adresi olarak yalnızca şu tam adres eklenir:
 
 ```text
-https://mevzuat-mcp.seymata.com/auth/google/callback
+https://gumruksor.com/auth/google/callback
 ```
 
 Coolify ortam değişkenleri:
 
 ```text
-PUBLIC_BASE_URL=https://mevzuat-mcp.seymata.com
+PUBLIC_BASE_URL=https://gumruksor.com
+ADDITIONAL_ALLOWED_ORIGINS=<geçiş dönemi için ek adresler, virgülle ayrılmış, isteğe bağlı>
 GOOGLE_CLIENT_ID=<Google OAuth web client ID>
 GOOGLE_CLIENT_SECRET=<Google OAuth client secret>
 AUTH_SESSION_SECRET=<en az 32 karakter kriptografik rastgele değer>
@@ -146,6 +147,24 @@ GOOGLE_SITE_VERIFICATION=<Search Console doğrulama kodu, isteğe bağlı>
 ```
 
 `GOOGLE_CLIENT_SECRET` ve `AUTH_SESSION_SECRET` hiçbir zaman tarayıcıya gönderilmez. OAuth access/refresh tokenları saklanmaz; yalnız doğrulanmış profil alanları ve imzalı birinci taraf oturum çerezi kullanılır. Anahtarlar eklenmediyse Google düğmesi kurulum uyarısı gösterir ve misafir erişimi çalışmaya devam eder.
+
+### Alan adı bağlama (Cloudflare + Coolify)
+
+Uygulamanın birincil adresi `https://gumruksor.com`'dur. Alan adını sıfırdan bağlamak veya
+değiştirmek için adım adım rehber: [`docs/gumruksor-alan-adi-kurulumu.md`](docs/gumruksor-alan-adi-kurulumu.md).
+
+`PUBLIC_BASE_URL` uygulamanın kendini tanıttığı tek adrestir; canonical etiketleri, `sitemap.xml`,
+Google OAuth dönüş adresi, Stripe dönüş adresleri ve e-posta bağlantıları bu değerden üretilir.
+Alan adı değişince yalnız bu değişkeni güncellemek yeterlidir.
+
+`ADDITIONAL_ALLOWED_ORIGINS`, geçiş döneminde eski adresin de çalışmasını sağlar. Tarayıcıdan gelen
+POST istekleri normalde yalnız `PUBLIC_BASE_URL` kaynağından kabul edilir; bu değişkene virgülle
+ayrılmış ek adresler yazıldığında onlar da güvenilir sayılır. Boş bırakılırsa davranış değişmez.
+Geçiş tamamlanıp eski adres kapatıldığında bu değişken tekrar boşaltılmalıdır.
+
+```text
+ADDITIONAL_ALLOWED_ORIGINS=https://www.gumruksor.com,https://mevzuat-mcp.seymata.com
+```
 
 ### Abonelik, kota ve kanıt dosyaları
 
@@ -164,14 +183,14 @@ STRIPE_PRICE_TEAM_YEARLY=<price_ kimliği>
 STRIPE_AUTOMATIC_TAX=false
 ```
 
-Stripe webhook adresi `https://mevzuat-mcp.seymata.com/api/billing/stripe/webhook` olmalı ve yalnız `checkout.session.completed`, `customer.subscription.updated`, `customer.subscription.deleted`, `invoice.paid`, `invoice.payment_failed` olaylarını göndermelidir. Müşteri Portalı, paket değişikliği/iptal ve ödeme yöntemi yönetimini Stripe’ın barındırdığı sayfada yapar. `STRIPE_AUTOMATIC_TAX` yalnız Stripe Tax kayıtları hazırlandıktan sonra `true` yapılmalıdır. Anahtar, webhook secret veya Price ID’lerden biri eksikse ödeme güvenli biçimde kapalı kalır; paket ve fiyat seçimi tarayıcıdan değil sunucudaki katalogdan doğrulanır.
+Stripe webhook adresi `https://gumruksor.com/api/billing/stripe/webhook` olmalı ve yalnız `checkout.session.completed`, `customer.subscription.updated`, `customer.subscription.deleted`, `invoice.paid`, `invoice.payment_failed` olaylarını göndermelidir. Müşteri Portalı, paket değişikliği/iptal ve ödeme yöntemi yönetimini Stripe’ın barındırdığı sayfada yapar. `STRIPE_AUTOMATIC_TAX` yalnız Stripe Tax kayıtları hazırlandıktan sonra `true` yapılmalıdır. Anahtar, webhook secret veya Price ID’lerden biri eksikse ödeme güvenli biçimde kapalı kalır; paket ve fiyat seçimi tarayıcıdan değil sunucudaki katalogdan doğrulanır.
 
-Landing page; canonical, Open Graph/Twitter kartları, `SoftwareApplication` ve `FAQPage` yapılandırılmış verisi, `/robots.txt`, `/sitemap.xml`, manifest ve indekslenmeyen `/app` çalışma alanıyla hazırdır. Google Search Console tarafında alan adı doğrulandıktan sonra `https://mevzuat-mcp.seymata.com/sitemap.xml` gönderilmelidir; indeks kararı ve sıralama Google'a aittir.
+Landing page; canonical, Open Graph/Twitter kartları, `SoftwareApplication` ve `FAQPage` yapılandırılmış verisi, `/robots.txt`, `/sitemap.xml`, manifest ve indekslenmeyen `/app` çalışma alanıyla hazırdır. Google Search Console tarafında alan adı doğrulandıktan sonra `https://gumruksor.com/sitemap.xml` gönderilmelidir; indeks kararı ve sıralama Google'a aittir.
 
 ChatGPT'de geliştirici modu açıkken **Ayarlar → Uygulamalar → Oluştur** ekranında bu adresi endpoint olarak verin, kimlik doğrulamayı **Yok** seçin ve **Araçları tara** ile 44 aracı yükleyin. Tarife, maliyet, ithalat kontrolü ve Gümrükçe araçları MCP Apps yapılandırılmış sonuç görünümünü destekler. Codex için:
 
 ```bash
-codex mcp add mevzuat-mcp --url https://mevzuat-mcp.seymata.com/mcp
+codex mcp add mevzuat-mcp --url https://gumruksor.com/mcp
 ```
 
 Responses API örneği:
@@ -186,7 +205,7 @@ response = client.responses.create(
     tools=[{
         "type": "mcp",
         "server_label": "turkiye_mevzuat_ticaret",
-        "server_url": "https://mevzuat-mcp.seymata.com/mcp",
+        "server_url": "https://gumruksor.com/mcp",
         "require_approval": "never",
     }],
 )
