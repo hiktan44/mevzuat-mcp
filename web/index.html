@@ -214,6 +214,13 @@
               </div>
               <div class="product-fields">
                 <label class="field"><span>Ürün tanımı <b>*</b></span><textarea id="productDescription" maxlength="2000" required placeholder="Ürünün adı, işlevi, marka/modeli, ölçüsü ve teknik özellikleri"></textarea></label>
+                <details class="advanced-fields" id="documentIngest">
+                  <summary><span>Ürün belgesi ekle (PDF veya ürün sayfası)</span><small>Teknik föy, fiyat listesi, e-ticaret sayfası</small></summary>
+                  <label class="field"><span>Belge adresi (URL)</span><input id="ingestUrl" maxlength="2000" inputmode="url" placeholder="https://..."></label>
+                  <label class="field"><span>veya PDF dosyası</span><input id="ingestPdf" type="file" accept="application/pdf"></label>
+                  <button class="analyse-button" type="button" id="ingestSource"><span>Belge metnini çıkar</span></button>
+                  <div id="ingestOutput" aria-live="polite"></div>
+                </details>
                 <div class="field-row">
                   <label class="field"><span>Seçilen HS / CN / Türk GTİP</span><input id="candidateGtip" maxlength="30" inputmode="numeric" placeholder="Aday seçin veya 6, 8, 10, 12 hane yazın"></label>
                   <label class="field"><span>Menşe ülke <b>*</b></span><input id="originCountry" maxlength="100" required placeholder="Örn. Çin"></label>
@@ -349,6 +356,13 @@
             <button class="analyse-button" type="submit"><span>Resmî satırları ve maliyeti getir</span></button>
           </form>
           <div class="tool-output" id="tariffOutput" aria-live="polite"></div>
+          <div class="scenario-box" id="scenarioBox" hidden>
+            <h3>Menşe senaryoları</h3>
+            <p class="rate-warning">Aynı kod için menşe ülke değişince resmî tarife sütunu, oran ve tercih belgesi de değişir. Karşılaştırma kanıt satırlarıyla bilgilendirme amaçlıdır; senaryo seçimi bağlayıcı değildir.</p>
+            <label class="field"><span>Menşe ülkeleri (en az iki, virgülle)</span><input id="scenarioOrigins" maxlength="400" placeholder="Örn. Çin, Almanya, Güney Kore"></label>
+            <button class="analyse-button" type="button" id="scenarioCompare"><span>Senaryoları karşılaştır</span></button>
+            <div id="scenarioOutput" aria-live="polite"></div>
+          </div>
         </section>
 
         <section class="customs-tool-panel" data-customs-panel="controls" hidden aria-labelledby="controlsPanelTitle">

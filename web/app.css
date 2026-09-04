@@ -947,3 +947,18 @@ body:not(.marketplace-enabled) [data-customs-view="consultants"] { display: none
 body:not(.marketplace-enabled) .consultant-send-result { display: none; }
 /* Resmî tarife satırından önerilen ve kullanıcı onayı bekleyen vergi oranları. */
 .rate-suggested { border-color: var(--teal) !important; box-shadow: 0 0 0 2px var(--teal-soft); }
+/* Kullanıcı belgesinden (PDF/URL) çıkarılan ürün metni için gözden geçirme alanı. */
+.ingest-textarea { width: 100%; min-height: 150px; margin: 10px 0; padding: 10px; border: 1px solid var(--line); border-radius: var(--radius-xs); font-family: var(--mono); font-size: .62rem; line-height: 1.5; color: var(--ink); background: var(--surface); }
+/* Menşe senaryoları karşılaştırma tablosu. */
+.scenario-box { margin-top: 18px; padding-top: 14px; border-top: 1px solid var(--line); }
+.scenario-box h3 { margin: 0 0 6px; font-family: var(--display); font-size: .8rem; }
+.scenario-table-wrap { overflow-x: auto; margin: 12px 0; }
+
+/* Ön değerlendirme dosyasını yazdırma/PDF kaydetme görünümü. */
+@media print {
+  @page { margin: 14mm; }
+  body.print-dossier * { visibility: hidden !important; }
+  body.print-dossier .answer-sheet, body.print-dossier .answer-sheet * { visibility: visible !important; }
+  body.print-dossier .answer-sheet { position: absolute; inset: 0; width: 100%; box-shadow: none; border: 0; }
+  body.print-dossier .answer-sheet button, body.print-dossier .result-actions, body.print-dossier .followup-box { display: none !important; }
+}

@@ -161,8 +161,8 @@ cython_debug/
 hello.py
 test_mevzuat_server.py
 
-# Test files
-test_*.py
+# Test files (root-level scratch only; tests/ is tracked)
+/test_*.py
 
 # Claude development notes
 CLAUDE.md

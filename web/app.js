@@ -954,6 +954,7 @@ function renderCustomsResult(data) {
       </header>
       <section class="answer-section"><h3>Aday GTİP / CN kodları</h3>${candidates}</section>
       ${data.tariff_lookup ? `<section class="answer-section"><h3>Resmî tarife snapshot eşleşmesi</h3>${tariffMatchSummary(data.tariff_lookup)}${renderMeasureCoverage(data.tariff_lookup.measure_coverage)}<table class="evidence-table"><thead><tr><th>GTİP / Önlem</th><th>Oran</th><th>Menşe sütunu</th><th>Kaynak satırı</th><th>Kanıt</th></tr></thead><tbody>${tariffRows(data.tariff_lookup.measures)}</tbody></table>${applyRatesButton(data.tariff_lookup, "precheck")}${(data.tariff_lookup.warnings || []).length ? `<div class="result-caution">${data.tariff_lookup.warnings.map((item) => escapeHtml(item)).join(" · ")}</div>` : ""}</section>` : ""}
+      ${data.origin_documents ? `<section class="answer-section"><h3>Menşe belgeleri · ${escapeHtml(data.origin_documents.regime_name)}</h3><ul class="missing-list">${(data.origin_documents.documents || []).map((item) => `<li><b>${escapeHtml(item.name)}</b> — ${escapeHtml(item.applicability)}${item.note ? ` <small>${escapeHtml(item.note)}</small>` : ""}</li>`).join("")}</ul><div class="result-caution">${escapeHtml((data.origin_documents.caveats || []).join(" "))}</div></section>` : ""}
       ${data.control_lookup ? `<section class="answer-section"><h3>Resmî kontrol tebliği Ek-1 eşleşmeleri</h3>${renderControlTool(data.control_lookup)}</section>` : ""}
       <section class="answer-section"><h3>Eksik veya teyit edilmesi gereken bilgiler</h3><ul class="missing-list">${(data.missing_information?.length ? data.missing_information : ["Kritik eksik alan bildirilmedi."]).map((item) => `<li>${escapeHtml(item)}</li>`).join("")}</ul></section>
       <section class="answer-section"><h3>TAREKS · TSE · kimyasal · laboratuvar kontrolleri</h3>${renderFindings(data.controls, sourceMap)}</section>
@@ -965,7 +966,7 @@ function renderCustomsResult(data) {
       <section class="answer-section"><h3>Sonraki güvenli adımlar</h3><ol class="next-list">${(data.next_steps || []).map((item) => `<li>${escapeHtml(item)}</li>`).join("")}</ol></section>
       <section class="answer-section"><h3>Resmî kanıt defteri · ${(data.sources || []).length} kaynak</h3><div class="source-ledger">${sources}</div></section>
       <div class="legal-banner"><strong>Önemli:</strong> ${escapeHtml(data.legal_notice)}</div>
-      <div class="result-actions"><button class="consultant-send-result" id="sendResultToConsultant" type="button">Danışmana gönder</button><button id="saveScenario" type="button">Kanıt dosyasına kaydet</button></div>
+      <div class="result-actions"><button class="consultant-send-result" id="sendResultToConsultant" type="button">Danışmana gönder</button><button id="saveScenario" type="button">Kanıt dosyasına kaydet</button><button id="printPrecheck" type="button">PDF olarak kaydet</button></div>
     </article>
     <form class="followup-box" id="followupForm"><label class="field"><span>Bu ürün için takip sorusu</span><input id="followupQuestion" maxlength="1500" placeholder="Örn. TAREKS başvurusunda hangi teknik dosyalar hazırlanmalı?"></label><button class="analyse-button" type="submit"><span>Takip sorusunu sor</span><svg viewBox="0 0 24 24"><path d="m5 12 14 0M14 6l6 6-6 6"/></svg></button></form>`;
   $("#followupForm")?.addEventListener("submit", (event) => {
@@ -2158,9 +2159,107 @@ $("#tariffForm").addEventListener("submit", async (event) => {
           vat_rate: nullableNumber("#tariffVat"),
         }) });
     output.innerHTML = renderTariffTool(data);
+    const scenarioBox = $("#scenarioBox");
+    if (scenarioBox) {
+      scenarioBox.hidden = false;
+      const input = $("#scenarioOrigins");
+      if (input && !input.value.trim()) {
+        const base = $("#tariffOrigin").value.trim();
+        const candidates = ["Çin", "Almanya", "Güney Kore", "İtalya"]
+          .filter((item) => item.toLocaleLowerCase("tr") !== base.toLocaleLowerCase("tr"));
+        input.value = [base, ...candidates.slice(0, 2)].filter(Boolean).join(", ");
+      }
+    }
   } catch (error) {
     output.innerHTML = `<div class="answer-error"><h2>Tarife sorgusu tamamlanamadı</h2><p>${escapeHtml(error.message)}</p></div>`;
   } finally { button.disabled = false; }
+});
+
+function renderScenarioRows(data) {
+  const fmt = (value) => value == null ? "kod başına değişiyor" : `%${numberFormat.format(value)}`;
+  return `<div class="scenario-table-wrap"><table class="evidence-table"><thead><tr><th>Menşe</th><th>Sütun</th><th>Gümrük vergisi</th><th>İGV / ek vergi</th><th>Tercih belgesi</th><th>Not</th></tr></thead><tbody>${(data.rows || []).map((row) => {
+    const docs = row.origin_documents;
+    const docText = docs ? (docs.documents || []).map((item) => item.name).join(", ") : "—";
+    const notes = (row.warnings || []).slice(0, 2);
+    if (row.unambiguous_rates?.customs_duty == null) notes.push("Oran bütün alt GTİP12 satırlarında ortak değil");
+    return `<tr><td><b>${escapeHtml(row.origin_country)}</b><small>${escapeHtml(docs?.regime_name || "")}</small></td><td>${escapeHtml(row.resolved_country_group || "—")}</td><td>${escapeHtml(fmt(row.unambiguous_rates?.customs_duty))}</td><td>${escapeHtml(fmt(row.unambiguous_rates?.additional_duty))}</td><td>${escapeHtml(docText)}</td><td>${escapeHtml(notes.join(" · ") || "—")}</td></tr>`;
+  }).join("")}</tbody></table></div>
+  <p class="rate-warning">Senaryo satırları resmî tarife arşivinin güncel snapshot'ından ve belge kural tablosundan üretilir; bağlayıcı tarife bilgisi değildir.</p>`;
+}
+
+$("#scenarioCompare").addEventListener("click", async () => {
+  const output = $("#scenarioOutput");
+  const gtip = $("#tariffGtip").value.trim();
+  const origins = $("#scenarioOrigins").value.split(",").map((item) => item.trim()).filter(Boolean).slice(0, 6);
+  if (!gtip || origins.length < 2) {
+    output.innerHTML = '<p class="missing-list">Karşılaştırma için tarife kodu ve en az iki menşe ülke gerekir.</p>';
+    return;
+  }
+  output.innerHTML = '<div class="analysis-loading"><i></i><div><b>Senaryolar karşılaştırılıyor</b><span>Her menşe için resmî sütun ve belge kuralı denetleniyor…</span></div></div>';
+  try {
+    const data = await fetchJson("/api/tariff/scenarios", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ gtip, origins }),
+    });
+    output.innerHTML = renderScenarioRows(data);
+  } catch (error) {
+    output.innerHTML = `<div class="answer-error"><p>${escapeHtml(error.message)}</p></div>`;
+  }
+});
+
+document.addEventListener("click", (event) => {
+  if (!event.target.closest("#printPrecheck")) return;
+  document.body.classList.add("print-dossier");
+  const cleanup = () => {
+    document.body.classList.remove("print-dossier");
+    window.removeEventListener("afterprint", cleanup);
+  };
+  window.addEventListener("afterprint", cleanup);
+  window.print();
+});
+
+$("#ingestSource")?.addEventListener("click", async () => {
+  const output = $("#ingestOutput");
+  const url = $("#ingestUrl").value.trim();
+  const file = $("#ingestPdf")?.files?.[0];
+  if (!url && !file) { output.innerHTML = '<p class="missing-list">Belge adresi girin veya PDF dosyası seçin.</p>'; return; }
+  if (url && file) { output.innerHTML = '<p class="missing-list">Yalnızca bir kaynak belirtin: adres veya PDF.</p>'; return; }
+  output.innerHTML = '<div class="analysis-loading"><i></i><div><b>Belge okunuyor</b><span>Ürün metni çıkarılıyor, onayınıza sunulacak…</span></div></div>';
+  try {
+    let body;
+    if (file) {
+      if (file.size > 10 * 1024 * 1024) throw new Error("PDF en fazla 10 MB olabilir.");
+      body = { pdf_data_url: await new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = () => resolve(String(reader.result));
+        reader.onerror = () => reject(new Error("PDF dosyası okunamadı."));
+        reader.readAsDataURL(file);
+      }) };
+    } else {
+      body = { url };
+    }
+    const data = await fetchJson("/api/customs/ingest-source", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(body),
+    });
+    output.innerHTML = `
+      <p class="missing-list">${escapeHtml(data.warning || "")}</p>
+      <textarea class="ingest-textarea" id="ingestText">${escapeHtml(data.text)}</textarea>
+      <div class="result-actions"><button type="button" id="ingestAppend">Ürün tanımına ekle</button></div>
+      ${data.truncated ? '<p class="missing-list">Belge uzun olduğu için metin kısaltıldı.</p>' : ""}`;
+    $("#ingestAppend")?.addEventListener("click", () => {
+      const target = $("#productDescription");
+      const text = ($("#ingestText")?.value || "").trim();
+      if (!target || !text) return;
+      target.value = `${target.value ? `${target.value.trimEnd()} ` : ""}${text}`.slice(0, 2000);
+      target.dispatchEvent(new Event("input", { bubbles: true }));
+      showToast("Belge metni ürün tanımına eklendi; gözden geçirip onaylayın.");
+    });
+  } catch (error) {
+    output.innerHTML = `<div class="answer-error"><p>${escapeHtml(error.message)}</p></div>`;
+  }
 });
 
 function renderControlTool(data) {

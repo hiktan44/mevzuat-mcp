@@ -28,6 +28,7 @@ from pydantic import BaseModel, Field, field_validator, model_validator
 
 from control_engine import ImportControlEngine, ImportControlLookupResult
 from classification_evidence import ClassificationEvidenceEngine, ClassificationEvidenceHit
+from origin_documents import OriginDocumentRequirements, origin_document_requirements
 from security_firewall import (
     redact_data,
     sanitize_untrusted_context,
@@ -341,6 +342,7 @@ class CustomsPrecheckResult(BaseModel):
     deterministic_cost: dict[str, Any] | None = None
     tariff_lookup: TariffLookupResult | None = None
     control_lookup: ImportControlLookupResult | None = None
+    origin_documents: OriginDocumentRequirements | None = None
     next_steps: list[str] = Field(default_factory=list)
     image_observation: str | None = None
     sources: list[EvidenceSource] = Field(default_factory=list)
@@ -376,6 +378,7 @@ class CustomsEvidencePack(BaseModel):
     deterministic_cost: dict[str, Any] | None
     tariff_lookup: TariffLookupResult | None = None
     control_lookup: ImportControlLookupResult | None = None
+    origin_documents: OriginDocumentRequirements | None = None
     sources: list[EvidenceSource]
     legal_notice: str
     image_observation_rule: str = (
@@ -1223,6 +1226,7 @@ class CustomsAdvisor:
             ),
             tariff_lookup=tariff_lookup,
             control_lookup=control_lookup,
+            origin_documents=origin_document_requirements(inquiry.origin_country or ""),
             sources=sources,
             legal_notice=_legal_notice(as_of),
         )
@@ -1542,6 +1546,7 @@ class CustomsAdvisor:
                 deterministic_cost=pack.deterministic_cost,
                 tariff_lookup=pack.tariff_lookup,
                 control_lookup=pack.control_lookup,
+                origin_documents=pack.origin_documents,
                 sources=pack.sources,
                 legal_notice=pack.legal_notice,
                 safety_notes=safety_notes,
@@ -1587,6 +1592,7 @@ class CustomsAdvisor:
             deterministic_cost=pack.deterministic_cost,
             tariff_lookup=pack.tariff_lookup,
             control_lookup=pack.control_lookup,
+            origin_documents=pack.origin_documents,
             next_steps=parsed.next_steps,
             image_observation=parsed.image_observation,
             sources=pack.sources,

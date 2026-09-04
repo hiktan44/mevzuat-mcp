@@ -2,20 +2,25 @@
 
 from __future__ import annotations
 
+import base64
 import html
 import hmac
+import io
+import ipaddress
 import json
 import logging
 import os
 import re
+import socket
 import threading
 import time
 from datetime import UTC, date, datetime
 from pathlib import Path
 from typing import Any
-from urllib.parse import urlsplit
+from urllib.parse import urljoin, urlsplit
 
 import httpx
+from bs4 import BeautifulSoup
 from pydantic import ValidationError
 from starlette.requests import Request
 from starlette.responses import FileResponse, HTMLResponse, JSONResponse, PlainTextResponse, RedirectResponse, Response
@@ -33,6 +38,7 @@ from mevzuat_mcp_server import (
     tariff_engine,
     ticaret_client,
 )
+from origin_documents import origin_document_requirements
 from mevzuat_mcp_server import (
     app as mcp,
 )
@@ -1216,6 +1222,140 @@ async def web_customs_describe_image(request: Request):
     return JSONResponse(redact_data(result.model_dump(mode="json"), contact_data=True))
 
 
+_USER_DOCUMENT_MAX_BYTES = 10 * 1024 * 1024
+_USER_DOCUMENT_MAX_CHARS = 6_000
+
+
+def _validate_user_document_url(url: str) -> str:
+    """HTTPS-only, allow-list-free guard for user-supplied product document URLs."""
+    parsed = urlsplit(str(url or ""))
+    host = (parsed.hostname or "").lower().rstrip(".")
+    if parsed.scheme != "https" or not host or parsed.username or parsed.password:
+        raise SecurityViolation("Belge adresi yalnızca kimlik bilgisi içermeyen HTTPS adresi olabilir.", code="unsafe_url")
+    if host in {"169.254.169.254", "metadata.google.internal", "metadata.azure.internal"} or host == "localhost":
+        raise SecurityViolation("Sunucu meta veri veya yerel ağ adresine erişim engellendi.", code="ssrf_blocked")
+    try:
+        address = ipaddress.ip_address(host)
+    except ValueError:
+        address = None
+    if address and not address.is_global:
+        raise SecurityViolation("Özel, yerel veya ayrılmış ağ adresine erişim engellendi.", code="ssrf_blocked")
+    return url
+
+
+def _validate_user_document_host_resolution(url: str) -> None:
+    host = (urlsplit(url).hostname or "").lower().rstrip(".")
+    try:
+        infos = socket.getaddrinfo(host, None)
+    except OSError as exc:
+        raise SecurityViolation("Belge adresi çözümlenemedi.", code="unsafe_url") from exc
+    for info in infos:
+        try:
+            address = ipaddress.ip_address(info[4][0])
+        except ValueError:
+            continue
+        if not address.is_global:
+            raise SecurityViolation("Özel, yerel veya ayrılmış ağ adresine erişim engellendi.", code="ssrf_blocked")
+
+
+def _html_to_text(html_text: str) -> tuple[str, str]:
+    soup = BeautifulSoup(html_text[:2_000_000], "lxml")
+    for element in soup(["script", "style", "noscript"]):
+        element.decompose()
+    title = str(soup.title.string).strip() if soup.title and soup.title.string else ""
+    return " ".join(soup.get_text(" ", strip=True).split()), title
+
+
+async def _fetch_user_document_text(url: str) -> tuple[str, str]:
+    """Fetch a user-supplied page with per-hop URL revalidation; no cross-host redirect trust."""
+    async with httpx.AsyncClient(
+        follow_redirects=False,
+        timeout=httpx.Timeout(20),
+        headers={"User-Agent": "Gumrukce/1.4 (+product-document-ingest)", "Accept-Language": "tr-TR,tr;q=0.9"},
+    ) as client:
+        current = url
+        for _ in range(4):
+            _validate_user_document_url(current)
+            _validate_user_document_host_resolution(current)
+            response = await client.get(current)
+            if response.is_redirect:
+                current = urljoin(current, str(response.headers.get("location", "")))
+                continue
+            response.raise_for_status()
+            content_type = response.headers.get("content-type", "")
+            if response.headers.get("content-length", "") and int(response.headers.get("content-length", "0")) > _USER_DOCUMENT_MAX_BYTES:
+                raise ValueError("Belge 10 MB sınırını aşıyor.")
+            if "pdf" in content_type.lower():
+                payload = response.content[:_USER_DOCUMENT_MAX_BYTES]
+                return _extract_pdf_text(payload), current
+            text, title = _html_to_text(response.text)
+            return text[:_USER_DOCUMENT_MAX_CHARS], title or current
+    raise ValueError("Belge çok fazla yönlendirme içeriyor.")
+
+
+def _extract_pdf_text(payload: bytes) -> str:
+    """Extract bounded text from a PDF; markitdown is imported lazily."""
+    from markitdown import MarkItDown
+
+    result = MarkItDown().convert_stream(io.BytesIO(payload), file_extension=".pdf")
+    return " ".join(str(result.text_content or "").split())[:_USER_DOCUMENT_MAX_CHARS]
+
+
+@mcp.custom_route("/api/customs/ingest-source", methods=["POST"])
+async def web_customs_ingest_source(request: Request):
+    """Extract bounded text from a user-supplied product page or PDF for attribute review."""
+    limited = _rate_limit_response(request, "customs-ingest", limit=10, window_seconds=3600)
+    if limited:
+        return limited
+    try:
+        _trusted_request_origin(request)
+        _agent_or_browser_identity(request)
+    except SecurityViolation as exc:
+        return _security_response(exc)
+    try:
+        body = await request.json()
+        if not isinstance(body, dict):
+            raise ValueError("İstek bir nesne olmalıdır.")
+        url = str(body.get("url", "")).strip()
+        pdf_data_url = body.get("pdf_data_url")
+        if bool(url) == bool(pdf_data_url):
+            raise ValueError("Tek bir kaynak belirtin: belge adresi veya PDF.")
+        if url:
+            text, title = await _fetch_user_document_text(url)
+            source_type, source_label = "url", url
+        else:
+            match = re.fullmatch(r"data:application/pdf;base64,([A-Za-z0-9+/=\r\n]+)", str(pdf_data_url or ""))
+            if not match:
+                raise ValueError("Yalnızca PDF dosyası yüklenebilir.")
+            payload = base64.b64decode(match.group(1), validate=True)
+            if not payload or len(payload) > _USER_DOCUMENT_MAX_BYTES:
+                raise ValueError("PDF 10 MB sınırını aşıyor.")
+            text, title = _extract_pdf_text(payload), "Yüklenen PDF"
+            source_type, source_label = "pdf", "PDF belgesi"
+        if not text.strip():
+            raise ValueError("Belgede kopyalanabilir metin bulunamadı; taranmış sayfa ise metin çıkarılamaz.")
+        truncated = len(text) > _USER_DOCUMENT_MAX_CHARS
+        return JSONResponse(
+            {
+                "source_type": source_type,
+                "title": title[:200] or source_label,
+                "text": text[:_USER_DOCUMENT_MAX_CHARS],
+                "truncated": truncated,
+                "warning": (
+                    "Belge metni yalnızca ürün evsaflarını hazırlamak için çıkarıldı. İçeriği gözden geçirip "
+                    "onaylamadan sınıflandırma araştırması başlamaz."
+                ),
+            }
+        )
+    except SecurityViolation as exc:
+        return _security_response(exc)
+    except ValueError as exc:
+        return JSONResponse({"error": str(exc)}, status_code=422)
+    except Exception:
+        logger.exception("User document ingestion failed")
+        return JSONResponse({"error": "Belge metni şu anda çıkarılamadı."}, status_code=502)
+
+
 @mcp.custom_route("/api/customs/classify-product", methods=["POST"])
 async def web_customs_classify_product(request: Request):
     """Suggest editable HS6/CN8 candidates from approved attributes and verify tariff existence."""
@@ -1431,6 +1571,47 @@ async def web_tariff_cost(request: Request):
     except Exception:
         logger.exception("Tariff cost calculation failed")
         return JSONResponse({"error": "Kaynaklı maliyet hesabı şu anda tamamlanamadı."}, status_code=502)
+
+
+@mcp.custom_route("/api/tariff/scenarios", methods=["POST"])
+async def web_tariff_scenarios(request: Request):
+    """Compare deterministic tariff burden and origin documents across origin countries."""
+    limited = _rate_limit_response(request, "tariff-scenarios", limit=20, window_seconds=60)
+    if limited:
+        return limited
+    try:
+        body = await request.json()
+        if not isinstance(body, dict):
+            raise ValueError("Senaryo isteği bir nesne olmalıdır.")
+        gtip = str(body.get("gtip", "")).strip()
+        origins_raw = body.get("origins", [])
+        if not isinstance(origins_raw, list):
+            raise ValueError("Menşe listesi geçersiz.")
+        origins = [str(item).strip() for item in origins_raw if str(item).strip()][:6]
+        if not gtip or len(origins) < 2:
+            raise ValueError("Karşılaştırma için tarife kodu ve en az iki menşe ülke gereklidir.")
+        rows = []
+        for origin in origins:
+            lookup = await tariff_engine.lookup(gtip, origin_country=origin)
+            documents = origin_document_requirements(origin)
+            rows.append(
+                {
+                    "origin_country": origin,
+                    "status": lookup.status,
+                    "resolved_country_group": lookup.resolved_country_group,
+                    "matched_gtip_count": lookup.matched_gtip_count,
+                    "unambiguous_rates": lookup.unambiguous_rates or {},
+                    "ambiguous_measure_types": lookup.ambiguous_measure_types,
+                    "origin_documents": documents.model_dump(mode="json") if documents else None,
+                    "warnings": lookup.warnings,
+                }
+            )
+        return JSONResponse({"gtip": gtip, "rows": rows, "generated_at": time.time()})
+    except (ValueError, ValidationError) as exc:
+        return JSONResponse({"error": str(exc)}, status_code=422)
+    except Exception:
+        logger.exception("Tariff scenario comparison failed")
+        return JSONResponse({"error": "Menşe senaryoları şu anda karşılaştırılamadı."}, status_code=502)
 
 
 @mcp.custom_route("/api/controls/status", methods=["GET"])

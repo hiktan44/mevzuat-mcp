@@ -1,6 +1,28 @@
 # Proje Devir Notu — Ticaret Bilgi Masası / mevzuat-mcp
 
-Son güncelleme: 2 Eylül 2026
+Son güncelleme: 4 Eylül 2026
+
+## 4 Eylül 2026 oturumu — rekabet analizi karşılıkları
+
+Atez TARIFF rekabet analizindeki Faz 1-2 maddeleri uygulandı (109 test OK):
+
+- **`describe_product_image` MCP aracı**: fotoğraftan görünür evsaf çıkarımı artık MCP istemcilerinde de
+  (web'deki akışın aynısı). Ortak `decode_image_data_url` customs_advisor.py'de; MCP çıktısı kırmızılaştırılıyor.
+- **Hızlı düzeltmeler**: /api/search gelecek tarihli RG kayıtlarını sayfa sonuna atıp `date_warning` veriyor
+  (kaynak hatası korundu, sıralama bozulmuyor); Değişiklikler sekmesi ham anahtarları Türkçeleştirdi;
+  danışman pazaryeri `CONSULTANTS_MARKETPLACE_ENABLED=1` ile açılır (varsayılan kapalı — demo profiller gizli);
+  GTİP12 onayında resmî oran alanlara öneri olarak dolduruluyor (`.rate-suggested`).
+- **Menşe belge kural tablosu** (`origin_documents.py`): A.TR / EUR.1 / menşe şahadetnamesi kuralları,
+  resmî yürürlükteki STA listesinden (04.09.2026; Katar, BAE, Morityus, BK dahil; Tunus listede YOK).
+  Ön değerlendirme çıktısına `origin_documents` alanı olarak eklendi (MCP dahil).
+- **Senaryo karşılaştırma** `/api/tariff/scenarios`: aynı GTİP için menşe başına resmî sütun + oran + belge;
+  Tarife & Maliyet aracında "Menşe senaryoları" paneli. (Örn. 691110000011: Çin %12+%19, Almanya/G.Kore %0.)
+- **Belge girdisi** `/api/customs/ingest-source`: kullanıcı PDF'i veya HTTPS ürün sayfasından metin çıkarımı;
+  SSRF koruması (yalnız https, özel/meta IP reddi, DNS çözümleme denetimi, atlama başına yeniden doğrulama),
+  10 MB / 6 bin karakter sınırı; metin kullanıcı onayına sunulup ürün tanımına eklenir.
+- **PDF çıktısı**: ön değerlendirme dosyasında "PDF olarak kaydet" (tarayıcı yazdırma görünümü, print CSS).
+
+E-posta gönderimi SMTP anahtarı bekliyor; EN/DE arayüz ve AB TARIC varış tarifesi ayrı oturum konusu.
 
 ## Proje nedir
 FastMCP tabanlı Türkiye mevzuat + Ticaret Bakanlığı bilgi sunucusu ve üstündeki web uygulaması
