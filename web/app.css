@@ -984,3 +984,8 @@ input.input-invalid { border-color: #c0392b !important; box-shadow: 0 0 0 2px rg
 .document-list li { margin: 4px 0; }
 .document-list li.document-conditional { color: var(--ink-2); }
 .document-list li small { color: #a15c00; font-size: .58rem; }
+
+/* İzleme listesi değişiklik rozeti */
+.watch-item.has-changes { border-color: #a15c00; }
+.watch-badge { display: inline-block; margin-left: 6px; padding: 1px 6px; border-radius: 999px; background: #fff3e0; color: #a15c00; font-size: .56rem; }
+.watch-changes { flex-basis: 100%; margin-top: 6px; }

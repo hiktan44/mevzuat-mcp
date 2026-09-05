@@ -228,9 +228,105 @@ class AccountService:
                     body TEXT NOT NULL, created_at INTEGER NOT NULL
                 );
                 CREATE INDEX IF NOT EXISTS consultation_message_thread ON consultation_messages(request_id, created_at);
+                CREATE TABLE IF NOT EXISTS watchlist (
+                    id TEXT PRIMARY KEY,
+                    google_sub TEXT NOT NULL REFERENCES users(google_sub) ON DELETE CASCADE,
+                    gtip TEXT NOT NULL, label TEXT NOT NULL DEFAULT '', origin_country TEXT,
+                    created_at INTEGER NOT NULL
+                );
+                CREATE UNIQUE INDEX IF NOT EXISTS watchlist_owner_gtip ON watchlist(google_sub, gtip);
+                CREATE TABLE IF NOT EXISTS notification_log (
+                    google_sub TEXT NOT NULL REFERENCES users(google_sub) ON DELETE CASCADE,
+                    kind TEXT NOT NULL, target_key TEXT NOT NULL, created_at INTEGER NOT NULL,
+                    PRIMARY KEY (google_sub, kind, target_key)
+                );
                 """
             )
         self.db_path.chmod(0o600)
+
+    # ------------------------------------------------------------------ watchlist
+    WATCHLIST_LIMIT = 100
+
+    def list_watchlist(self, user: dict[str, Any]) -> list[dict[str, Any]]:
+        google_sub = str(user["sub"])
+        with self._connect() as connection:
+            rows = connection.execute(
+                "SELECT id,gtip,label,origin_country,created_at FROM watchlist WHERE google_sub=? ORDER BY created_at DESC",
+                (google_sub,),
+            ).fetchall()
+        return [dict(row) for row in rows]
+
+    def add_watch(self, user: dict[str, Any], *, gtip: str, label: str = "", origin_country: str | None = None) -> dict[str, Any]:
+        google_sub = str(user["sub"])
+        digits = re.sub(r"\D", "", str(gtip or ""))
+        if len(digits) not in {4, 6, 8, 10, 12}:
+            raise AccountError("İzleme için 4, 6, 8, 10 veya 12 haneli GTİP girin.")
+        label = str(label or "").strip()[:100]
+        origin = (str(origin_country or "").strip()[:100] or None)
+        now = int(time.time())
+        with self._connect() as connection:
+            if connection.execute("SELECT 1 FROM users WHERE google_sub=?", (google_sub,)).fetchone() is None:
+                raise AccountError("İzleme listesi için giriş yapmış bir hesap gerekir.")
+            count = connection.execute("SELECT COUNT(*) FROM watchlist WHERE google_sub=?", (google_sub,)).fetchone()[0]
+            existing = connection.execute(
+                "SELECT id FROM watchlist WHERE google_sub=? AND gtip=?", (google_sub, digits)
+            ).fetchone()
+            if existing:
+                connection.execute(
+                    "UPDATE watchlist SET label=?, origin_country=? WHERE id=?", (label, origin, existing["id"])
+                )
+                watch_id = str(existing["id"])
+            else:
+                if count >= self.WATCHLIST_LIMIT:
+                    raise AccountError(f"İzleme listesi en fazla {self.WATCHLIST_LIMIT} GTİP alabilir.")
+                watch_id = uuid.uuid4().hex[:16]
+                connection.execute(
+                    "INSERT INTO watchlist(id,google_sub,gtip,label,origin_country,created_at) VALUES(?,?,?,?,?,?)",
+                    (watch_id, google_sub, digits, label, origin, now),
+                )
+        return {"id": watch_id, "gtip": digits, "label": label, "origin_country": origin, "created_at": now}
+
+    def remove_watch(self, user: dict[str, Any], watch_id: str) -> bool:
+        google_sub = str(user["sub"])
+        with self._connect() as connection:
+            cursor = connection.execute("DELETE FROM watchlist WHERE id=? AND google_sub=?", (str(watch_id), google_sub))
+            return cursor.rowcount > 0
+
+    def all_watches(self) -> list[dict[str, Any]]:
+        """Every watch with the owner's e-mail; used by the change notifier."""
+        with self._connect() as connection:
+            rows = connection.execute(
+                "SELECT w.id,w.google_sub,w.gtip,w.label,w.origin_country,u.email FROM watchlist w JOIN users u ON u.google_sub=w.google_sub"
+            ).fetchall()
+        return [dict(row) for row in rows]
+
+    def notification_sent(self, google_sub: str, kind: str, target_key: str) -> bool:
+        with self._connect() as connection:
+            return connection.execute(
+                "SELECT 1 FROM notification_log WHERE google_sub=? AND kind=? AND target_key=?",
+                (google_sub, kind, target_key),
+            ).fetchone() is not None
+
+    def mark_notified(self, google_sub: str, kind: str, target_key: str) -> None:
+        with self._connect() as connection:
+            connection.execute(
+                "INSERT OR IGNORE INTO notification_log(google_sub,kind,target_key,created_at) VALUES(?,?,?,?)",
+                (google_sub, kind, target_key, int(time.time())),
+            )
+
+    def consultation_participants(self, request_id: str) -> dict[str, Any] | None:
+        """E-mail addresses of both sides of a consultation thread (for notifications only)."""
+        with self._connect() as connection:
+            row = connection.execute(
+                """SELECT r.id, r.subject, r.status, r.requester_sub, r.consultant_sub,
+                          ru.email AS requester_email, cu.email AS consultant_email
+                   FROM consultation_requests r
+                   JOIN users ru ON ru.google_sub = r.requester_sub
+                   JOIN users cu ON cu.google_sub = r.consultant_sub
+                   WHERE r.id=?""",
+                (str(request_id),),
+            ).fetchone()
+        return dict(row) if row else None
 
     @staticmethod
     def public_plans() -> list[dict[str, Any]]:

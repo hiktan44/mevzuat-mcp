@@ -653,6 +653,7 @@ async function loadAuthState() {
     $("#appAccountButton").hidden = false;
     $("#appAccountButton").textContent = `${firstName} · Hesabım`;
     refreshConsultationBadge();
+    renderWatchList();
     if (new URLSearchParams(location.search).get("account")) openAccount();
   } catch (_) {
     // The application remains usable as a guest if account state is unavailable.
@@ -2508,6 +2509,7 @@ document.addEventListener("click", async (event) => {
   const result = state.currentCustomsResult;
   if (!result) { showToast("Gönderilecek ön değerlendirme dosyası bulunamadı."); return; }
   if (!state.auth?.authenticated) { showToast("E-posta ile göndermek için Google ile giriş yapın; dosya kendi adresinize gider."); return; }
+  if (state.auth?.email_enabled === false) { showToast("E-posta gönderimi sunucuda henüz yapılandırılmadı; dosyayı PDF olarak kaydedebilirsiniz."); return; }
   button.disabled = true;
   try {
     const data = await fetchJson("/api/email/precheck", {
@@ -2615,35 +2617,99 @@ function savedScenarios() {
   try { return JSON.parse(localStorage.getItem("gumrukce-scenarios") || "[]"); } catch (_) { return []; }
 }
 
-function renderWatchList() {
-  const target = $("#watchList");
-  const items = savedWatchItems();
-  target.innerHTML = items.length ? items.map((item, index) => `<div class="watch-item"><code>${escapeHtml(item.gtip)}</code><span>${escapeHtml(item.label || "Adsız ürün")}</span><button type="button" data-watch-query="${index}">Kontrol et</button><button type="button" data-watch-remove="${index}">Kaldır</button></div>`).join("") : '<p class="missing-list">Bu cihazda izlenen GTİP yok.</p>';
-  const scenarios = savedScenarios();
-  $("#scenarioList").innerHTML = scenarios.length ? scenarios.map((item, index) => `<div class="watch-item"><code>${escapeHtml(item.gtip || "GTİP yok")}</code><span>${escapeHtml(item.title)}<small>${escapeHtml(formatDate(item.savedAt, true))} · ${escapeHtml(item.origin || "menşe yok")}</small></span><button type="button" data-scenario-open="${index}">Aç</button><button type="button" data-scenario-remove="${index}">Kaldır</button></div>`).join("") : '<p class="missing-list">Henüz kayıtlı ön değerlendirme yok.</p>';
+function watchlistOnServer() {
+  return Boolean(state.auth?.authenticated);
 }
 
-$("#addWatch").addEventListener("click", () => {
+function renderWatchChanges(item) {
+  const changes = item.changes || [];
+  if (!changes.length) return "";
+  const rows = changes.slice(0, 20).map((change) => `<tr><td><code>${escapeHtml(change.gtip)}</code></td><td>${escapeHtml(change.measure_label || change.measure_type)}</td><td>${escapeHtml(change.country_group)}</td><td>${escapeHtml(change.before ?? "—")}</td><td>${escapeHtml(change.after ?? "— (satır kaldırıldı)")}</td></tr>`).join("");
+  return `<details class="advanced-fields watch-changes"><summary><span>${escapeHtml(item.change_count || changes.length)} resmî satır değişikliği</span><small>${escapeHtml(changes[0].source_title || "")} · yeni sürüm ${escapeHtml(changes[0].new_snapshot || "")}</small></summary>
+    <div class="scenario-table-wrap"><table class="evidence-table"><thead><tr><th>GTİP</th><th>Önlem</th><th>Sütun</th><th>Önce</th><th>Sonra</th></tr></thead><tbody>${rows}</tbody></table></div></details>`;
+}
+
+function renderWatchItems(items, { server }) {
+  const target = $("#watchList");
+  if (!items.length) {
+    target.innerHTML = `<p class="missing-list">${server ? "Hesabınızda izlenen GTİP yok." : "Bu cihazda izlenen GTİP yok. Google ile giriş yaparsanız liste hesabınızda saklanır ve resmî satır değiştiğinde e-posta alırsınız."}</p>`;
+    return;
+  }
+  target.innerHTML = items.map((item, index) => `<div class="watch-item${item.change_count ? " has-changes" : ""}"><code>${escapeHtml(item.gtip)}</code><span>${escapeHtml(item.label || "Adsız ürün")}${item.change_count ? `<small class="watch-badge">${escapeHtml(item.change_count)} değişiklik</small>` : ""}${item.origin_country ? `<small>menşe: ${escapeHtml(item.origin_country)}</small>` : ""}</span><button type="button" data-watch-query="${index}">Kontrol et</button><button type="button" data-watch-remove="${index}" data-watch-id="${escapeHtml(item.id || "")}">Kaldır</button>${renderWatchChanges(item)}</div>`).join("");
+}
+
+async function migrateLocalWatchItems() {
+  const local = savedWatchItems();
+  if (!local.length || !watchlistOnServer()) return;
+  try {
+    await fetchJson("/api/watchlist", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ items: local.map((item) => ({ gtip: item.gtip, label: item.label || "" })) }) });
+    localStorage.removeItem("gumrukce-watchlist");
+    showToast(`${local.length} izlenen GTİP hesabınıza taşındı.`);
+  } catch (_) {
+    // Local copy stays until the server accepts it.
+  }
+}
+
+async function renderWatchList() {
+  const scenarios = savedScenarios();
+  $("#scenarioList").innerHTML = scenarios.length ? scenarios.map((item, index) => `<div class="watch-item"><code>${escapeHtml(item.gtip || "GTİP yok")}</code><span>${escapeHtml(item.title)}<small>${escapeHtml(formatDate(item.savedAt, true))} · ${escapeHtml(item.origin || "menşe yok")}</small></span><button type="button" data-scenario-open="${index}">Aç</button><button type="button" data-scenario-remove="${index}">Kaldır</button></div>`).join("") : '<p class="missing-list">Henüz kayıtlı ön değerlendirme yok.</p>';
+  if (!watchlistOnServer()) {
+    state.watchItems = savedWatchItems();
+    renderWatchItems(state.watchItems, { server: false });
+    return;
+  }
+  try {
+    await migrateLocalWatchItems();
+    const data = await fetchJson("/api/watchlist");
+    state.watchItems = data.items || [];
+    renderWatchItems(state.watchItems, { server: true });
+    const note = $("#watchNotifyNote");
+    if (note) note.textContent = data.email_enabled
+      ? "İzlenen GTİP'in resmî tarife satırı yeni sürümde değişirse e-posta adresinize bildirim gönderilir."
+      : "E-posta bildirimi sunucuda henüz yapılandırılmadı; değişiklikler bu listede görünür.";
+  } catch (error) {
+    state.watchItems = savedWatchItems();
+    renderWatchItems(state.watchItems, { server: false });
+  }
+}
+
+$("#addWatch").addEventListener("click", async () => {
   const gtip = $("#watchGtip").value.replace(/\D/g, "");
-  if (gtip.length !== 12) return showToast("İzleme için 12 haneli GTİP girin.");
+  if (![4, 6, 8, 10, 12].includes(gtip.length)) return showToast("İzleme için 4, 6, 8, 10 veya 12 haneli GTİP girin.");
+  const label = $("#watchLabel").value.trim();
+  if (watchlistOnServer()) {
+    try {
+      await fetchJson("/api/watchlist", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ gtip, label }) });
+      showToast("GTİP hesabınızdaki izleme listesine eklendi.");
+      renderWatchList();
+    } catch (error) { showToast(error.message); }
+    return;
+  }
   const items = savedWatchItems();
-  if (!items.some((item) => item.gtip === gtip)) items.push({ gtip, label: $("#watchLabel").value.trim(), addedAt: new Date().toISOString() });
+  if (!items.some((item) => item.gtip === gtip)) items.push({ gtip, label, addedAt: new Date().toISOString() });
   localStorage.setItem("gumrukce-watchlist", JSON.stringify(items.slice(-100)));
   renderWatchList();
   showToast("GTİP bu cihazdaki izleme listesine eklendi.");
 });
 
-$("#watchList").addEventListener("click", (event) => {
+$("#watchList").addEventListener("click", async (event) => {
   const remove = event.target.closest("[data-watch-remove]");
   const query = event.target.closest("[data-watch-query]");
   if (remove) {
-    const items = savedWatchItems(); items.splice(Number(remove.dataset.watchRemove), 1);
-    localStorage.setItem("gumrukce-watchlist", JSON.stringify(items)); renderWatchList();
+    if (watchlistOnServer() && remove.dataset.watchId) {
+      try { await fetchJson(`/api/watchlist/${encodeURIComponent(remove.dataset.watchId)}`, { method: "DELETE" }); } catch (error) { showToast(error.message); }
+    } else {
+      const items = savedWatchItems(); items.splice(Number(remove.dataset.watchRemove), 1);
+      localStorage.setItem("gumrukce-watchlist", JSON.stringify(items));
+    }
+    renderWatchList();
   }
   if (query) {
-    const item = savedWatchItems()[Number(query.dataset.watchQuery)];
+    const item = (state.watchItems || [])[Number(query.dataset.watchQuery)];
     if (!item) return;
-    $("#controlsGtip").value = item.gtip; switchCustomsView("controls"); $("#controlsForm").requestSubmit();
+    const digits = String(item.gtip).replace(/\D/g, "");
+    if (digits.length === 12) { $("#controlsGtip").value = digits; switchCustomsView("controls"); $("#controlsForm").requestSubmit(); return; }
+    $("#tariffGtip").value = digits; if (item.origin_country) $("#tariffOrigin").value = item.origin_country; switchCustomsView("tariff"); $("#tariffForm").requestSubmit();
   }
 });
 
@@ -2676,10 +2742,13 @@ async function loadChanges() {
     const tariffSummaries = Object.entries(data.tariff || {}).map(([name, value]) => {
       const sourceLabel = changeSourceLabels[name] || name;
       const statusText = changeStatusLabels[value.status] || value.status || (value.changes?.length ? "değişiklik var" : "tek sürüm");
+      const total = value.total_changes ?? value.changes?.length ?? 0;
       const note = value.status === "no_previous_snapshot"
         ? "Karşılaştırılacak ikinci resmî sürüm henüz arşivlenmedi; sonraki sürüm güncellemesinden sonra satır farkları burada listelenir."
-        : (value.message || `${value.changes?.length || 0} satır farkı`);
-      return `<article class="candidate-card"><code>${escapeHtml(sourceLabel)}</code><b>${escapeHtml(statusText)}</b><p>${escapeHtml(note)}</p></article>`;
+        : `${total} satır farkı${value.new_snapshot ? ` · yeni sürüm ${value.new_snapshot}` : ""}`;
+      const rows = (value.changes || []).slice(0, 50).map((change) => `<tr><td><code>${escapeHtml(change.gtip)}</code></td><td>${escapeHtml(tariffMeasureLabels[change.measure_type] || change.measure_type)}</td><td>${escapeHtml(change.country_group)}</td><td>${escapeHtml(change.before ?? "—")}</td><td>${escapeHtml(change.after ?? "— (satır kaldırıldı)")}</td></tr>`).join("");
+      const table = rows ? `<details class="advanced-fields"><summary><span>Satır farkları</span><small>${Math.min(total, 50)} / ${total}</small></summary><div class="scenario-table-wrap"><table class="evidence-table"><thead><tr><th>GTİP</th><th>Önlem</th><th>Sütun</th><th>Önce</th><th>Sonra</th></tr></thead><tbody>${rows}</tbody></table></div></details>` : "";
+      return `<article class="candidate-card"><code>${escapeHtml(sourceLabel)}</code><b>${escapeHtml(statusText)}</b><p>${escapeHtml(note)}</p>${table}</article>`;
     }).join("");
     output.innerHTML = `<div class="candidate-grid">${tariffSummaries || '<p class="missing-list">Tarife sürümü henüz yok.</p>'}</div>
       <div class="formula-ledger"><h3>Kontrol tebliği değişiklikleri</h3>${controlRows.length ? controlRows.map((item) => `<div class="formula-line"><span><strong>${escapeHtml(item.code)}</strong> · ${escapeHtml(item.title)}<br><small>${escapeHtml(item.changed_at)}</small></span><code>${item.scope_count_delta > 0 ? "+" : ""}${escapeHtml(item.scope_count_delta)}</code></div>`).join("") : '<p class="missing-list">Karşılaştırılabilir ikinci tebliğ sürümü henüz oluşmadı.</p>'}</div>`;

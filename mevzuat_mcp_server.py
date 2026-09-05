@@ -7,7 +7,7 @@ import asyncio
 import logging
 from contextlib import asynccontextmanager
 from pydantic import Field
-from typing import Any, Literal, Optional
+from typing import Callable, Coroutine, Any, Literal, Optional
 
 from fastmcp import FastMCP
 
@@ -79,9 +79,14 @@ customs_advisor_service = CustomsAdvisor(
 )
 
 
+# Extra background coroutines registered by the web layer (e.g. watch-list notifier).
+BACKGROUND_LOOPS: list[tuple[str, "Callable[[], Coroutine[Any, Any, None]]"]] = []
+
+
 @asynccontextmanager
 async def _server_lifespan(server):
     """Keep the Ministry catalogue fresh without delaying ASGI startup."""
+    extra_tasks = [asyncio.create_task(factory(), name=name) for name, factory in BACKGROUND_LOOPS]
     refresh_task = asyncio.create_task(
         ticaret_client.periodic_refresh_loop(),
         name="ticaret-catalog-refresh",
@@ -107,7 +112,7 @@ async def _server_lifespan(server):
             "classification_engine": classification_engine,
         }
     finally:
-        for task in (refresh_task, tariff_task, control_task, classification_task):
+        for task in (refresh_task, tariff_task, control_task, classification_task, *extra_tasks):
             task.cancel()
             try:
                 await task

@@ -165,7 +165,8 @@ kaynak denetimi (evil origin 403), yönetici erişim kontrolü (403/303), mobild
 - ✅ (5 Eyl) Toplu hesap (CSV/XLSX ile çok satırlı beyanname, 200 satır, şablon indirme, para birimi bazında toplam). ✅ (5 Eyl) CSV dışa aktarım ve panoya kopyalama: tarife satırları,
   maliyet defteri, senaryo tablosu (Tarife & Maliyet ve ön değerlendirme ekranlarında).
 - ✅ (5 Eyl) Kanonik ülke listesi (ISO kodu, TR/EN ad) ve seçici; Türkçe sayı biçimi girişi.
-- İzleme listesinin sunucuda tutulması ve değişiklikte e-posta; danışman e-posta bildirimi.
+- ✅ (5 Eyl) İzleme listesinin sunucuda tutulması ve değişiklikte e-posta; danışman e-posta bildirimi (gönderim için
+  `RESEND_API_KEY` + `MAIL_FROM` yapılandırması gerekir; yapılandırılmadıysa değişiklikler listede görünür).
 - Ekip paketinde vadedilen paylaşılan kanıt dosyaları (ekip/kuruluş kavramı yok).
 - ✅ (5 Eyl) Zorunlu belge listesinin yapılandırılmış satırlara dönüştürülmesi; muafiyet / numune / sanayici / serbest
   dolaşım cümleleri ayrı listede (kanıt olarak, karar değil).
@@ -255,3 +256,10 @@ kaynak denetimi (evil origin 403), yönetici erişim kontrolü (403/303), mobild
   sanayici/serbest dolaşım cümlelerini toplar. Snapshot tablosuna `required_documents_json` ve `exemptions_json`
   sütunları eklendi (otomatik geçiş; eski kayıtlar alıntıdan türetilir). Kontroller sekmesindeki kartta
   "Yüklenmesi gereken belgeler" ve "Muafiyet / istisna hükümleri" bölümleri.
+- İzleme listesi sunucuda: `watchlist` ve `notification_log` tabloları, `/api/watchlist` (GET/POST/DELETE; toplu
+  taşıma için `items`), giriş yapınca cihazdaki liste hesaba taşınır. Her GTİP için resmî snapshot farkları prefiks
+  eşleşmesiyle listelenir (rozet + satır tablosu); "Kontrol et" 12 hanede kontrol, kısa kodda tarife sorgusu açar.
+  Arka plan döngüsü (`WATCHLIST_NOTIFY_INTERVAL_SECONDS`, varsayılan 30 dk) yeni snapshot'ta kullanıcı başına tek
+  e-posta gönderir ve `notification_log` ile yinelemez. Danışmanlık talebi, mesaj ve durum değişikliğinde karşı
+  tarafa e-posta (kısa alıntı). `/api/auth/me` `email_enabled` döndürür; düğme yapılandırma yoksa uyarır.
+  Değişiklikler sekmesi artık fark satırlarını (GTİP, önlem, sütun, önce/sonra) ve toplam sayıyı gösteriyor.

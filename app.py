@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import asyncio
 import base64
 import html
 import hmac
@@ -29,7 +30,7 @@ from auth_service import AuthError, GoogleAuthService
 from account_service import PLANS, AccountError, AccountService, QuotaExceeded
 from billing_service import BillingError, StripeBilling
 from customs_advisor import CustomsInquiry, CustomsPrecheckResult, ProductClassificationRequest, decode_image_data_url
-from email_service import MailError, ResendEmailSender, render_precheck_email
+from email_service import MailError, ResendEmailSender, render_consultation_email, render_precheck_email, render_watch_email
 from mevzuat_mcp_server import (
     _BED_VALID_TYPES,
     bedesten_client,
@@ -43,6 +44,7 @@ from bulk_costing import MAX_FILE_BYTES as BULK_MAX_FILE_BYTES, calculate_rows a
 from countries import COUNTRIES, PENDING_AGREEMENTS
 from origin_documents import origin_document_requirements
 from mevzuat_mcp_server import (
+    BACKGROUND_LOOPS,
     app as mcp,
 )
 from security_firewall import AgentTokenVerifier, SecurityViolation, guard_data, redact_data
@@ -437,6 +439,7 @@ async def web_auth_me(request: Request):
             "billing_enabled": stripe_billing.configured,
             "billing_provider": "stripe",
             "billing_mode": stripe_billing.mode,
+            "email_enabled": email_sender.configured,
         }
     )
     response.headers["Cache-Control"] = "no-store"
@@ -837,6 +840,7 @@ async def web_create_consultation_request(request: Request):
             share_consent=body.get("share_consent") is True,
             dossier_id=str(body.get("dossier_id", "")) or None,
         )
+        asyncio.create_task(_notify_consultation(str(result.get("id", "")), "new_request", str(body.get("message", "")), recipient_role="consultant"))
         return JSONResponse(result, status_code=201, headers={"Cache-Control": "no-store"})
     except SecurityViolation as exc:
         return _security_response(exc)
@@ -854,9 +858,12 @@ async def web_update_consultation_request(request: Request):
         body = await request.json()
         if not isinstance(body, dict):
             raise AccountError("Danışmanlık talebi güncellemesi geçersiz.")
-        account_service.update_consultation_request(
-            user, request.path_params.get("request_id", ""), str(body.get("status", ""))
-        )
+        request_id = request.path_params.get("request_id", "")
+        account_service.update_consultation_request(user, request_id, str(body.get("status", "")))
+        participants = account_service.consultation_participants(request_id)
+        if participants:
+            role = "requester" if str(user.get("sub")) == str(participants["consultant_sub"]) else "consultant"
+            asyncio.create_task(_notify_consultation(request_id, "status", f"Yeni durum: {body.get('status', '')}", recipient_role=role))
         return JSONResponse({"updated": True})
     except SecurityViolation as exc:
         return _security_response(exc)
@@ -879,9 +886,12 @@ async def web_add_consultation_message(request: Request):
             raise AccountError("Danışman mesajı geçersiz.")
         guard_data(body, path="danışman mesajı")
         body = redact_data(body, contact_data=True)
-        result = account_service.add_consultation_message(
-            user, request.path_params.get("request_id", ""), str(body.get("body", ""))
-        )
+        request_id = request.path_params.get("request_id", "")
+        result = account_service.add_consultation_message(user, request_id, str(body.get("body", "")))
+        participants = account_service.consultation_participants(request_id)
+        if participants:
+            role = "requester" if str(user.get("sub")) == str(participants["consultant_sub"]) else "consultant"
+            asyncio.create_task(_notify_consultation(request_id, "message", str(body.get("body", "")), recipient_role=role))
         return JSONResponse(result, status_code=201)
     except SecurityViolation as exc:
         return _security_response(exc)
@@ -1778,6 +1788,198 @@ async def web_control_lookup(request: Request):
     except Exception:
         logger.exception("Import control lookup failed")
         return JSONResponse({"error": "Resmî ithalat kontrol tebliğleri şu anda sorgulanamadı."}, status_code=502)
+
+
+_MEASURE_LABELS_TR = {
+    "customs_duty": "Gümrük vergisi", "additional_duty": "İGV", "additional_financial_liability": "Ek mali yükümlülük",
+    "customs_duty_suspension": "Askıya alma", "customs_duty_end_use": "Nihai kullanım",
+}
+_CHANGE_SOURCE_TITLES = {"import_regime": "İthalat Rejimi Kararı", "additional_duty": "İlave Gümrük Vergisi Kararı"}
+
+
+def _watch_changes_for(gtip: str, ledgers: dict[str, dict[str, Any]]) -> list[dict[str, Any]]:
+    """Official tariff line changes whose 12-digit code starts with the watched code."""
+    digits = re.sub(r"\D", "", gtip)
+    found: list[dict[str, Any]] = []
+    for source_id, ledger in ledgers.items():
+        if ledger.get("status") != "compared":
+            continue
+        for change in ledger.get("changes", []):
+            if str(change.get("gtip", "")).startswith(digits):
+                found.append(
+                    {
+                        **change,
+                        "source_id": source_id,
+                        "source_title": _CHANGE_SOURCE_TITLES.get(source_id, source_id),
+                        "measure_label": _MEASURE_LABELS_TR.get(change.get("measure_type"), change.get("measure_type")),
+                        "new_snapshot": ledger.get("new_snapshot"),
+                        "old_snapshot": ledger.get("old_snapshot"),
+                    }
+                )
+    return found
+
+
+def _change_ledgers() -> dict[str, dict[str, Any]]:
+    return {
+        "import_regime": tariff_engine.changes("import_regime", limit=1000),
+        "additional_duty": tariff_engine.changes("additional_duty", limit=1000),
+    }
+
+
+@mcp.custom_route("/api/watchlist", methods=["GET"])
+async def web_watchlist(request: Request):
+    try:
+        user = _required_user(request)
+        ledgers = _change_ledgers()
+        items = []
+        for item in account_service.list_watchlist(user):
+            changes = _watch_changes_for(item["gtip"], ledgers)
+            items.append({**item, "changes": changes[:50], "change_count": len(changes)})
+        return JSONResponse(
+            {
+                "items": items,
+                "email_enabled": email_sender.configured,
+                "ledger": {key: {"status": value.get("status"), "new_snapshot": value.get("new_snapshot")} for key, value in ledgers.items()},
+            },
+            headers={"Cache-Control": "no-store"},
+        )
+    except AuthError as exc:
+        return _auth_error(exc)
+
+
+@mcp.custom_route("/api/watchlist", methods=["POST"])
+async def web_add_watch(request: Request):
+    try:
+        _trusted_request_origin(request)
+        user = _required_user(request)
+        body = await request.json()
+        if not isinstance(body, dict):
+            raise AccountError("İzleme isteği bir nesne olmalıdır.")
+        items_in = body.get("items")
+        if isinstance(items_in, list):
+            created = [
+                account_service.add_watch(
+                    user, gtip=str(item.get("gtip", "")), label=str(item.get("label", "")),
+                    origin_country=str(item.get("origin_country", "") or "") or None,
+                )
+                for item in items_in[:100] if isinstance(item, dict)
+            ]
+            return JSONResponse({"items": created}, status_code=201, headers={"Cache-Control": "no-store"})
+        created = account_service.add_watch(
+            user, gtip=str(body.get("gtip", "")), label=str(body.get("label", "")),
+            origin_country=str(body.get("origin_country", "") or "") or None,
+        )
+        return JSONResponse(created, status_code=201, headers={"Cache-Control": "no-store"})
+    except SecurityViolation as exc:
+        return _security_response(exc)
+    except AuthError as exc:
+        return _auth_error(exc)
+    except (AccountError, ValueError) as exc:
+        return JSONResponse({"error": str(exc)}, status_code=422)
+
+
+@mcp.custom_route("/api/watchlist/{watch_id}", methods=["DELETE"])
+async def web_remove_watch(request: Request):
+    try:
+        _trusted_request_origin(request)
+        user = _required_user(request)
+        removed = account_service.remove_watch(user, request.path_params.get("watch_id", ""))
+        return JSONResponse({"removed": removed}, status_code=200 if removed else 404)
+    except SecurityViolation as exc:
+        return _security_response(exc)
+    except AuthError as exc:
+        return _auth_error(exc)
+
+
+async def notify_watchlist_changes() -> dict[str, int]:
+    """E-mail each user once per new official snapshot that changes a watched code."""
+    stats = {"users": 0, "sent": 0, "skipped": 0}
+    ledgers = _change_ledgers()
+    if not any(ledger.get("status") == "compared" for ledger in ledgers.values()):
+        return stats
+    by_user: dict[str, dict[str, Any]] = {}
+    for watch in account_service.all_watches():
+        changes = _watch_changes_for(watch["gtip"], ledgers)
+        if not changes:
+            continue
+        pending = []
+        for change in changes:
+            key = f"{change['source_id']}:{change['new_snapshot']}:{watch['gtip']}"
+            if account_service.notification_sent(watch["google_sub"], "watch", key):
+                continue
+            pending.append((key, change))
+        if not pending:
+            continue
+        entry = by_user.setdefault(watch["google_sub"], {"email": watch["email"], "items": [], "keys": set()})
+        entry["items"].append(
+            {
+                "gtip": watch["gtip"], "label": watch["label"], "changes": [change for _, change in pending],
+                "source_title": ", ".join(sorted({change["source_title"] for _, change in pending})),
+                "new_snapshot": ", ".join(sorted({str(change["new_snapshot"]) for _, change in pending})),
+            }
+        )
+        entry["keys"].update(key for key, _ in pending)
+    stats["users"] = len(by_user)
+    for google_sub, entry in by_user.items():
+        if not email_sender.configured or not entry["email"]:
+            stats["skipped"] += 1
+            continue
+        try:
+            await email_sender.send(
+                to=entry["email"],
+                subject="İzlediğiniz GTİP satırlarında resmî tarife değişikliği",
+                html_body=render_watch_email(entry["items"], PUBLIC_BASE_URL),
+            )
+        except MailError as exc:
+            logger.warning("Watch-list notification failed for %s: %s", google_sub, exc)
+            stats["skipped"] += 1
+            continue
+        for key in entry["keys"]:
+            account_service.mark_notified(google_sub, "watch", key)
+        stats["sent"] += 1
+    return stats
+
+
+async def watchlist_notification_loop() -> None:
+    interval = max(300, int(os.environ.get("WATCHLIST_NOTIFY_INTERVAL_SECONDS", "1800")))
+    while True:
+        try:
+            await asyncio.sleep(interval)
+            stats = await notify_watchlist_changes()
+            if stats["users"]:
+                logger.info("Watch-list notifications: %s", stats)
+        except asyncio.CancelledError:
+            raise
+        except Exception:
+            logger.exception("Watch-list notification loop failed")
+
+
+BACKGROUND_LOOPS.append(("watchlist-notifications", watchlist_notification_loop))
+
+
+async def _notify_consultation(request_id: str, kind: str, snippet: str, *, recipient_role: str) -> None:
+    """Best-effort e-mail to the other party of a consultation thread."""
+    if not email_sender.configured:
+        return
+    try:
+        participants = account_service.consultation_participants(request_id)
+        if not participants:
+            return
+        recipient = participants["consultant_email"] if recipient_role == "consultant" else participants["requester_email"]
+        if not recipient:
+            return
+        subject_line = {
+            "new_request": "Yeni danışmanlık talebi",
+            "message": "Danışmanlık görüşmesinde yeni mesaj",
+            "status": "Danışmanlık talebinizin durumu değişti",
+        }.get(kind, "Danışmanlık bildirimi")
+        await email_sender.send(
+            to=recipient,
+            subject=f"{subject_line}: {participants['subject'][:80]}",
+            html_body=render_consultation_email(kind, participants["subject"], snippet[:300], PUBLIC_BASE_URL),
+        )
+    except Exception:
+        logger.exception("Consultation notification failed")
 
 
 @mcp.custom_route("/api/changes", methods=["GET"])

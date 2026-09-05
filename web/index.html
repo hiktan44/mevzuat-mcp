@@ -405,7 +405,8 @@
 
         <section class="customs-tool-panel" data-customs-panel="changes" hidden aria-labelledby="changesPanelTitle">
           <header class="tool-panel-head"><span>03 / SÜRÜM DEFTERİ</span><h2 id="changesPanelTitle">Resmî veri ve tebliğ değişiklikleri</h2><p>Arşiv SHA-256 sürümleri ve kapsam sayısı farkları burada izlenir. GTİP listenizi bu cihazda saklayarak hızlı yeniden kontrol edebilirsiniz.</p></header>
-          <div class="watch-form"><label class="field"><span>İzlenecek GTİP</span><input id="watchGtip" maxlength="30" inputmode="numeric" placeholder="12 hane"></label><label class="field"><span>Kısa ad</span><input id="watchLabel" maxlength="100" placeholder="Örn. çocuk şortu"></label><button id="addWatch" type="button">İzleme listesine ekle</button></div>
+          <div class="watch-form"><label class="field"><span>İzlenecek GTİP</span><input id="watchGtip" maxlength="30" inputmode="decimal" placeholder="4-12 hane"></label><label class="field"><span>Kısa ad</span><input id="watchLabel" maxlength="100" placeholder="Örn. çocuk şortu"></label><button id="addWatch" type="button">İzleme listesine ekle</button></div>
+          <p class="rate-warning" id="watchNotifyNote">Giriş yaptıysanız liste hesabınızda saklanır; resmî tarife satırı yeni sürümde değişirse e-posta ile bildirilir.</p>
           <div class="watch-list" id="watchList"></div>
           <h3 class="subledger-title">Bu cihazda kayıtlı ön değerlendirmeler</h3>
           <div class="watch-list" id="scenarioList"></div>
