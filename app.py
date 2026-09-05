@@ -1570,7 +1570,8 @@ async def web_tariff_lookup(request: Request):
             raise ValueError("Tarife isteği bir nesne olmalıdır.")
         result = await tariff_engine.lookup(
             str(body.get("gtip", "")),
-            origin_country=str(body.get("origin_country", "")).strip() or None,
+            origin_country=str(body.get("origin_country", "")).strip()[:100] or None,
+            dispatch_country=str(body.get("dispatch_country", "") or "").strip()[:100] or None,
         )
         return JSONResponse(result.model_dump(mode="json"))
     except (ValueError, ValidationError) as exc:
@@ -1613,11 +1614,12 @@ async def web_tariff_cost(request: Request):
         if not isinstance(body, dict):
             raise ValueError("Maliyet isteği bir nesne olmalıdır.")
         gtip = str(body.pop("gtip", ""))
-        origin = str(body.pop("origin_country", "")).strip()
+        origin = str(body.pop("origin_country", "")).strip()[:100]
+        dispatch = str(body.pop("dispatch_country", "") or "").strip()[:100] or None
         if not origin:
             raise ValueError("Menşe ülke gereklidir.")
         inputs = LandedCostInput.model_validate(body)
-        result = await tariff_engine.calculate(gtip, origin, inputs)
+        result = await tariff_engine.calculate(gtip, origin, inputs, dispatch_country=dispatch)
         return JSONResponse(result)
     except ValidationError as exc:
         message = exc.errors(include_url=False)[0].get("msg", "Alanları kontrol edin.")
@@ -1643,26 +1645,32 @@ async def web_tariff_scenarios(request: Request):
         origins_raw = body.get("origins", [])
         if not isinstance(origins_raw, list):
             raise ValueError("Menşe listesi geçersiz.")
-        origins = [str(item).strip() for item in origins_raw if str(item).strip()][:6]
+        origins = list(dict.fromkeys(str(item).strip()[:100] for item in origins_raw if str(item).strip()))[:6]
+        dispatch = str(body.get("dispatch_country", "") or "").strip()[:100] or None
         if not gtip or len(origins) < 2:
-            raise ValueError("Karşılaştırma için tarife kodu ve en az iki menşe ülke gereklidir.")
+            raise ValueError("Karşılaştırma için tarife kodu ve en az iki farklı menşe ülke gereklidir.")
         rows = []
         for origin in origins:
-            lookup = await tariff_engine.lookup(gtip, origin_country=origin)
-            documents = origin_document_requirements(origin)
+            lookup = await tariff_engine.lookup(gtip, origin_country=origin, dispatch_country=dispatch)
+            documents = origin_document_requirements(origin, gtip=lookup.gtip, dispatch_country=dispatch)
             rows.append(
                 {
                     "origin_country": origin,
+                    "dispatch_country": dispatch,
                     "status": lookup.status,
+                    "origin_recognised": lookup.origin_recognised,
                     "resolved_country_group": lookup.resolved_country_group,
                     "matched_gtip_count": lookup.matched_gtip_count,
                     "unambiguous_rates": lookup.unambiguous_rates or {},
                     "ambiguous_measure_types": lookup.ambiguous_measure_types,
+                    "atr_free_circulation": lookup.atr_free_circulation,
+                    "origin_proof_required": lookup.origin_proof_required,
+                    "fallback_rates": lookup.fallback_rates,
                     "origin_documents": documents.model_dump(mode="json") if documents else None,
                     "warnings": lookup.warnings,
                 }
             )
-        return JSONResponse({"gtip": gtip, "rows": rows, "generated_at": time.time()})
+        return JSONResponse({"gtip": gtip, "dispatch_country": dispatch, "rows": rows, "generated_at": time.time()})
     except (ValueError, ValidationError) as exc:
         return JSONResponse({"error": str(exc)}, status_code=422)
     except Exception:

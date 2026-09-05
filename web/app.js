@@ -1414,7 +1414,7 @@ async function refreshCandidateRates() {
     const tariff = await fetchJson("/api/tariff/lookup", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ gtip: candidate.code, origin_country: origin }),
+      body: JSON.stringify({ gtip: candidate.code, origin_country: origin, dispatch_country: $("#dispatchCountry")?.value.trim() || null }),
     });
     const safe = tariff.unambiguous_rates || {};
     return {
@@ -2133,6 +2133,8 @@ document.addEventListener("click", (event) => {
     const origin = $("#tariffOrigin").value.trim();
     if (code && !$("#candidateGtip").value.trim()) { $("#candidateGtip").value = code; $("#candidateGtip").dispatchEvent(new Event("input", { bubbles: true })); }
     if (origin && !$("#originCountry").value.trim()) $("#originCountry").value = origin;
+    const dispatch = $("#tariffDispatch")?.value.trim();
+    if (dispatch && !$("#dispatchCountry").value.trim()) $("#dispatchCountry").value = dispatch;
     const invoice = $("#tariffInvoice").value.trim();
     if (invoice && !$("#invoiceValue").value.trim()) { $("#invoiceValue").value = invoice; $("#freight").value = $("#tariffFreight").value || $("#freight").value; $("#insurance").value = $("#tariffInsurance").value || $("#insurance").value; $("#currency").value = $("#tariffCurrency").value; }
     switchCustomsView("assistant");
@@ -2150,7 +2152,11 @@ $("#tariffForm").addEventListener("submit", async (event) => {
   const button = event.currentTarget.querySelector("button[type=submit]");
   button.disabled = true;
   output.innerHTML = '<div class="analysis-loading"><i></i><div><b>Resmî tarife satırları alınıyor</b><span>Menşe grubu, dipnot ve snapshot kanıtı denetleniyor…</span></div></div>';
-  const common = { gtip: $("#tariffGtip").value.trim(), origin_country: $("#tariffOrigin").value.trim() };
+  const common = {
+    gtip: $("#tariffGtip").value.trim(),
+    origin_country: $("#tariffOrigin").value.trim(),
+    dispatch_country: $("#tariffDispatch")?.value.trim() || null,
+  };
   try {
     const invoice = nullableNumber("#tariffInvoice");
     const data = invoice == null
@@ -2182,7 +2188,14 @@ function renderScenarioRows(data) {
   return `<div class="scenario-table-wrap"><table class="evidence-table"><thead><tr><th>Menşe</th><th>Sütun</th><th>Gümrük vergisi</th><th>İGV / ek vergi</th><th>Tercih belgesi</th><th>Not</th></tr></thead><tbody>${(data.rows || []).map((row) => {
     const docs = row.origin_documents;
     const docText = docs ? (docs.documents || []).map((item) => item.name).join(", ") : "—";
-    const notes = (row.warnings || []).slice(0, 2);
+    const notes = [];
+    if (row.origin_recognised === false) notes.push("Menşe ülke tanınmadı; 'Diğer Ülkeler' varsayıldı");
+    if (row.atr_free_circulation) notes.push("GV: A.TR ile serbest dolaşım sütunu; İGV/EMY menşeye göre");
+    if ((row.origin_proof_required || []).length) {
+      const fallback = Object.entries(row.fallback_rates || {}).map(([key, value]) => `${tariffMeasureLabels[key] || key} %${numberFormat.format(value)}`).join(", ");
+      notes.push(`İGV/EMY tercihi menşe tevsikine bağlı${fallback ? ` (tevsik yoksa ${fallback})` : ""}`);
+    }
+    notes.push(...(row.warnings || []).filter((item) => !item.includes("kapsam matrisi")).slice(0, 1));
     if (row.unambiguous_rates?.customs_duty == null) notes.push("Oran bütün alt GTİP12 satırlarında ortak değil");
     return `<tr><td><b>${escapeHtml(row.origin_country)}</b><small>${escapeHtml(docs?.regime_name || "")}</small></td><td>${escapeHtml(row.resolved_country_group || "—")}</td><td>${escapeHtml(fmt(row.unambiguous_rates?.customs_duty))}</td><td>${escapeHtml(fmt(row.unambiguous_rates?.additional_duty))}</td><td>${escapeHtml(docText)}</td><td>${escapeHtml(notes.join(" · ") || "—")}</td></tr>`;
   }).join("")}</tbody></table></div>
@@ -2202,7 +2215,7 @@ $("#scenarioCompare").addEventListener("click", async () => {
     const data = await fetchJson("/api/tariff/scenarios", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ gtip, origins }),
+      body: JSON.stringify({ gtip, origins, dispatch_country: $("#tariffDispatch")?.value.trim() || null }),
     });
     output.innerHTML = renderScenarioRows(data);
   } catch (error) {

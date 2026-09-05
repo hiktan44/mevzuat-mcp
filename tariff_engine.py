@@ -28,7 +28,10 @@ import httpx
 import xlrd
 from bs4 import BeautifulSoup
 from openpyxl import load_workbook
-from pydantic import BaseModel, Field, field_validator
+from pydantic import BaseModel, ConfigDict, Field, field_validator
+
+from countries import PENDING_AGREEMENTS, by_regime, column_1_keys, explicit_labels, find_country
+from origin_documents import atr_eligible
 from security_firewall import validate_outbound_url
 
 _GTIP_RE = re.compile(r"^\d{4}(?:\d{2}){0,4}$")
@@ -70,6 +73,17 @@ def _number(value: Any) -> tuple[float | None, str]:
     if not _RATE_RE.fullmatch(canonical):
         return None, text[:160]
     return float(canonical), text[:160]
+
+
+
+def _list_name_is(file_key: str, numeral: str) -> bool:
+    """True when the (normalised) file name names exactly this Roman-numeral list."""
+    return re.search(rf"(?:^|[^a-z]){numeral}\s*say", file_key) is not None
+
+
+def _annex_sheet_is(sheet_key: str, number: int) -> bool:
+    """Match 'Ek-2', 'EK 2', 'Ek2' and similar official sheet names."""
+    return re.search(rf"(?:^|[^a-z])ek\s*[-–]?\s*{number}(?!\d)", sheet_key) is not None
 
 
 def _official_url(url: str) -> bool:
@@ -140,6 +154,11 @@ class TariffLookupResult(BaseModel):
     matched_gtips: list[str] = Field(default_factory=list)
     matched_gtip_count: int = 0
     origin_country: str | None = None
+    dispatch_country: str | None = None
+    origin_recognised: bool = True
+    atr_free_circulation: bool = False
+    origin_proof_required: list[str] = Field(default_factory=list)
+    fallback_rates: dict[str, float] = Field(default_factory=dict)
     resolved_country_group: str | None = None
     rate_variants: dict[str, list[float]] = Field(default_factory=dict)
     unambiguous_rates: dict[str, float] = Field(default_factory=dict)
@@ -201,6 +220,10 @@ class TariffSyncStatus(BaseModel):
 
 
 class LandedCostInput(BaseModel):
+    # Unknown keys (typos such as customs_duty_rat) must fail loudly instead of silently
+    # letting the official rate replace the rate the user believed they had entered.
+    model_config = ConfigDict(extra="forbid")
+
     invoice_value: float = Field(..., gt=0, le=1_000_000_000)
     freight: float = Field(0, ge=0, le=1_000_000_000)
     insurance: float = Field(0, ge=0, le=1_000_000_000)
@@ -237,6 +260,7 @@ class LandedCostResult(BaseModel):
     landed_total: float | None = None
     unit_landed_cost: float | None = None
     missing_rates: list[str] = Field(default_factory=list)
+    rate_overrides: list[dict[str, Any]] = Field(default_factory=list)
     warnings: list[str] = Field(default_factory=list)
     formula_version: str = "tr-landed-cost-v3"
 
@@ -246,6 +270,12 @@ class _ParsedArchive:
     measures: list[dict[str, Any]]
     metadata: dict[str, Any]
 
+
+_MEASURE_LABELS = {
+    "customs_duty": "gümrük vergisi",
+    "additional_duty": "İGV",
+    "additional_financial_liability": "ek mali yükümlülük",
+}
 
 _GROUP_DESCRIPTIONS = {
     "1": "AB, EFTA ve İthalat Rejimi Kararında 1 numaralı sütunda sayılan STA ülkeleri",
@@ -261,24 +291,12 @@ _GROUP_DESCRIPTIONS = {
     "DÜ": "Diğer Ülkeler",
 }
 
-_COLUMN_1_COUNTRIES = {
-    "arnavutluk", "bolivarci venezuela cumhuriyeti", "venezuela", "birlesik krallik", "ingiltere",
-    "bosna-hersek", "bosna hersek", "fas", "faroe adalari", "filistin", "gurcistan", "guney kore",
-    "kore cumhuriyeti", "israil", "karadag", "kosova", "kuzey makedonya", "malezya", "misir",
-    "morityus", "moldova", "sirbistan", "singapur", "sili", "tunus",
-}
-_EU_COUNTRIES = {
-    "almanya", "avusturya", "belcika", "bulgaristan", "cekya", "cek cumhuriyeti", "danimarka",
-    "estonya", "finlandiya", "fransa", "hirvatistan", "hollanda", "irlanda", "ispanya", "isvec",
-    "italya", "kibris", "letonya", "litvanya", "luksemburg", "macaristan", "malta", "polonya",
-    "portekiz", "romanya", "slovakya", "slovenya", "yunanistan",
-}
-_EFTA_COUNTRIES = {"izlanda", "lihtenstayn", "norvec", "isvicre"}
-_EXPLICIT_LABELS = {
-    "guney kore": "G.KORE", "kore cumhuriyeti": "G.KORE", "malezya": "MLZ",
-    "singapur": "SNG", "kosova": "KOS", "iran": "İRAN", "venezuela": "VNZ",
-    "birlesik arap emirlikleri": "BAE", "bae": "BAE", "gurcistan": "GÜR",
-}
+# Country facts come from countries.py (single source shared with origin_documents.py).
+_EU_COUNTRIES = by_regime("eu")
+_EFTA_COUNTRIES = by_regime("efta")
+_COLUMN_1_COUNTRIES = column_1_keys() - _EU_COUNTRIES - _EFTA_COUNTRIES
+# Countries that have their own column token in at least one official list.
+_EXPLICIT_LABELS = {alias: label for alias, label in explicit_labels().items() if label not in {"AB", "EFTA"}}
 
 
 class TariffEngine:
@@ -439,25 +457,27 @@ class TariffEngine:
                 return -1, {}, "", None
             if "ek-1" in file_key:
                 return 0, {2: "1", 3: "2", 4: "3", 5: "4", 6: "5", 7: "6", 8: "7"}, "İGV Ek-1", None
-            if "ek 2" in sheet_key:
+            if _annex_sheet_is(sheet_key, 2):
                 groups = {2: "AB/BK/B-HER/EFTA/F.ADA/G.KORE/MLZ", 3: "KOS", 4: "SNG", 5: "VNZ", 6: "BAE", 7: "EAGÜ", 8: "ÖTDÜ", 9: "GYÜ", 10: "DÜ"}
                 return 0, groups, "İGV Ek-2", None
-            if "ek 3" in sheet_key:
+            if _annex_sheet_is(sheet_key, 3):
                 groups = {2: "AB/BK/B-HER/EFTA/F.ADA", 3: "G.KORE", 4: "MLZ", 5: "SNG", 6: "KOS", 7: "İRAN", 8: "VNZ", 9: "BAE", 10: "EAGÜ", 11: "ÖTDÜ", 12: "GYÜ", 13: "DÜ"}
                 return 0, groups, "İGV Ek-3", None
             return -1, {}, "", None
 
         if file_key.startswith(("ek-", "ek ")) or "tablo" in file_key:
             return -1, {}, "", None
-        if "v say" in file_key:
-            return 0, {5: "NİHAİ KULLANIM"}, "V Sayılı Liste", "customs_duty_suspension"
-        if "vi say" in file_key:
-            return 2, {5: "NİHAİ KULLANIM"}, "VI Sayılı Liste", "customs_duty_end_use"
-        if "vii say" in file_key:
+        # Roman numerals share substrings ("iv say" contains "v say"), so every
+        # list is matched on a word boundary and the longer names are tested first.
+        if _list_name_is(file_key, "vii"):
             return 0, {3: "NİHAİ KULLANIM"}, "VII Sayılı Liste", "customs_duty_end_use"
-        if "iv say" in file_key:
+        if _list_name_is(file_key, "vi"):
+            return 2, {5: "NİHAİ KULLANIM"}, "VI Sayılı Liste", "customs_duty_end_use"
+        if _list_name_is(file_key, "iv"):
             groups = {2: "EFTA/B-HER/F.ADA", 3: "AB/BK", 4: "G.KORE", 5: "MLZ", 6: "SNG", 7: "KOS", 8: "VNZ", 9: "BAE", 10: "TPS-OIC", 11: "D-8", 12: "DÜ", 13: "EFTA/F.ADA"}
             return 0, groups, "IV Sayılı Liste", None
+        if _list_name_is(file_key, "v"):
+            return 0, {5: "NİHAİ KULLANIM"}, "V Sayılı Liste", "customs_duty_suspension"
         if "iii say" in file_key:
             groups = {2: "AB/BK/B-HER/EFTA/F.ADA", 3: "G.KORE", 4: "MLZ", 5: "SNG", 6: "KOS", 7: "İRAN", 8: "VNZ", 9: "BAE", 10: "EAGÜ", 11: "ÖTDÜ", 12: "GYÜ", 13: "DÜ"}
             return 0, groups, "III Sayılı Liste", None
@@ -699,31 +719,84 @@ class TariffEngine:
         )
 
     @staticmethod
-    def _matching_group(origin: str, labels: set[str], metadata: dict[str, Any], gtip: str) -> tuple[str | None, list[str]]:
-        origin_key = _key(origin).strip()
+    def _matching_group(
+        origin: str,
+        labels: set[str],
+        metadata: dict[str, Any],
+        gtip: str,
+        measure_type: str = "customs_duty",
+    ) -> tuple[str | None, list[str]]:
+        """Pick the official column for one origin deterministically.
+
+        Column labels such as ``AB/BK/B-HER/EFTA/F.ADA`` are split into tokens and a
+        country is matched only against whole tokens, never substrings.  Labels are
+        visited in sorted order so the result never depends on set iteration order.
+        Priority: the country's own column (G.KORE, MLZ, B-HER, BK...), then the
+        numeric column 1/2/3 of the industrial tables, then the shared AB / EFTA
+        column, then GTS groups, and only then the residual "Diğer Ülkeler" column.
+        A preferential country that has no column in the queried list is reported
+        with a warning instead of being silently attached to the EU column.
+        """
         warnings: list[str] = []
-        if not origin_key:
+        if not str(origin or "").strip():
             return None, warnings
-        if origin_key in _EU_COUNTRIES or origin_key in _EFTA_COUNTRIES or origin_key in _COLUMN_1_COUNTRIES:
-            if "1" in labels:
-                return "1", warnings
-            for label in labels:
-                if any(token in label for token in ("AB", "EFTA")):
-                    return label, warnings
-        if origin_key in {"katar", "qatar"} and "2" in labels:
-            return "2", warnings
-        if origin_key in {"birlesik arap emirlikleri", "bae", "united arab emirates"}:
-            if "3" in labels:
-                return "3", warnings
-            if "BAE" in labels:
-                return "BAE", warnings
+        country = find_country(origin)
+        origin_key = country.key if country else _key(origin).strip()
+        if country is None:
+            warnings.append(
+                f"Menşe ülke '{origin}' bilinen ülke listesinde bulunamadı; 'Diğer Ülkeler' sütunu varsayıldı. "
+                "Adı Türkçe yazın (ör. Almanya, Çin, Güney Kore)."
+            )
+        elif country.key in PENDING_AGREEMENTS:
+            warnings.append(PENDING_AGREEMENTS[country.key])
+        ordered = sorted(labels)
+        tokens = {label: {_key(part).strip() for part in label.split("/")} for label in ordered}
+
+        def with_token(token: str) -> str | None:
+            wanted = _key(token).strip()
+            for label in ordered:
+                if wanted in tokens[label]:
+                    return label
+            return None
+
+        is_eu = origin_key in _EU_COUNTRIES
+        is_efta = origin_key in _EFTA_COUNTRIES
+        is_column_1 = origin_key in _COLUMN_1_COUNTRIES
         explicit = _EXPLICIT_LABELS.get(origin_key)
         if explicit:
-            for label in labels:
-                if explicit in label:
-                    return label, warnings
+            own = with_token(explicit)
+            if own:
+                return own, warnings
+        if (is_eu or is_efta or is_column_1) and "1" in labels:
+            return "1", warnings
+        if origin_key in {"katar", "qatar"} and "2" in labels:
+            return "2", warnings
+        if origin_key in {"birlesik arap emirlikleri", "bae", "united arab emirates"} and "3" in labels:
+            return "3", warnings
+        if is_eu:
+            shared = with_token("AB")
+            if shared:
+                return shared, warnings
+        if is_efta:
+            shared = with_token("EFTA")
+            if shared:
+                return shared, warnings
+        if is_eu or is_efta or is_column_1 or explicit:
+            if measure_type == "additional_financial_liability":
+                # No EMY column for this origin means the liability does not apply.
+                return None, warnings
+            warnings.append(
+                f"{origin} için sorgulanan listede ayrı tercihli sütun yok; anlaşma tavizi varsa "
+                "anlaşma ekinden/tarife kontenjanından doğrulanmalıdır. 'Diğer Ülkeler' sütunu gösterildi."
+            )
 
-        gts = metadata.get("gts_countries", {}).get(origin_key)
+        gts_table = metadata.get("gts_countries", {})
+        gts = gts_table.get(origin_key)
+        if gts is None and country is not None:
+            for alias in country.keys:
+                gts = gts_table.get(alias) or gts_table.get(_key(alias))
+                if gts:
+                    break
         if gts:
             group = gts["group"]
             exclusions = gts.get("exclusions", "")
@@ -810,7 +883,14 @@ class TariffEngine:
             ),
         }
 
-    async def lookup(self, gtip: str, *, origin_country: str | None = None, auto_sync: bool = True) -> TariffLookupResult:
+    async def lookup(
+        self,
+        gtip: str,
+        *,
+        origin_country: str | None = None,
+        dispatch_country: str | None = None,
+        auto_sync: bool = True,
+    ) -> TariffLookupResult:
         normalised = _normalise_gtip(gtip)
         if not normalised or len(normalised) not in {6, 8, 10, 12}:
             raise ValueError("Tarife sorgusu için 6, 8, 10 veya 12 haneli HS/CN/GTİP kodu gereklidir.")
@@ -820,7 +900,7 @@ class TariffEngine:
         with self._connect() as db:
             snapshots = db.execute("SELECT * FROM tariff_snapshots WHERE active=1 ORDER BY source_id").fetchall()
             if not snapshots:
-                return TariffLookupResult(status="unavailable", gtip=normalised, origin_country=origin_country, as_of=_now(), warnings=["Resmî tarife tabloları henüz eşitlenmedi."])
+                return TariffLookupResult(status="unavailable", gtip=normalised, origin_country=origin_country, dispatch_country=dispatch_country, as_of=_now(), warnings=["Resmî tarife tabloları henüz eşitlenmedi."])
             all_rows: list[tuple[sqlite3.Row, sqlite3.Row]] = []
             metadata: dict[str, Any] = {}
             for snapshot in snapshots:
@@ -840,6 +920,7 @@ class TariffEngine:
             coverage = self._measure_coverage(snapshots)
             return TariffLookupResult(
                 status="not_found", gtip=normalised, match_mode=match_mode, origin_country=origin_country,
+                dispatch_country=dispatch_country,
                 snapshots=[self._snapshot(row) for row in snapshots], measure_coverage=coverage,
                 unresolved_measure_types=[key for key, item in coverage.items() if item.status != "verified_snapshot"],
                 as_of=_now(),
@@ -847,28 +928,66 @@ class TariffEngine:
             )
 
         matched_gtips = sorted({row["gtip"] for row, _ in all_rows})
-        selected_by_scope: dict[tuple[str, str], str | None] = {}
+        selected_by_scope: dict[tuple[str, str, str], str | None] = {}
         warnings: list[str] = []
-        scopes = {(row["gtip"], snapshot["id"]) for row, snapshot in all_rows}
-        for matched_gtip, snapshot_id in sorted(scopes):
+        origin_entry = find_country(origin_country) if origin_country else None
+        dispatch_entry = find_country(dispatch_country) if dispatch_country else None
+        if dispatch_country and dispatch_entry is None:
+            warnings.append(f"Sevk ülkesi '{dispatch_country}' tanınmadı; A.TR/serbest dolaşım değerlendirmesi yapılmadı.")
+        origin_is_eu = bool(origin_entry and origin_entry.regime == "eu")
+        dispatch_is_eu = bool(dispatch_entry and dispatch_entry.regime == "eu")
+        # Third-country goods in free circulation in the EU: with an A.TR the customs duty
+        # follows the EU column, while İGV/EMY still follow the real origin.
+        atr_route = bool(dispatch_is_eu and not origin_is_eu and all(atr_eligible(code) for code in matched_gtips))
+        origin_proof_required: list[str] = []
+        fallback_rates: dict[str, float] = {}
+        # The column is chosen per measure type: in the IV list the EMY column
+        # carries its own label, so a duty column and an EMY column can both be
+        # primary for the same GTIP without competing with each other.
+        scopes = {(row["gtip"], snapshot["id"], row["measure_type"]) for row, snapshot in all_rows}
+        for matched_gtip, snapshot_id, measure_type in sorted(scopes):
             labels = {
                 row["country_group"]
                 for row, snapshot in all_rows
-                if row["gtip"] == matched_gtip and snapshot["id"] == snapshot_id
+                if row["gtip"] == matched_gtip and snapshot["id"] == snapshot_id and row["measure_type"] == measure_type
             }
+            column_origin = origin_country or ""
+            if atr_route and measure_type == "customs_duty":
+                column_origin = dispatch_entry.name if dispatch_entry else column_origin
             selected_group, group_warnings = self._matching_group(
-                origin_country or "", labels, metadata, matched_gtip
+                column_origin, labels, metadata, matched_gtip, measure_type=measure_type
             )
-            selected_by_scope[(matched_gtip, snapshot_id)] = selected_group
+            selected_by_scope[(matched_gtip, snapshot_id, measure_type)] = selected_group
             warnings.extend(group_warnings)
+            if (
+                measure_type in {"additional_duty", "additional_financial_liability"}
+                and selected_group
+                and (origin_is_eu or (origin_entry and origin_entry.regime in {"efta", "fta", "pta"}))
+            ):
+                residual = "7" if "7" in labels else ("DÜ" if "DÜ" in labels else None)
+                if residual and residual != selected_group:
+                    if measure_type not in origin_proof_required:
+                        origin_proof_required.append(measure_type)
+                    for row, snapshot in all_rows:
+                        if (
+                            row["gtip"] == matched_gtip and snapshot["id"] == snapshot_id
+                            and row["measure_type"] == measure_type and row["country_group"] == residual
+                            and row["rate"] is not None
+                        ):
+                            fallback_rates[measure_type] = max(fallback_rates.get(measure_type, 0.0), float(row["rate"]))
         warnings = list(dict.fromkeys(warnings))
         selected_groups = {group for group in selected_by_scope.values() if group}
         selected = " / ".join(sorted(selected_groups)) if selected_groups else None
-        if len(selected_groups) > 1:
-            warnings.append(
-                "Resmî tablolar aynı menşe grubu için farklı sütun etiketleri kullanıyor: "
-                + " / ".join(sorted(selected_groups))
-            )
+        groups_by_type: dict[str, set[str]] = {}
+        for (_, _, measure_type), group in selected_by_scope.items():
+            if group:
+                groups_by_type.setdefault(measure_type, set()).add(group)
+        for measure_type, groups in sorted(groups_by_type.items()):
+            if len(groups) > 1:
+                warnings.append(
+                    f"Resmî tablolar {measure_type} için aynı menşeye farklı sütun etiketleri kullanıyor: "
+                    + " / ".join(sorted(groups))
+                )
         if any(int(str(snapshot["valid_from"])[:4]) < datetime.now().year for snapshot in snapshots):
             warnings.append(
                 "Aktif tarife snapshot'ı cari yıldan eskidir; oran otomatik karar için kullanılmadan önce yıllık cetvel güncellemesi doğrulanmalıdır."
@@ -880,10 +999,29 @@ class TariffEngine:
             measure = self._measure(row, snapshot)
             if measure.measure_type in {"customs_duty_suspension", "customs_duty_end_use"}:
                 conditional.append(measure)
-            elif selected_by_scope.get((measure.gtip, measure.snapshot_id)) == measure.country_group:
+            elif selected_by_scope.get((measure.gtip, measure.snapshot_id, measure.measure_type)) == measure.country_group:
                 primary.append(measure)
             else:
                 alternatives.append(measure)
+        if atr_route:
+            warnings.append(
+                f"Sevk ülkesi {dispatch_entry.name} (AB) ve menşe {origin_country}: gümrük vergisi A.TR ile serbest dolaşım "
+                "sütunundan alındı ve A.TR ibrazına bağlıdır; İGV ve ek mali yükümlülük menşe ülkesi sütunundan uygulanır."
+            )
+        elif dispatch_is_eu and not origin_is_eu:
+            warnings.append(
+                f"Sevk ülkesi {dispatch_entry.name} (AB) olsa da bu tarife satırı için A.TR düzenlenmez (tarım/AKÇT ürünü); "
+                "gümrük vergisi menşe ülkesine göre uygulandı."
+            )
+        if origin_proof_required:
+            fallback_text = ", ".join(
+                f"{_MEASURE_LABELS.get(item, item)} %{fallback_rates[item]:g}" for item in origin_proof_required if item in fallback_rates
+            )
+            warnings.append(
+                "İGV/EMY için tercihli sütun, eşyanın AB/Türkiye veya anlaşma ülkesi menşeli olduğunun tedarikçi beyanı, "
+                "menşe şahadetnamesi ya da anlaşma menşe belgesiyle tevsikine bağlıdır; A.TR tek başına menşe ispatı değildir. "
+                + (f"Tevsik yoksa 'Diğer Ülkeler' sütunu uygulanır: {fallback_text}." if fallback_text else "Tevsik yoksa 'Diğer Ülkeler' sütunu uygulanır.")
+            )
         if not origin_country:
             warnings.append("Menşe ülke verilmediği için uygulanacak ülke sütunu seçilmedi.")
         elif not selected:
@@ -937,6 +1075,8 @@ class TariffEngine:
             status="matched" if primary and not ambiguous_measure_types else "partial",
             gtip=normalised, match_mode=match_mode, matched_gtips=matched_gtips[:500],
             matched_gtip_count=len(matched_gtips), origin_country=origin_country,
+            dispatch_country=dispatch_country, origin_recognised=not origin_country or origin_entry is not None,
+            atr_free_circulation=atr_route, origin_proof_required=origin_proof_required, fallback_rates=fallback_rates,
             resolved_country_group=selected, rate_variants=rate_variants,
             unambiguous_rates=unambiguous_rates, ambiguous_measure_types=ambiguous_measure_types,
             measures=primary[:500], conditional_measures=conditional[:240],
@@ -1064,14 +1204,31 @@ class TariffEngine:
         gtip: str,
         origin_country: str,
         data: LandedCostInput,
+        *,
+        dispatch_country: str | None = None,
     ) -> dict[str, Any]:
         """Apply only one unambiguous, unfootnoted official rate per measure type."""
-        lookup = await self.lookup(gtip, origin_country=origin_country)
+        lookup = await self.lookup(gtip, origin_country=origin_country, dispatch_country=dispatch_country)
         safe_rates = lookup.unambiguous_rates
         conflicts = [
             f"{measure_type}: alt GTİP satırlarında oran veya önlem kapsamı farklı"
             for measure_type in lookup.ambiguous_measure_types
         ]
+        # A user-supplied rate never silently replaces a different official rate.
+        overrides: list[dict[str, Any]] = []
+        for measure_type, field_name in (
+            ("customs_duty", "customs_duty_rate"),
+            ("additional_duty", "additional_duty_rate"),
+            ("additional_financial_liability", "additional_financial_liability_rate"),
+        ):
+            user_rate = getattr(data, field_name)
+            official = safe_rates.get(measure_type)
+            if user_rate is not None and official is not None and abs(float(user_rate) - float(official)) > 1e-9:
+                overrides.append({"measure_type": measure_type, "user_rate": float(user_rate), "official_rate": float(official)})
+                conflicts.append(
+                    f"{_MEASURE_LABELS.get(measure_type, measure_type)}: girdiğiniz %{float(user_rate):g} resmî satırdaki "
+                    f"%{float(official):g} oranından farklı; hesapta girdiğiniz oran kullanıldı, beyan öncesi doğrulayın."
+                )
         enriched = data.model_copy(
             update={
                 "customs_duty_rate": data.customs_duty_rate if data.customs_duty_rate is not None else safe_rates.get("customs_duty"),
@@ -1084,6 +1241,7 @@ class TariffEngine:
             }
         )
         cost = calculate_landed_cost(enriched)
+        cost.rate_overrides = overrides
         cost.warnings.extend(conflicts)
         return {
             "tariff": lookup.model_dump(mode="json"),

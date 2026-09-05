@@ -1136,6 +1136,7 @@ class CustomsAdvisor:
             tariff_lookup = await self.tariff_engine.lookup(
                 inquiry.candidate_gtip,
                 origin_country=inquiry.origin_country,
+                dispatch_country=inquiry.dispatch_country,
             )
             official_rates.update(tariff_lookup.unambiguous_rates)
             for measure in tariff_lookup.measures:
@@ -1227,7 +1228,11 @@ class CustomsAdvisor:
             ),
             tariff_lookup=tariff_lookup,
             control_lookup=control_lookup,
-            origin_documents=origin_document_requirements(inquiry.origin_country or ""),
+            origin_documents=origin_document_requirements(
+                inquiry.origin_country or "",
+                gtip=inquiry.candidate_gtip,
+                dispatch_country=inquiry.dispatch_country,
+            ),
             sources=sources,
             legal_notice=_legal_notice(as_of),
         )
