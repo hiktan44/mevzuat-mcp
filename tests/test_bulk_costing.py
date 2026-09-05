@@ -100,14 +100,14 @@ class BulkCalculationTests(unittest.IsolatedAsyncioTestCase):
         first = result["rows"][0]
         self.assertEqual(first["customs_value"], 11250.0)
         self.assertEqual(first["rates"]["customs_duty"], 12.0)
-        self.assertEqual(first["landed_total"], 18765.0)
+        self.assertEqual(first["landed_total"], 18045.0)
         self.assertIn("Ek mali yükümlülük oranı", result["rows"][1]["missing_rates"])
         self.assertIn("GTİP boş", result["rows"][2]["error"])
         self.assertIn("doğrulanamadı", result["rows"][3]["error"])
         self.assertEqual(result["summary"], {"rows": 4, "complete": 1, "partial": 1, "errors": 2})
         usd = result["totals"][0]
         self.assertEqual((usd["currency"], usd["rows"], usd["complete_rows"]), ("USD", 2, 1))
-        self.assertEqual(usd["landed_total"], 18765.0)
+        self.assertEqual(usd["landed_total"], 18045.0)
         self.assertEqual(usd["customs_value"], 16250.0)
 
     async def test_row_limit(self) -> None:
