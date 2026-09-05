@@ -167,7 +167,8 @@ kaynak denetimi (evil origin 403), yönetici erişim kontrolü (403/303), mobild
 - ✅ (5 Eyl) Kanonik ülke listesi (ISO kodu, TR/EN ad) ve seçici; Türkçe sayı biçimi girişi.
 - İzleme listesinin sunucuda tutulması ve değişiklikte e-posta; danışman e-posta bildirimi.
 - Ekip paketinde vadedilen paylaşılan kanıt dosyaları (ekip/kuruluş kavramı yok).
-- Zorunlu belge listesinin yapılandırılmış satırlara dönüştürülmesi (muafiyet, numune, sanayici istisnası).
+- ✅ (5 Eyl) Zorunlu belge listesinin yapılandırılmış satırlara dönüştürülmesi; muafiyet / numune / sanayici / serbest
+  dolaşım cümleleri ayrı listede (kanıt olarak, karar değil).
 - Test kapsamı: I/III/IV listeleri, İGV Ek-2/3, `_group_map` ad çakışması, hash-seed belirlenimciliği,
   `_discover_documents`, çok ekli tebliğ, `calculate` entegrasyonu, `changes`, kullanıcı-oran çakışması.
 
@@ -249,3 +250,8 @@ kaynak denetimi (evil origin 403), yönetici erişim kontrolü (403/303), mobild
   Ürüne Sor maliyet bölümünde, Tarife & Maliyet formunda, MCP `calculate_import_landed_cost` /
   `prepare_customs_precheck` araçlarında ve toplu hesap şablonunda (Kur, Kur tarihi, Damga vergisi, TRT bandrol,
   Liman/ardiye, GEKAP sütunları) mevcut; CSV dışa aktarımına TL satırları eklendi.
+- Kontrol tebliği belge listesi: `structure_document_list` alıntıyı numaralı satırlara ayırır ("varsa", "halinde" gibi
+  ifadeler şarta bağlı işaretlenir); `extract_exemptions` tebliğ metnindeki muafiyet/istisna/kapsam dışı/numune/
+  sanayici/serbest dolaşım cümlelerini toplar. Snapshot tablosuna `required_documents_json` ve `exemptions_json`
+  sütunları eklendi (otomatik geçiş; eski kayıtlar alıntıdan türetilir). Kontroller sekmesindeki kartta
+  "Yüklenmesi gereken belgeler" ve "Muafiyet / istisna hükümleri" bölümleri.

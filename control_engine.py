@@ -75,6 +75,13 @@ class ControlScopeRow(BaseModel):
     list_kind: Literal["scope", "prohibited"] = "scope"
 
 
+class RequiredDocument(BaseModel):
+    order: int
+    text: str
+    # "conditional": the communique itself makes the document depend on a case ("varsa", "…halinde").
+    kind: Literal["required", "conditional"] = "required"
+
+
 class ImportControlRule(BaseModel):
     code: str
     title: str
@@ -85,6 +92,10 @@ class ImportControlRule(BaseModel):
     physical_inspection_possible: bool
     laboratory_test_possible: bool
     required_documents_excerpt: str | None = None
+    required_documents: list[RequiredDocument] = Field(default_factory=list)
+    # Sentences of the communique that carve products or importers out of the control
+    # (muafiyet, istisna, numune, sanayici, AB'de serbest dolaşım...).  Evidence, not a decision.
+    exemptions: list[str] = Field(default_factory=list)
     scope_count: int
     mevzuat_id: str
     source_url: str
@@ -348,6 +359,66 @@ def extract_required_documents(text: str) -> str | None:
     return re.sub(r"\s+", " ", tail).strip()[:3000] or None
 
 
+_DOCUMENT_ITEM_RE = re.compile(r"(?:(?<=\s)|^)(\d{1,2})\s*[.)-]\s+(?=\S)")
+_CONDITIONAL_HINTS = ("varsa", " ise ", "halinde", "gerektiginde", "talep edilmesi", "istenmesi", "olmasi durumunda", "gerekmesi")
+_EXEMPTION_HINTS = (
+    "muaf", "istisna", "kapsam disi", "kapsami disinda", "kapsamina girmez", "uygulanmaz", "numune", "sanayici",
+    "serbest dolasim", "a.tr", "dahilde isleme", "geri gelen esya", "bedelsiz",
+)
+
+
+def structure_document_list(excerpt: str | None) -> list[RequiredDocument]:
+    """Turn the raw 'yüklenmesi gereken belgeler' excerpt into numbered rows."""
+    if not excerpt:
+        return []
+    text = re.sub(r"\s+", " ", excerpt).strip()
+    matches = list(_DOCUMENT_ITEM_RE.finditer(text))
+    rows: list[RequiredDocument] = []
+    for index, match in enumerate(matches):
+        end = matches[index + 1].start() if index + 1 < len(matches) else len(text)
+        body = text[match.end():end].strip(" ;,-–")
+        if len(body) < 4:
+            continue
+        # Stop a trailing item at the next annex/form heading that may be glued to it.
+        body = re.split(r"\s(?=(?:EK|Ek)\s*[-–]?\s*\d)", body)[0].strip()
+        order = int(match.group(1))
+        if rows and order <= rows[-1].order and order != 1:
+            # Numbering restarted or a stray number: keep sequential order.
+            order = rows[-1].order + 1
+        kind = "conditional" if any(hint in _key(f" {body} ") for hint in _CONDITIONAL_HINTS) else "required"
+        rows.append(RequiredDocument(order=order, text=body[:400], kind=kind))
+        if len(rows) >= 25:
+            break
+    return rows
+
+
+def extract_exemptions(text: str) -> list[str]:
+    """Sentences that limit the control's scope; returned verbatim for the reader to judge."""
+    if not text:
+        return []
+    flat = re.sub(r"\s+", " ", text)
+    sentences = re.split(r"(?<=[.;])\s+(?=[A-ZÇĞİÖŞÜ(])", flat)
+    found: list[str] = []
+    seen: set[str] = set()
+    for sentence in sentences:
+        key = _key(sentence)
+        if not any(hint in key for hint in _EXEMPTION_HINTS):
+            continue
+        if len(sentence) < 25 or len(sentence) > 600:
+            continue
+        # Skip the list tables and annex headings; keep article prose.
+        if _CODE_RE.search(sentence) and len(_CODE_RE.findall(sentence)) > 2:
+            continue
+        cleaned = sentence.strip()
+        if cleaned in seen:
+            continue
+        seen.add(cleaned)
+        found.append(cleaned[:400])
+        if len(found) >= 12:
+            break
+    return found
+
+
 def infer_process(text: str, title: str) -> dict[str, Any]:
     normal = _key(text)
     title_key = _key(title)
@@ -475,6 +546,10 @@ class ImportControlEngine:
                 CREATE INDEX IF NOT EXISTS idx_control_scope_gtip ON control_scope(gtip_prefix);
                 """
             )
+            snapshot_columns = {row[1] for row in db.execute("PRAGMA table_info(control_snapshots)").fetchall()}
+            for column in ("required_documents_json", "exemptions_json"):
+                if column not in snapshot_columns:
+                    db.execute(f"ALTER TABLE control_snapshots ADD COLUMN {column} TEXT")
             columns = {row[1] for row in db.execute("PRAGMA table_info(control_scope)").fetchall()}
             if "excluded" not in columns:
                 db.execute("ALTER TABLE control_scope ADD COLUMN excluded INTEGER NOT NULL DEFAULT 0")
@@ -703,6 +778,10 @@ class ImportControlEngine:
                     snapshot_id = hashlib.sha256(f"{config['code']}:{digest}".encode()).hexdigest()[:32]
                     process = infer_process(text, document.mevzuat_adi)
                     documents = extract_required_documents(text)
+                    documents_json = json.dumps(
+                        [item.model_dump(mode="json") for item in structure_document_list(documents)], ensure_ascii=False
+                    )
+                    exemptions_json = json.dumps(extract_exemptions(text), ensure_ascii=False)
                     retrieved_at = _now()
                     source_url = document.url or f"https://www.mevzuat.gov.tr/MevzuatMetin/9.5.{document.mevzuat_no}.pdf"
                     with self._connect() as db:
@@ -715,8 +794,8 @@ class ImportControlEngine:
                                 document_sha256, retrieved_at, valid_from, scope_count,
                                 authority, system, risk_based,
                                 physical_inspection_possible, laboratory_test_possible,
-                                required_documents_excerpt, active
-                            ) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,1)
+                                required_documents_excerpt, required_documents_json, exemptions_json, active
+                            ) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,1)
                             """,
                             (
                                 snapshot_id, config["code"], document.mevzuat_adi, config["category"],
@@ -724,7 +803,7 @@ class ImportControlEngine:
                                 document.resmi_gazete_sayisi, digest, retrieved_at, self.valid_from,
                                 sum(not row.excluded for row in scope), process["authority"], process["system"],
                                 int(process["risk_based"]), int(process["physical_inspection_possible"]),
-                                int(process["laboratory_test_possible"]), documents,
+                                int(process["laboratory_test_possible"]), documents, documents_json, exemptions_json,
                             ),
                         )
                         db.execute("DELETE FROM control_scope WHERE snapshot_id=?", (snapshot_id,))
@@ -783,12 +862,24 @@ class ImportControlEngine:
 
     @staticmethod
     def _rule(row: sqlite3.Row) -> ImportControlRule:
+        def _load_json_list(source: sqlite3.Row, column: str) -> list[Any]:
+            if column not in source.keys() or not source[column]:
+                return []
+            try:
+                value = json.loads(source[column])
+            except (TypeError, ValueError):
+                return []
+            return value if isinstance(value, list) else []
+
         return ImportControlRule(
             code=row["code"], title=row["title"], category=row["category"], authority=row["authority"],
             system=row["system"], risk_based=bool(row["risk_based"]),
             physical_inspection_possible=bool(row["physical_inspection_possible"]),
             laboratory_test_possible=bool(row["laboratory_test_possible"]),
-            required_documents_excerpt=row["required_documents_excerpt"], scope_count=row["scope_count"],
+            required_documents_excerpt=row["required_documents_excerpt"],
+            required_documents=_load_json_list(row, "required_documents_json") or structure_document_list(row["required_documents_excerpt"]),
+            exemptions=[str(item) for item in _load_json_list(row, "exemptions_json")],
+            scope_count=row["scope_count"],
             mevzuat_id=row["mevzuat_id"], source_url=row["source_url"],
             official_gazette_date=row["official_gazette_date"],
             official_gazette_number=row["official_gazette_number"], document_sha256=row["document_sha256"],

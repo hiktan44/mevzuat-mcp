@@ -11,6 +11,8 @@ from control_engine import (
     annex_plan,
     communique_code_matches,
     extract_annex_scope,
+    extract_exemptions,
+    structure_document_list,
     extract_attachment_scope,
     extract_required_documents,
     extract_scope_table,
@@ -45,6 +47,28 @@ class ControlParsingTests(unittest.TestCase):
         rows = extract_annex_scope(SAMPLE)
         self.assertEqual([row.gtip_prefix for row in rows], ["300590500019", "392690971000"])
         self.assertIn("tıbbi tekstiller", rows[0].description)
+
+    def test_document_excerpt_is_structured_into_rows(self):
+        excerpt = ("YÜKLENMESİ GEREKEN BELGELER 1. Fatura veya proforma fatura 2. Taşıma belgesi 3. Varsa AB'de serbest "
+                   "dolaşımda olduğunu gösteren A.TR belgesi 4. Ürün teknik dosyası, talep edilmesi halinde")
+        rows = structure_document_list(excerpt)
+        self.assertEqual([row.order for row in rows], [1, 2, 3, 4])
+        self.assertEqual(rows[0].text, "Fatura veya proforma fatura")
+        self.assertEqual([row.kind for row in rows], ["required", "required", "conditional", "conditional"])
+        self.assertEqual(structure_document_list(None), [])
+
+    def test_exemption_sentences_are_collected_from_the_text(self):
+        text = ("MADDE 5- (1) Ek-1'de yer alan ürünlerden numune olarak gelenler bu Tebliğ kapsamı dışındadır. "
+                "(2) Sanayicilerin kendi üretimlerinde girdi olarak kullanacakları ürünler için TAREKS başvurusu aranmaz. "
+                "MADDE 6- (1) AB'de serbest dolaşımda bulunan ürünler A.TR Dolaşım Belgesi ile geldiğinde denetime tabi tutulmaz. "
+                "MADDE 7- (1) Bu Tebliğ 1/1/2026 tarihinde yürürlüğe girer. "
+                "Ek-1 8429.11.00.00.00 Paletli buldozerler 8429.40.90.00.00 Diğer yol silindirleri 8701.21.00.00.00 Çekiciler.")
+        found = extract_exemptions(text)
+        self.assertEqual(len(found), 3)
+        self.assertTrue(any("numune" in item for item in found))
+        self.assertTrue(any("Sanayicilerin" in item for item in found))
+        self.assertTrue(any("A.TR" in item for item in found))
+        self.assertFalse(any("8429" in item for item in found))
 
     def test_extracts_document_excerpt(self):
         excerpt = extract_required_documents(SAMPLE)
@@ -107,8 +131,11 @@ Taahhütname 2026
             engine.rules_config = [item for item in engine.rules_config if item["code"] == "2026/3"]
             with engine._connect() as db:
                 db.execute(
-                    """INSERT INTO control_snapshots VALUES
-                    (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)""",
+                    """INSERT INTO control_snapshots (id, code, title, category, mevzuat_id, source_url,
+                    official_gazette_date, official_gazette_number, document_sha256, retrieved_at, valid_from,
+                    scope_count, authority, system, risk_based, physical_inspection_possible,
+                    laboratory_test_possible, required_documents_excerpt, active)
+                    VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)""",
                     (
                         "waste", "2026/3", "Atık Tebliği", "atıklar", "3", "https://mevzuat.adalet.gov.tr/",
                         "2025-12-31", "33124", "abc", "2026-01-01T00:00:00+03:00", "2026-01-01", 2,
@@ -126,6 +153,7 @@ Taahhütname 2026
             banned = asyncio.run(engine.lookup("271099000000"))
             asyncio.run(engine.close())
             self.assertEqual(controlled.matches[0].matched_scope.list_kind, "scope")
+            self.assertEqual(controlled.matches[0].rule.required_documents, [])
             self.assertEqual(banned.matches[0].matched_scope.list_kind, "prohibited")
             self.assertIn("ithali yasak", banned.matches[0].assessment)
 
@@ -178,8 +206,11 @@ Yürürlükten kaldırılan tebliğ
             engine.rules_config = [item for item in engine.rules_config if item["code"] == "2026/31"]
             with engine._connect() as db:
                 db.execute(
-                    """INSERT INTO control_snapshots VALUES
-                    (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)""",
+                    """INSERT INTO control_snapshots (id, code, title, category, mevzuat_id, source_url,
+                    official_gazette_date, official_gazette_number, document_sha256, retrieved_at, valid_from,
+                    scope_count, authority, system, risk_based, physical_inspection_possible,
+                    laboratory_test_possible, required_documents_excerpt, active)
+                    VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)""",
                     (
                         "vehicles", "2026/31", "Taşıt Tebliği", "taşıt", "31", "https://mevzuat.adalet.gov.tr/",
                         "2025-12-31", "33124", "abc", "2026-01-01T00:00:00+03:00", "2026-01-01", 1,
@@ -241,8 +272,11 @@ Yürürlükten kaldırılan tebliğ
             engine.rules_config = [item for item in engine.rules_config if item["code"] == "2026/18"]
             with engine._connect() as db:
                 db.execute(
-                    """INSERT INTO control_snapshots VALUES
-                    (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)""",
+                    """INSERT INTO control_snapshots (id, code, title, category, mevzuat_id, source_url,
+                    official_gazette_date, official_gazette_number, document_sha256, retrieved_at, valid_from,
+                    scope_count, authority, system, risk_based, physical_inspection_possible,
+                    laboratory_test_possible, required_documents_excerpt, active)
+                    VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)""",
                     (
                         "snap", "2026/18", "Tekstil Tebliği", "tekstil", "1", "https://mevzuat.adalet.gov.tr/",
                         "2025-12-31", "33124", "abc", "2026-01-01T00:00:00+03:00", "2026-01-01", 1,
@@ -254,7 +288,9 @@ Yürürlükten kaldırılan tebliğ
                     ("snap", "6104", "Kadın giyim", "6104 Kadın giyim", 10, 0),
                 )
             result = asyncio.run(engine.lookup("850760000000"))
+            matched = asyncio.run(engine.lookup("610410000000"))
             asyncio.run(engine.close())
+            self.assertEqual([item.text for item in matched.matches[0].rule.required_documents], [])
             self.assertEqual(result.status, "not_found")
             self.assertIn("anlamına gelmez", result.warnings[0])
 

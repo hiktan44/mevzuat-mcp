@@ -2566,13 +2566,26 @@ $("#ingestSource")?.addEventListener("click", async () => {
   }
 });
 
+function renderRuleDocuments(rule) {
+  const documents = rule.required_documents || [];
+  const exemptions = rule.exemptions || [];
+  if (!documents.length && !exemptions.length && !rule.required_documents_excerpt) return "";
+  const documentList = documents.length
+    ? `<ol class="document-list">${documents.map((item) => `<li class="document-${escapeHtml(item.kind)}">${escapeHtml(item.text)}${item.kind === "conditional" ? " <small>şarta bağlı</small>" : ""}</li>`).join("")}</ol>`
+    : (rule.required_documents_excerpt ? `<p>${escapeHtml(rule.required_documents_excerpt)}</p>` : "");
+  const exemptionList = exemptions.length
+    ? `<details class="advanced-fields"><summary><span>Muafiyet / istisna / kapsam dışı hükümleri</span><small>${exemptions.length} cümle · resmî metinden</small></summary><ul class="missing-list">${exemptions.map((item) => `<li>${escapeHtml(item)}</li>`).join("")}</ul><p class="rate-warning">Bu cümleler ürünün kapsam dışı olduğunu kanıtlamaz; ürün, ithalatçı ve rejim şartları resmî metinden doğrulanmalıdır.</p></details>`
+    : "";
+  return `<details class="advanced-fields"><summary><span>Yüklenmesi gereken belgeler</span><small>${documents.length ? `${documents.length} satır` : "resmî metinden"}</small></summary>${documentList}</details>${exemptionList}`;
+}
+
 function renderControlTool(data) {
   const cards = (data.matches || []).map((match) => {
     const rule = match.rule;
     return `<article class="control-card"><header><code>${escapeHtml(rule.code)}</code><b>${escapeHtml(rule.title)}</b><a href="${safeUrl(rule.source_url)}" target="_blank" rel="noreferrer">Resmî metin ↗</a></header>
       <dl><div><dt>Ek-1 eşleşmesi</dt><dd>${escapeHtml(match.matched_scope.gtip_prefix)} · ${escapeHtml(match.match_type)}</dd></div><div><dt>Sistem</dt><dd>${escapeHtml(rule.system)}</dd></div><div><dt>Fiilî denetim</dt><dd>${rule.risk_based ? "Risk analizine bağlı" : "Yetkili kurum kararı"}</dd></div><div><dt>Laboratuvar</dt><dd>${rule.laboratory_test_possible ? "Mümkün; otomatik değil" : "Metinde tespit edilmedi"}</dd></div></dl>
       <p><strong>Kapsam satırı:</strong> ${escapeHtml(match.matched_scope.source_line)}<br>${escapeHtml(match.assessment)}</p>
-      ${rule.required_documents_excerpt ? `<details class="advanced-fields"><summary><span>Belge listesi özeti</span><small>Resmî metinden</small></summary><p>${escapeHtml(rule.required_documents_excerpt)}</p></details>` : ""}
+      ${renderRuleDocuments(rule)}
       <div class="result-caution">${match.cautions.map((item) => escapeHtml(item)).join(" · ")}</div></article>`;
   }).join("");
   return `<div class="answer-head"><span class="answer-status${data.status === "matched" ? "" : " warning"}">${escapeHtml(data.status)}</span><div><h2>${escapeHtml(data.gtip)} kontrol dosyası</h2><p>${escapeHtml(data.as_of)} itibarıyla indekslenmiş resmî tebliğ ekleri · kapsam: ${escapeHtml(data.scope_determination || "belirsiz")} · fiilî denetim sonucu bu sistemde belirlenmez</p></div></div>

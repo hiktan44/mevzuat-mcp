@@ -978,3 +978,9 @@ input.input-invalid { border-color: #c0392b !important; box-shadow: 0 0 0 2px rg
 .bulk-table td small { display: block; color: var(--ink-2); font-size: .56rem; }
 .bulk-table tr.bulk-error td { background: color-mix(in srgb, #c0392b 8%, transparent); }
 .bulk-table tr.bulk-partial td:nth-child(4) { color: #a15c00; }
+
+/* Kontrol tebliği belge satırları */
+.document-list { margin: 8px 0 0; padding-left: 20px; font-size: .68rem; line-height: 1.45; }
+.document-list li { margin: 4px 0; }
+.document-list li.document-conditional { color: var(--ink-2); }
+.document-list li small { color: #a15c00; font-size: .58rem; }
