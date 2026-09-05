@@ -35,6 +35,7 @@ from customs_advisor import (
     ProductClassificationResult,
     decode_image_data_url,
 )
+from exchange_rates import ExchangeRateError, ExchangeRateService, parse_registration_date
 from tariff_engine import (
     LandedCostInput,
     TariffDecisionTreeResult,
@@ -70,6 +71,7 @@ logger = logging.getLogger(__name__)
 
 ticaret_client = TicaretApiClient()
 tariff_engine = TariffEngine()
+exchange_rate_service = ExchangeRateService()
 control_engine = ImportControlEngine()
 classification_engine = ClassificationEvidenceEngine()
 customs_advisor_service = CustomsAdvisor(
@@ -2609,6 +2611,38 @@ async def lookup_tariff_measures(
     A rate is automatic only when every matching subline has the same unfootnoted rate.
     """
     return await tariff_engine.lookup(gtip, origin_country=origin_country, dispatch_country=dispatch_country)
+
+
+@app.tool(
+    app=True,
+    annotations={
+        "title": "Tescil tarihi için TCMB gümrük kurunu getir",
+        "readOnlyHint": True,
+        "destructiveHint": False,
+        "idempotentHint": True,
+        "openWorldHint": True,
+    }
+)
+async def get_customs_exchange_rate(
+    currency: str = Field("USD", min_length=3, max_length=5, description="Döviz kodu (USD, EUR, GBP, CNY, JPY...)."),
+    registration_date: Optional[str] = Field(
+        None,
+        description="Beyanname tescil tarihi (YYYY-AA-GG veya GG.AA.YYYY). Boşsa bugün.",
+    ),
+) -> dict:
+    """Return the TCMB selling rate in force on the declaration registration date.
+
+    Gümrük Kanunu md. 30 uyarınca gümrük kıymeti, tescil tarihinde yürürlükte olan
+    TCMB döviz satış kuru ile TL'ye çevrilir; yürürlükteki kur, tescil tarihinden
+    önceki son iş gününün bültenidir. Sonuç bülten tarihi, numarası ve kaynağı ile
+    döner; `calculate_import_landed_cost` çağrısında `exchange_rate` ve
+    `exchange_rate_date` olarak kullanılabilir.
+    """
+    try:
+        target = parse_registration_date(registration_date)
+        return await exchange_rate_service.customs_quote(currency, target)
+    except ExchangeRateError as exc:
+        return {"error": str(exc), "currency": currency, "registration_date": registration_date}
 
 
 @app.tool(

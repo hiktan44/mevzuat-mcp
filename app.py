@@ -37,6 +37,7 @@ from mevzuat_mcp_server import (
     classification_engine,
     control_engine,
     customs_advisor_service,
+    exchange_rate_service,
     tariff_engine,
     ticaret_client,
 )
@@ -48,6 +49,7 @@ from mevzuat_mcp_server import (
     app as mcp,
 )
 from security_firewall import AgentTokenVerifier, SecurityViolation, guard_data, redact_data
+from exchange_rates import ExchangeRateError, parse_registration_date
 from tariff_engine import LandedCostInput
 
 logger = logging.getLogger(__name__)
@@ -1669,6 +1671,29 @@ async def web_tariff_cost(request: Request):
     except Exception:
         logger.exception("Tariff cost calculation failed")
         return JSONResponse({"error": "Kaynaklı maliyet hesabı şu anda tamamlanamadı."}, status_code=502)
+
+
+@mcp.custom_route("/api/tariff/exchange-rate", methods=["GET"])
+async def web_tariff_exchange_rate(request: Request):
+    """TCMB döviz satış kuru: tescil tarihinde yürürlükte olan bülten (GK md. 30)."""
+    limited = _rate_limit_response(request, "tariff-fx", limit=60, window_seconds=60)
+    if limited:
+        return limited
+    currency = str(request.query_params.get("currency", "USD"))[:5]
+    try:
+        registration = parse_registration_date(request.query_params.get("date"))
+    except ExchangeRateError as exc:
+        return JSONResponse({"error": str(exc)}, status_code=422)
+    try:
+        result = await exchange_rate_service.customs_quote(currency, registration)
+    except ExchangeRateError as exc:
+        message = str(exc)
+        status = 422 if message.startswith("Geçersiz") or "bültende yer almıyor" in message else 502
+        return JSONResponse({"error": message}, status_code=status)
+    except Exception:
+        logger.exception("Exchange rate lookup failed")
+        return JSONResponse({"error": "TCMB kuru şu anda alınamadı."}, status_code=502)
+    return JSONResponse(result, headers={"Cache-Control": "public, max-age=900"})
 
 
 @mcp.custom_route("/api/tariff/bulk/template", methods=["GET"])

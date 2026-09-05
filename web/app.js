@@ -2769,6 +2769,38 @@ $("#themeToggle").addEventListener("click", () => {
 loadCatalogStatus();
 loadAuthState();
 loadCountryList();
+async function fetchCustomsRate(prefix) {
+  const currencyEl = $(prefix === "tariff" ? "#tariffCurrency" : "#currency");
+  const dateEl = $(`#${prefix}ExchangeRateDate`);
+  const rateEl = $(`#${prefix}ExchangeRate`);
+  const note = $(`#${prefix}FxNote`);
+  const button = document.querySelector(`.fx-fetch[data-prefix="${prefix}"]`);
+  const currency = currencyEl?.value || "USD";
+  const show = (message) => { if (note) { note.hidden = false; note.textContent = message; } };
+  if (currency === "TRY") {
+    rateEl.value = "1";
+    show("Fatura Türk lirası ise kur 1 alınır.");
+    return;
+  }
+  const params = new URLSearchParams({ currency });
+  if (dateEl?.value) params.set("date", dateEl.value);
+  if (button) button.disabled = true;
+  try {
+    const data = await fetchJson(`/api/tariff/exchange-rate?${params}`);
+    rateEl.value = String(data.rate).replace(".", ",");
+    rateEl.classList.remove("input-invalid");
+    if (dateEl && !dateEl.value) dateEl.value = data.registration_date;
+    show(`${data.note} Dayanak: ${data.legal_basis}.`);
+  } catch (error) {
+    show(`Kur alınamadı: ${error.message}`);
+  } finally {
+    if (button) button.disabled = false;
+  }
+}
+document.querySelectorAll(".fx-fetch").forEach((button) => {
+  button.addEventListener("click", () => fetchCustomsRate(button.dataset.prefix));
+});
+
 bindLocalizedNumberInputs();
 if (new URLSearchParams(location.search).get("scope") === "customs" || location.hash === "#customs") switchScope("customs");
 runTicaretSearch({ offset: 0 });
