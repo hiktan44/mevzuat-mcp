@@ -39,6 +39,7 @@ from mevzuat_mcp_server import (
     tariff_engine,
     ticaret_client,
 )
+from bulk_costing import MAX_FILE_BYTES as BULK_MAX_FILE_BYTES, calculate_rows as bulk_calculate_rows, rows_from_upload as bulk_rows_from_upload, template_csv as bulk_template_csv
 from countries import COUNTRIES, PENDING_AGREEMENTS
 from origin_documents import origin_document_requirements
 from mevzuat_mcp_server import (
@@ -1658,6 +1659,51 @@ async def web_tariff_cost(request: Request):
     except Exception:
         logger.exception("Tariff cost calculation failed")
         return JSONResponse({"error": "Kaynaklı maliyet hesabı şu anda tamamlanamadı."}, status_code=502)
+
+
+@mcp.custom_route("/api/tariff/bulk/template", methods=["GET"])
+async def web_tariff_bulk_template(request: Request):
+    return Response(
+        bulk_template_csv(),
+        media_type="text/csv; charset=utf-8",
+        headers={"Content-Disposition": 'attachment; filename="toplu-hesap-sablonu.csv"', "Cache-Control": "public, max-age=3600"},
+    )
+
+
+@mcp.custom_route("/api/tariff/bulk", methods=["POST"])
+async def web_tariff_bulk(request: Request):
+    """Calculate many declaration lines from an uploaded CSV/XLSX or JSON rows."""
+    limited = _rate_limit_response(request, "tariff-bulk", limit=10, window_seconds=60)
+    if limited:
+        return limited
+    try:
+        _trusted_request_origin(request)
+    except SecurityViolation as exc:
+        return _security_response(exc)
+    try:
+        content_length = int(request.headers.get("content-length", "0") or 0)
+        if content_length > BULK_MAX_FILE_BYTES * 2:
+            raise ValueError("Dosya 2 MB sınırını aşıyor.")
+        body = await request.json()
+        if not isinstance(body, dict):
+            raise ValueError("Toplu hesap isteği bir nesne olmalıdır.")
+        if body.get("file_data_url"):
+            match = re.fullmatch(r"data:[\w./+-]*;base64,([A-Za-z0-9+/=\r\n]+)", str(body["file_data_url"]))
+            if not match:
+                raise ValueError("Dosya base64 veri adresi olarak gönderilmelidir.")
+            payload = base64.b64decode(match.group(1), validate=True)
+            rows = bulk_rows_from_upload(payload, str(body.get("file_name", "")))
+        else:
+            rows = body.get("rows")
+            if not isinstance(rows, list) or not rows or not all(isinstance(item, dict) for item in rows):
+                raise ValueError("En az bir satır gönderin (rows) veya bir CSV/XLSX dosyası yükleyin.")
+        result = await bulk_calculate_rows(tariff_engine, rows)
+        return JSONResponse(result)
+    except (ValueError, ValidationError) as exc:
+        return JSONResponse({"error": str(exc)}, status_code=422)
+    except Exception:
+        logger.exception("Bulk tariff calculation failed")
+        return JSONResponse({"error": "Toplu hesap şu anda tamamlanamadı."}, status_code=502)
 
 
 @mcp.custom_route("/api/tariff/scenarios", methods=["POST"])

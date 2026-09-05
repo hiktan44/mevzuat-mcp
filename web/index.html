@@ -358,6 +358,13 @@
             <button class="analyse-button" type="submit"><span>Resmî satırları ve maliyeti getir</span></button>
           </form>
           <div class="tool-output" id="tariffOutput" aria-live="polite"></div>
+          <details class="scenario-box advanced-fields" id="bulkBox">
+            <summary><span>Toplu hesap (çok satırlı beyanname)</span><small>CSV veya Excel yükleyin; her satır ayrı hesaplanır</small></summary>
+            <p class="rate-warning">Başlık satırı GTİP, Menşe ve Fatura bedeli sütunlarını içermelidir; Sevk ülkesi, Navlun, Sigorta, Miktar, Para birimi, KDV, Ödeme şekli, KKDF, Damping, ÖTV, Gözetim, EMY, GV ve İGV sütunları isteğe bağlıdır. <a href="/api/tariff/bulk/template" download>Şablonu indir</a>.</p>
+            <label class="field"><span>CSV / XLSX dosyası</span><input id="bulkFile" type="file" accept=".csv,.xlsx,text/csv,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"></label>
+            <button class="analyse-button" type="button" id="bulkCalculate"><span>Satırları hesapla</span></button>
+            <div id="bulkOutput" aria-live="polite"></div>
+          </details>
           <div class="scenario-box" id="scenarioBox" hidden>
             <h3>Menşe senaryoları</h3>
             <p class="rate-warning">Aynı kod için menşe ülke değişince resmî tarife sütunu, oran ve tercih belgesi de değişir. Karşılaştırma kanıt satırlarıyla bilgilendirme amaçlıdır; senaryo seçimi bağlayıcı değildir.</p>

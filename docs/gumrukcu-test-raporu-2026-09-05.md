@@ -161,7 +161,7 @@ kaynak denetimi (evil origin 403), yönetici erişim kontrolü (403/303), mobild
 - İthalat Tebliğleri indeksi: kullanılmış/yenileştirilmiş eşya (2026/9), ozon (2026/14), yasak/izne tabi eşya;
   ÜGD eklerinin "kapsam / yasak / muaf" ayrımı.
 - TCMB kuru ile TL beyanname özeti; beyanname tescil tarihine göre snapshot seçimi.
-- Toplu hesap (Excel/CSV ile çok satırlı beyanname). ✅ (5 Eyl) CSV dışa aktarım ve panoya kopyalama: tarife satırları,
+- ✅ (5 Eyl) Toplu hesap (CSV/XLSX ile çok satırlı beyanname, 200 satır, şablon indirme, para birimi bazında toplam). ✅ (5 Eyl) CSV dışa aktarım ve panoya kopyalama: tarife satırları,
   maliyet defteri, senaryo tablosu (Tarife & Maliyet ve ön değerlendirme ekranlarında).
 - ✅ (5 Eyl) Kanonik ülke listesi (ISO kodu, TR/EN ad) ve seçici; Türkçe sayı biçimi girişi.
 - İzleme listesinin sunucuda tutulması ve değişiklikte e-posta; danışman e-posta bildirimi.
@@ -236,3 +236,7 @@ kaynak denetimi (evil origin 403), yönetici erişim kontrolü (403/303), mobild
 - CSV dışa aktarım ve panoya kopyalama: tarife satırları (kaynak dosya/sayfa/satır ve arşiv SHA-256 dahil), maliyet
   defteri (satırlar, toplamlar, eksik girdiler) ve menşe senaryo tablosu; noktalı virgül ayraçlı, BOM'lu, Excel tr-TR
   uyumlu; kopyalama Excel'e yapıştırılabilir sekmeli metin.
+- Toplu hesap: `bulk_costing.py` + `/api/tariff/bulk` (JSON satırlar veya base64 CSV/XLSX, 2 MB, 200 satır) ve
+  `/api/tariff/bulk/template` şablonu; başlıklar Türkçe/İngilizce takma adlarla eşleşir, sayılar Türkçe biçimde
+  okunur; her satır tek satır hesabıyla aynı motor ve uyarılarla hesaplanır, eksik girdili satır `partial` kalır ve
+  toplama alınmaz. Tarife & Maliyet sekmesinde "Toplu hesap" bölümü, sonuç tablosu ve CSV/kopyala.

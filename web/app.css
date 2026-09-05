@@ -971,3 +971,10 @@ input.input-invalid { border-color: #c0392b !important; box-shadow: 0 0 0 2px rg
 .export-bar button { padding: 6px 10px; border: 1px solid var(--line); border-radius: var(--radius-sm, 8px); background: var(--canvas); color: var(--ink-2); font: inherit; font-size: .62rem; cursor: pointer; }
 .export-bar button:hover, .export-bar button:focus-visible { border-color: var(--teal); color: var(--teal-dark); }
 @media print { .export-bar { display: none; } }
+
+/* Toplu hesap */
+#bulkBox { margin-top: 14px; }
+#bulkBox summary { cursor: pointer; }
+.bulk-table td small { display: block; color: var(--ink-2); font-size: .56rem; }
+.bulk-table tr.bulk-error td { background: color-mix(in srgb, #c0392b 8%, transparent); }
+.bulk-table tr.bulk-partial td:nth-child(4) { color: #a15c00; }

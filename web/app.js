@@ -2220,6 +2220,20 @@ const exportTables = {
       rows,
     };
   },
+  bulk(data) {
+    const rows = (data.rows || []).map((row) => [
+      row.line ?? row.index, row.gtip || "", row.origin_country || "", row.dispatch_country || "", row.description || "",
+      row.status, row.resolved_country_group || "", csvNumber(row.rates?.customs_duty), csvNumber(row.rates?.additional_duty),
+      csvNumber(row.rates?.financial_liability), csvNumber(row.rates?.kkdf), csvNumber(row.rates?.vat),
+      csvNumber(row.customs_value), csvNumber(row.total_taxes), csvNumber(row.landed_total), csvNumber(row.unit_landed_cost),
+      row.currency || "", (row.missing_rates || []).join(" | "), row.error || (row.warnings || []).join(" | "),
+    ]);
+    return {
+      name: `toplu-hesap-${fileStamp()}.csv`,
+      headers: ["Satır", "GTİP", "Menşe", "Sevk", "Açıklama", "Durum", "Sütun", "GV %", "İGV %", "EMY %", "KKDF %", "KDV %", "Gümrük kıymeti", "Toplam vergi", "Genel toplam", "Birim maliyet", "Para birimi", "Eksik girdiler", "Hata / uyarılar"],
+      rows,
+    };
+  },
   scenarios(data) {
     const rows = (data.rows || []).map((row) => [
       row.origin_country, row.dispatch_country || "", row.origin_documents?.regime_name || "", row.resolved_country_group || "",
@@ -2367,6 +2381,55 @@ function renderScenarioRows(data) {
   ${exportBar("scenarios", [{ table: "scenarios", label: "Senaryo tablosu" }])}
   <p class="rate-warning">Senaryo satırları resmî tarife arşivinin güncel snapshot'ından ve belge kural tablosundan üretilir; bağlayıcı tarife bilgisi değildir.</p>`;
 }
+
+function renderBulkResult(data) {
+  exportStore.bulk = data;
+  const money = (value, currency) => value == null ? "—" : `${numberFormat.format(value)} ${escapeHtml(currency || "")}`;
+  const pct = (value) => value == null ? "—" : `%${numberFormat.format(value)}`;
+  const statusLabel = { complete: "tam", partial: "eksik girdi", error: "hata" };
+  const rows = (data.rows || []).map((row) => `<tr class="bulk-${escapeHtml(row.status)}">
+      <td>${escapeHtml(row.line ?? row.index)}</td>
+      <td><code>${escapeHtml(row.gtip || "—")}</code>${row.description ? `<small>${escapeHtml(row.description)}</small>` : ""}</td>
+      <td>${escapeHtml(row.origin_country || "—")}${row.dispatch_country ? `<small>sevk: ${escapeHtml(row.dispatch_country)}</small>` : ""}${row.origin_recognised === false ? "<small>menşe tanınmadı</small>" : ""}</td>
+      <td>${escapeHtml(statusLabel[row.status] || row.status)}</td>
+      <td>${pct(row.rates?.customs_duty)} / ${pct(row.rates?.additional_duty)}</td>
+      <td>${money(row.customs_value, row.currency)}</td>
+      <td>${money(row.total_taxes, row.currency)}</td>
+      <td>${money(row.landed_total, row.currency)}</td>
+      <td>${escapeHtml(row.error || (row.missing_rates || []).join(", ") || (row.warnings || [])[0] || "")}</td>
+    </tr>`).join("");
+  const totals = (data.totals || []).map((item) => `<div class="formula-line"><span><strong>${escapeHtml(item.currency)}</strong> <small>${item.complete_rows}/${item.rows} satır tam</small></span><code>kıymet ${numberFormat.format(item.customs_value)} · vergi ${numberFormat.format(item.total_taxes)} · toplam ${numberFormat.format(item.landed_total)}</code></div>`).join("");
+  const summary = data.summary || {};
+  return `<div class="answer-head"><span class="answer-status${summary.errors ? " warning" : ""}">${summary.rows || 0} satır</span><div><h2>Toplu hesap</h2><p>${summary.complete || 0} tam · ${summary.partial || 0} eksik girdi · ${summary.errors || 0} hata</p></div></div>
+    <div class="scenario-table-wrap"><table class="evidence-table bulk-table"><thead><tr><th>Satır</th><th>GTİP</th><th>Menşe</th><th>Durum</th><th>GV / İGV</th><th>Gümrük kıymeti</th><th>Toplam vergi</th><th>Genel toplam</th><th>Not</th></tr></thead><tbody>${rows}</tbody></table></div>
+    ${exportBar("bulk", [{ table: "bulk", label: "Toplu hesap" }])}
+    ${totals ? `<div class="formula-ledger"><h3>Para birimi bazında toplam (yalnız tam satırlar)</h3>${totals}</div>` : ""}
+    ${data.legal_notice ? `<div class="legal-banner"><strong>Önemli:</strong> ${escapeHtml(data.legal_notice)}</div>` : ""}`;
+}
+
+$("#bulkCalculate")?.addEventListener("click", async () => {
+  const output = $("#bulkOutput");
+  const file = $("#bulkFile")?.files?.[0];
+  if (!file) return showToast("Önce bir CSV veya XLSX dosyası seçin.");
+  if (file.size > 2 * 1024 * 1024) return showToast("Dosya 2 MB sınırını aşıyor.");
+  output.innerHTML = '<div class="answer-loading"><strong>Satırlar hesaplanıyor</strong><span>Her satır için resmî tarife satırı ve maliyet defteri üretiliyor…</span></div>';
+  try {
+    const fileDataUrl = await new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => resolve(reader.result);
+      reader.onerror = () => reject(new Error("Dosya okunamadı."));
+      reader.readAsDataURL(file);
+    });
+    const data = await fetchJson("/api/tariff/bulk", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ file_name: file.name, file_data_url: fileDataUrl }),
+    });
+    output.innerHTML = renderBulkResult(data);
+  } catch (error) {
+    output.innerHTML = `<div class="answer-error"><p>${escapeHtml(error.message)}</p></div>`;
+  }
+});
 
 $("#scenarioCompare").addEventListener("click", async () => {
   const output = $("#scenarioOutput");
