@@ -161,7 +161,8 @@ kaynak denetimi (evil origin 403), yönetici erişim kontrolü (403/303), mobild
 - İthalat Tebliğleri indeksi: kullanılmış/yenileştirilmiş eşya (2026/9), ozon (2026/14), yasak/izne tabi eşya;
   ÜGD eklerinin "kapsam / yasak / muaf" ayrımı.
 - TCMB kuru ile TL beyanname özeti; beyanname tescil tarihine göre snapshot seçimi.
-- Toplu hesap (Excel/CSV ile çok satırlı beyanname), Excel/CSV dışa aktarım, panoya kopyalama.
+- Toplu hesap (Excel/CSV ile çok satırlı beyanname). ✅ (5 Eyl) CSV dışa aktarım ve panoya kopyalama: tarife satırları,
+  maliyet defteri, senaryo tablosu (Tarife & Maliyet ve ön değerlendirme ekranlarında).
 - ✅ (5 Eyl) Kanonik ülke listesi (ISO kodu, TR/EN ad) ve seçici; Türkçe sayı biçimi girişi.
 - İzleme listesinin sunucuda tutulması ve değişiklikte e-posta; danışman e-posta bildirimi.
 - Ekip paketinde vadedilen paylaşılan kanıt dosyaları (ekip/kuruluş kavramı yok).
@@ -232,3 +233,6 @@ kaynak denetimi (evil origin 403), yönetici erişim kontrolü (403/303), mobild
   açıyor; menşe ve sevk ülkesi alanları `datalist` ile öneri listesi gösteriyor.
 - Para/oran alanları Türkçe biçim kabul ediyor ("1.234,56", "12.500", "12,5"); ayrıştırılamayan veya aralık dışı
   değer kırmızı çerçeveyle işaretleniyor ve hesaba girmiyor; odak kaybında değer tr-TR biçimiyle yeniden yazılıyor.
+- CSV dışa aktarım ve panoya kopyalama: tarife satırları (kaynak dosya/sayfa/satır ve arşiv SHA-256 dahil), maliyet
+  defteri (satırlar, toplamlar, eksik girdiler) ve menşe senaryo tablosu; noktalı virgül ayraçlı, BOM'lu, Excel tr-TR
+  uyumlu; kopyalama Excel'e yapıştırılabilir sekmeli metin.

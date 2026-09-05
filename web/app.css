@@ -965,3 +965,9 @@ body:not(.marketplace-enabled) .consultant-send-result { display: none; }
 
 /* Türkçe sayı girişi: ayrıştırılamayan veya aralık dışı değer */
 input.input-invalid { border-color: #c0392b !important; box-shadow: 0 0 0 2px rgba(192, 57, 43, 0.18); }
+
+/* Dışa aktarım çubuğu */
+.export-bar { display: flex; flex-wrap: wrap; gap: 8px; margin: 10px 0 4px; }
+.export-bar button { padding: 6px 10px; border: 1px solid var(--line); border-radius: var(--radius-sm, 8px); background: var(--canvas); color: var(--ink-2); font: inherit; font-size: .62rem; cursor: pointer; }
+.export-bar button:hover, .export-bar button:focus-visible { border-color: var(--teal); color: var(--teal-dark); }
+@media print { .export-bar { display: none; } }

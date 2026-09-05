@@ -984,6 +984,7 @@ function renderExpertReviewPacket(packet) {
 }
 
 function renderCustomsResult(data) {
+  exportStore.precheck = data;
   state.currentCustomsResult = data;
   const sourceMap = customsSourceMap(data);
   const statusLabels = {
@@ -1009,7 +1010,7 @@ function renderCustomsResult(data) {
         <time>${escapeHtml(formatDate(data.as_of, true))}</time>
       </header>
       <section class="answer-section"><h3>Aday GTİP / CN kodları</h3>${candidates}</section>
-      ${data.tariff_lookup ? `<section class="answer-section"><h3>Resmî tarife snapshot eşleşmesi</h3>${tariffMatchSummary(data.tariff_lookup)}${renderMeasureCoverage(data.tariff_lookup.measure_coverage)}<table class="evidence-table"><thead><tr><th>GTİP / Önlem</th><th>Oran</th><th>Menşe sütunu</th><th>Kaynak satırı</th><th>Kanıt</th></tr></thead><tbody>${tariffRows(data.tariff_lookup.measures)}</tbody></table>${applyRatesButton(data.tariff_lookup, "precheck")}${(data.tariff_lookup.warnings || []).length ? `<div class="result-caution">${data.tariff_lookup.warnings.map((item) => escapeHtml(item)).join(" · ")}</div>` : ""}</section>` : ""}
+      ${data.tariff_lookup ? `<section class="answer-section"><h3>Resmî tarife snapshot eşleşmesi</h3>${tariffMatchSummary(data.tariff_lookup)}${renderMeasureCoverage(data.tariff_lookup.measure_coverage)}<table class="evidence-table"><thead><tr><th>GTİP / Önlem</th><th>Oran</th><th>Menşe sütunu</th><th>Kaynak satırı</th><th>Kanıt</th></tr></thead><tbody>${tariffRows(data.tariff_lookup.measures)}</tbody></table>${exportBar("precheck", [{ table: "measures", label: "Tarife satırları" }, ...(data.deterministic_cost ? [{ table: "cost", label: "Maliyet taslağı" }] : [])])}${applyRatesButton(data.tariff_lookup, "precheck")}${(data.tariff_lookup.warnings || []).length ? `<div class="result-caution">${data.tariff_lookup.warnings.map((item) => escapeHtml(item)).join(" · ")}</div>` : ""}</section>` : ""}
       ${data.origin_documents ? `<section class="answer-section"><h3>Menşe belgeleri · ${escapeHtml(data.origin_documents.regime_name)}</h3><ul class="missing-list">${(data.origin_documents.documents || []).map((item) => `<li><b>${escapeHtml(item.name)}</b> — ${escapeHtml(item.applicability)}${item.note ? ` <small>${escapeHtml(item.note)}</small>` : ""}</li>`).join("")}</ul><div class="result-caution">${escapeHtml((data.origin_documents.caveats || []).join(" "))}</div></section>` : ""}
       ${data.control_lookup ? `<section class="answer-section"><h3>Resmî kontrol tebliği Ek-1 eşleşmeleri</h3>${renderControlTool(data.control_lookup)}</section>` : ""}
       <section class="answer-section"><h3>Eksik veya teyit edilmesi gereken bilgiler</h3><ul class="missing-list">${(data.missing_information?.length ? data.missing_information : ["Kritik eksik alan bildirilmedi."]).map((item) => `<li>${escapeHtml(item)}</li>`).join("")}</ul></section>
@@ -2152,7 +2153,113 @@ function applyRatesButton(tariff, source) {
   return `<div class="apply-rates"><div><b>Bulunan oranları maliyet hesabına aktar</b><small>${escapeHtml(summary)} · ${escapeHtml(tariff.gtip)}${tariff.origin_country ? ` · ${escapeHtml(tariff.origin_country)}` : ""}</small></div><button type="button" data-apply-rates="${escapeHtml(source)}">Bu oranları kullan</button></div>`;
 }
 
+// ---- Dışa aktarım (CSV) ve panoya kopyalama --------------------------------
+const exportStore = {};
+
+function csvCell(value) {
+  const text = value == null ? "" : String(value);
+  return /[;"\n\r]/.test(text) ? `"${text.replace(/"/g, '""')}"` : text;
+}
+
+function csvNumber(value) {
+  // Excel (tr-TR) ondalık ayırıcı olarak virgül bekler.
+  return value == null || value === "" ? "" : String(value).replace(".", ",");
+}
+
+function buildCsv(headers, rows) {
+  return "\ufeff" + [headers, ...rows].map((row) => row.map(csvCell).join(";")).join("\r\n");
+}
+
+function buildTsv(headers, rows) {
+  return [headers, ...rows].map((row) => row.map((value) => String(value ?? "").replace(/[\t\n\r]+/g, " ")).join("\t")).join("\n");
+}
+
+function downloadTextFile(name, text, mime = "text/csv;charset=utf-8") {
+  const blob = new Blob([text], { type: mime });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement("a");
+  link.href = url;
+  link.download = name;
+  document.body.appendChild(link);
+  link.click();
+  link.remove();
+  window.setTimeout(() => URL.revokeObjectURL(url), 1000);
+}
+
+function fileStamp() {
+  return new Date().toISOString().slice(0, 10);
+}
+
+const exportTables = {
+  measures(data) {
+    const tariff = data.tariff || data.tariff_lookup || data;
+    const rows = [...(tariff.measures || []), ...(tariff.conditional_measures || [])].map((item) => [
+      item.gtip, tariffMeasureLabels[item.measure_type] || item.measure_type, csvNumber(item.rate ?? item.rate_text),
+      item.country_group, item.country_group_description, item.description || "", item.footnote || "", item.condition || "",
+      item.list_name, item.source_file, item.source_sheet, item.source_row, item.valid_from, item.retrieved_at, item.archive_sha256,
+    ]);
+    return {
+      name: `tarife-${tariff.gtip}-${(tariff.origin_country || "mense").replace(/\s+/g, "_")}-${fileStamp()}.csv`,
+      headers: ["GTİP", "Önlem", "Oran %", "Menşe sütunu", "Sütun açıklaması", "Eşya tanımı", "Dipnot", "Şart", "Liste", "Kaynak dosya", "Sayfa", "Satır", "Yürürlük", "Alınma tarihi", "Arşiv SHA-256"],
+      rows,
+    };
+  },
+  cost(data) {
+    const cost = data.cost || data.deterministic_cost;
+    if (!cost) return null;
+    const currency = cost.currency || "";
+    const rows = (cost.lines || []).map((line) => [line.label, csvNumber(line.base), csvNumber(line.rate), csvNumber(line.amount), currency, line.formula || ""]);
+    if (cost.total_taxes != null) rows.push(["Toplam vergi", "", "", csvNumber(cost.total_taxes), currency, ""]);
+    if (cost.landed_total != null) rows.push(["Genel toplam (vergiler dahil)", "", "", csvNumber(cost.landed_total), currency, ""]);
+    if (cost.unit_landed_cost != null) rows.push(["Birim maliyet", "", "", csvNumber(cost.unit_landed_cost), currency, ""]);
+    (cost.missing_rates || []).forEach((item) => rows.push(["Eksik girdi", "", "", "", "", item]));
+    const tariff = data.tariff || data.tariff_lookup || {};
+    return {
+      name: `maliyet-${tariff.gtip || "gtip"}-${fileStamp()}.csv`,
+      headers: ["Kalem", "Matrah", "Oran %", "Tutar", "Para birimi", "Formül / not"],
+      rows,
+    };
+  },
+  scenarios(data) {
+    const rows = (data.rows || []).map((row) => [
+      row.origin_country, row.dispatch_country || "", row.origin_documents?.regime_name || "", row.resolved_country_group || "",
+      csvNumber(row.unambiguous_rates?.customs_duty), csvNumber(row.unambiguous_rates?.additional_duty), csvNumber(row.unambiguous_rates?.additional_financial_liability),
+      row.atr_free_circulation ? "evet" : "hayır", (row.origin_proof_required || []).map((key) => tariffMeasureLabels[key] || key).join(", "),
+      Object.entries(row.fallback_rates || {}).map(([key, value]) => `${tariffMeasureLabels[key] || key} %${value}`).join(", "),
+      (row.origin_documents?.documents || []).map((item) => item.name).join(" | "), (row.warnings || []).join(" | "),
+    ]);
+    return {
+      name: `mense-senaryolari-${data.gtip}-${fileStamp()}.csv`,
+      headers: ["Menşe", "Sevk ülkesi", "Rejim", "Sütun", "Gümrük vergisi %", "İGV %", "EMY %", "A.TR serbest dolaşım", "Menşe tevsiki gereken", "Tevsik yoksa oran", "Belgeler", "Uyarılar"],
+      rows,
+    };
+  },
+};
+
+function exportBar(kind, tables) {
+  const buttons = tables.map(({ table, label }) => `
+    <button type="button" data-export="${escapeHtml(kind)}" data-table="${escapeHtml(table)}" data-format="csv">${escapeHtml(label)} · CSV</button>
+    <button type="button" data-export="${escapeHtml(kind)}" data-table="${escapeHtml(table)}" data-format="copy">${escapeHtml(label)} · Kopyala</button>`).join("");
+  return `<div class="export-bar" role="group" aria-label="Dışa aktar">${buttons}</div>`;
+}
+
+document.addEventListener("click", (event) => {
+  const button = event.target.closest("[data-export]");
+  if (!button) return;
+  const data = exportStore[button.dataset.export];
+  const builder = exportTables[button.dataset.table];
+  const table = data && builder ? builder(data) : null;
+  if (!table || !table.rows.length) return showToast("Dışa aktarılacak satır yok.");
+  if (button.dataset.format === "copy") {
+    copyText(buildTsv(table.headers, table.rows), `${table.rows.length} satır panoya kopyalandı (Excel'e yapıştırılabilir).`);
+    return;
+  }
+  downloadTextFile(table.name, buildCsv(table.headers, table.rows));
+  showToast(`${table.name} indirildi.`);
+});
+
 function renderTariffTool(data) {
+  exportStore.tool = data;
   const tariff = data.tariff || data;
   const cost = data.cost;
   const warnings = [...(tariff.warnings || []), ...(cost?.warnings || [])];
@@ -2164,6 +2271,7 @@ function renderTariffTool(data) {
   return `<div class="answer-head"><span class="answer-status${tariff.status === "matched" ? "" : " warning"}">${escapeHtml(tariff.status)}</span><div><h2>${escapeHtml(tariff.gtip)} · ${escapeHtml(tariff.origin_country || "menşe seçilmedi")}</h2><p>Ülke grubu: ${escapeHtml(tariff.resolved_country_group || "çözümlenmedi")} · ${escapeHtml(tariff.as_of)}</p></div></div>
     ${tariffMatchSummary(tariff)}
     <table class="evidence-table"><thead><tr><th>GTİP / Önlem</th><th>Oran</th><th>Menşe sütunu</th><th>Kaynak satırı</th><th>Kanıt</th></tr></thead><tbody>${tariffRows(tariff.measures)}</tbody></table>
+    ${exportBar("tool", [{ table: "measures", label: "Tarife satırları" }, ...(cost ? [{ table: "cost", label: "Maliyet defteri" }] : [])])}
     ${applyRatesButton(tariff, "tool")}
     ${tariff.conditional_measures?.length ? `<details class="advanced-fields"><summary><span>Şarta bağlı askıya alma / nihai kullanım satırları</span><small>${tariff.conditional_measures.length} kayıt</small></summary><table class="evidence-table"><tbody>${tariffRows(tariff.conditional_measures)}</tbody></table></details>` : ""}
     ${costLedger}
@@ -2240,6 +2348,7 @@ $("#tariffForm").addEventListener("submit", async (event) => {
 });
 
 function renderScenarioRows(data) {
+  exportStore.scenarios = data;
   const fmt = (value) => value == null ? "kod başına değişiyor" : `%${numberFormat.format(value)}`;
   return `<div class="scenario-table-wrap"><table class="evidence-table"><thead><tr><th>Menşe</th><th>Sütun</th><th>Gümrük vergisi</th><th>İGV / ek vergi</th><th>Tercih belgesi</th><th>Not</th></tr></thead><tbody>${(data.rows || []).map((row) => {
     const docs = row.origin_documents;
@@ -2255,6 +2364,7 @@ function renderScenarioRows(data) {
     if (row.unambiguous_rates?.customs_duty == null) notes.push("Oran bütün alt GTİP12 satırlarında ortak değil");
     return `<tr><td><b>${escapeHtml(row.origin_country)}</b><small>${escapeHtml(docs?.regime_name || "")}</small></td><td>${escapeHtml(row.resolved_country_group || "—")}</td><td>${escapeHtml(fmt(row.unambiguous_rates?.customs_duty))}</td><td>${escapeHtml(fmt(row.unambiguous_rates?.additional_duty))}</td><td>${escapeHtml(docText)}</td><td>${escapeHtml(notes.join(" · ") || "—")}</td></tr>`;
   }).join("")}</tbody></table></div>
+  ${exportBar("scenarios", [{ table: "scenarios", label: "Senaryo tablosu" }])}
   <p class="rate-warning">Senaryo satırları resmî tarife arşivinin güncel snapshot'ından ve belge kural tablosundan üretilir; bağlayıcı tarife bilgisi değildir.</p>`;
 }
 
