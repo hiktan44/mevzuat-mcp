@@ -1,0 +1,569 @@
+[
+ {
+  "seq": 1,
+  "file_no": "211",
+  "product": "DÜZ CAM\n(İRAN MENŞELİ)/ \nFLOAT GLASS",
+  "gtip": "7004,7005,7006",
+  "country": "İran / Iran",
+  "stage": "III. UZATMA (2024-2027)",
+  "original_start": "2015-12-11",
+  "expires": "2027-12-11",
+  "amounts": [
+   "36 ABD Doları/Ton (12/12/2024 -11/12/2025)",
+   "35 ABD Doları/Ton (12/12/2025 -11/12/2026)",
+   "34 ABD Doları/Ton (12/12/2026 -11/12/2027)"
+  ],
+  "acts": [
+   {
+    "kind": "Soruşturma Açılış / Investigation İnitiation",
+    "number": "2024/10",
+    "rg_no": "32745",
+    "rg_date": "2024-12-07",
+    "published": "",
+    "wto": ""
+   },
+   {
+    "kind": "Geçici Önlem Karar /Provisional Measurement Decree",
+    "number": "2024/9229",
+    "rg_no": "32750",
+    "rg_date": "2024-12-12",
+    "published": "",
+    "wto": ""
+   },
+   {
+    "kind": "Soruşturma Kapanış / Investigation Complete",
+    "number": "2025/3",
+    "rg_no": "32902",
+    "rg_date": "2025-05-16",
+    "published": "",
+    "wto": ""
+   },
+   {
+    "kind": "Önlem Karar / Measurement Decree",
+    "number": "2025/9817",
+    "rg_no": "32902",
+    "rg_date": "2025-05-16",
+    "published": "",
+    "wto": ""
+   }
+  ]
+ },
+ {
+  "seq": 2,
+  "file_no": "242",
+  "product": "POLYESTER ELYAF\n(İRAN MENŞELİ)/\n POLYESTER STAPLE FIBER",
+  "gtip": "5503.20.00.00.00",
+  "country": "İran / Iran",
+  "stage": "III. UZATMA (2023-2026)",
+  "original_start": "2013-09-21",
+  "expires": "2026-09-20",
+  "amounts": [
+   "% 17 (21.9.2023-20.9.2024)",
+   "% 16,5 (21.9.2024-20.9.2025)",
+   "% 16 (21.9.2025-20.9.2026)"
+  ],
+  "acts": [
+   {
+    "kind": "Soruşturma Açılış / Investigation İnitiation",
+    "number": "2023/1",
+    "rg_no": "32162",
+    "rg_date": "2023-04-13",
+    "published": "",
+    "wto": ""
+   },
+   {
+    "kind": "Soruşturma Kapanış / Investigation Complete",
+    "number": "2023/5",
+    "rg_no": "32310",
+    "rg_date": "2023-09-15",
+    "published": "",
+    "wto": ""
+   },
+   {
+    "kind": "Önlem Karar / Measurement Decree",
+    "number": "2023/7615",
+    "rg_no": "32310",
+    "rg_date": "2023-09-15",
+    "published": "",
+    "wto": ""
+   }
+  ]
+ },
+ {
+  "seq": 3,
+  "file_no": "248",
+  "product": "DİŞ FIRÇALARI/ \nTOOTHBRUSHES",
+  "gtip": "9603.21.00.00.19",
+  "country": "Tüm Ülkeler/\nAll Countries",
+  "stage": "II.. UZATMA (2024-2027)",
+  "original_start": "2018-02-03",
+  "expires": "2027-02-02",
+  "amounts": [
+   "0,13 ABD Doları/Adet (3.02.2024-3.02.2025)",
+   "0,11 ABD Doları/Adet (3.02.2025-2.02.2026)",
+   "0,09 ABD Doları/Adet (3.02.2026-2.02.2027)",
+   "GYU Kont. 6.289.963 Adet"
+  ],
+  "acts": [
+   {
+    "kind": "Soruşturma Açılış / Investigation İnitiation",
+    "number": "2023/4",
+    "rg_no": "32250",
+    "rg_date": "2023-07-16",
+    "published": "2023-07-20",
+    "wto": "G/SG/N/6/TUR/23/Suppl.2\nG/SG/N/14/TUR/11/Suppl.1"
+   },
+   {
+    "kind": "Soruşturma Kapanış / Investigation Complete",
+    "number": "2024/3",
+    "rg_no": "32449",
+    "rg_date": "03.02.2024",
+    "published": "03.02.2024",
+    "wto": "G/SG/N/10/TUR/16/Suppl.4\nG/SG/N/11/TUR/22/Suppl.4"
+   },
+   {
+    "kind": "Önlem Karar / Measurement Decree",
+    "number": "2024/8147",
+    "rg_no": "32449",
+    "rg_date": "03.02.2024",
+    "published": "03.02.2024",
+    "wto": ""
+   },
+   {
+    "kind": "Kontenjan Dağıtım Genel ve GYÜ/ Tariff Quate",
+    "number": "2024/5",
+    "rg_no": "32460",
+    "rg_date": "14.02.2024",
+    "published": "",
+    "wto": ""
+   }
+  ]
+ },
+ {
+  "seq": 4,
+  "file_no": "225",
+  "product": "NAYLON VEYA DİĞER POLİAMİDLERDEN İPLİKLER/\n YARNS MADE OF NYLON OR OTHER POLYAMIDES",
+  "gtip": "5402.31\n5402.32\n5402.45\n5402.51\n5402.61",
+  "country": "Tüm Ülkeler/\nAll Countries",
+  "stage": "II. UZATMA (2025-2028)",
+  "original_start": "2019-11-21",
+  "expires": "2028-11-20",
+  "amounts": [
+   "0,0475 - 0,24 ABD Doları/Kg (21.11.2025-20.11.2026)",
+   "0,0450 - 0,23 ABD Doları/Kg (21.11.2026-20.11.2027)",
+   "0,0425 - 0,22 ABD Doları/Kg (21.11.2027-20.11.2028)",
+   "GYÜ Kont: 2.986 Ton"
+  ],
+  "acts": [
+   {
+    "kind": "Soruşturma Açılış / Investigation İnitiation",
+    "number": "2025/5",
+    "rg_no": "32931",
+    "rg_date": "09.10.2022",
+    "published": "19.6.2026",
+    "wto": "G/SG/N/6/TUR/25/Suppl.2"
+   },
+   {
+    "kind": "Soruşturma Kapanış / Investigation Complete",
+    "number": "2025/7",
+    "rg_no": "33081",
+    "rg_date": "19.6.2025",
+    "published": "2025-11-21",
+    "wto": "G/SG/N/10/TUR/17/Suppl.2 \nG/SG/N/11/TUR/24/Suppl.2"
+   },
+   {
+    "kind": "Önlem Karar / Measurement Decree",
+    "number": "2025/10578",
+    "rg_no": "33082",
+    "rg_date": "19.11.2025",
+    "published": "",
+    "wto": ""
+   },
+   {
+    "kind": "Kontenjan Dağıtım Genel ve GYÜ/ Tariff Quate",
+    "number": "2025/8",
+    "rg_no": "33099",
+    "rg_date": "19.11.2026",
+    "published": "",
+    "wto": ""
+   }
+  ]
+ },
+ {
+  "seq": 5,
+  "file_no": "252",
+  "product": "PET CİPS/\n PET CHİPS",
+  "gtip": "3907.69.00.00.00",
+  "country": "Tüm Ülkeler/\nAll Countries",
+  "stage": "I. UZATMA\n(2023-2026)",
+  "original_start": "2019-12-13",
+  "expires": "2026-12-12",
+  "amounts": [
+   "0,054 ABD Doları/Kg (13.12.2023-12.12.2024)",
+   "0,052 ABD Doları/Kg (13.12.2024-12.12.2025)",
+   "0,050 ABD Doları/Kg (13.12.2025-12.12.2026)",
+   "GYÜ Kont: 10.926"
+  ],
+  "acts": [
+   {
+    "kind": "Soruşturma Açılış / Investigation İnitiation",
+    "number": "2023/2",
+    "rg_no": "32187",
+    "rg_date": "6.12.2025",
+    "published": "",
+    "wto": "G/SG/N/6/TUR/27/Suppl.1"
+   },
+   {
+    "kind": "Soruşturma Kapanış / Investigation Complete",
+    "number": "2023/7",
+    "rg_no": "32398",
+    "rg_date": "13.12.2023",
+    "published": "2023-12-13",
+    "wto": "G/SG/N/8/TUR/18/Suppl.1 G/SG/N/10/TUR/18/Suppl.1 G/SG/N/11/TUR/25/Suppl.1"
+   },
+   {
+    "kind": "Önlem Karar / Measurement Decree",
+    "number": "2023/7952",
+    "rg_no": "32398",
+    "rg_date": "13.12.2023",
+    "published": "",
+    "wto": ""
+   },
+   {
+    "kind": "Kontenjan Dağıtım GYÜ/ Tariff Quota",
+    "number": "2023/6",
+    "rg_no": "32411",
+    "rg_date": "2023-12-26",
+    "published": "",
+    "wto": ""
+   }
+  ]
+ },
+ {
+  "seq": 6,
+  "file_no": "251",
+  "product": "POLYESTER ELYAF/\n POLYESTER STAPLE FIBER",
+  "gtip": "5503.20.00.00.00",
+  "country": "Tüm Ülkeler/\nAll Countries",
+  "stage": "I. UZATMA\n(2024-2027)",
+  "original_start": "2021-08-24",
+  "expires": "2027-09-22",
+  "amounts": [
+   "0,048 $/kg (23/9/2024-22/9/2025)",
+   "0,044 $/kg (23/9/2025-22/9/2026)",
+   "0,040 $/kg (23/9/2026-22/9/2027)",
+   "GYÜ Kont: 16.593 Ton"
+  ],
+  "acts": [
+   {
+    "kind": "Soruşturma Açılış / Investigation İnitiation",
+    "number": "2024/6",
+    "rg_no": "32522",
+    "rg_date": "19.04.2024",
+    "published": "2024-04-29",
+    "wto": "G/SG/N/6/TUR/26/Suppl.1"
+   },
+   {
+    "kind": "Soruşturma Kapanış / Investigation Complete",
+    "number": "2024/9",
+    "rg_no": "32668",
+    "rg_date": "20.9.2024",
+    "published": "2024-09-24",
+    "wto": "G/SG/N/10/TUR/19/Suppl.1"
+   },
+   {
+    "kind": "Önlem Karar / Measurement Decree",
+    "number": "2024/8988",
+    "rg_no": "32668",
+    "rg_date": "20.9.2024",
+    "published": "",
+    "wto": ""
+   },
+   {
+    "kind": "Kontenjan Dağıtım GYÜ/ Tariff Quota",
+    "number": "2024/8",
+    "rg_no": "32687",
+    "rg_date": "",
+    "published": "",
+    "wto": ""
+   }
+  ]
+ },
+ {
+  "seq": 7,
+  "file_no": "253",
+  "product": "ÖĞÜTÜCÜ BİLYA/\nGRINDING BALLS",
+  "gtip": "7325.91.00.00.00/ 7326.11.00.00.00",
+  "country": "Tüm Ülkeler/\nAll Countries",
+  "stage": "I. UZATMA (2026-2028)",
+  "original_start": "2022-08-26",
+  "expires": "2028-08-25",
+  "amounts": [
+   "185 ABD Doları/Ton (26.08.2025-25.08.2026)",
+   "180 ABD Doları/Ton (26.08.2026-25.08.2027)",
+   "175 ABD Doları/Ton (26.08.2027-25.08.2028)",
+   "GYÜ Kont:1040 Ton"
+  ],
+  "acts": [
+   {
+    "kind": "Soruşturma Açılış / Investigation İnitiation",
+    "number": "2025/1",
+    "rg_no": "32831",
+    "rg_date": "04.03.2025",
+    "published": "2025-03-13",
+    "wto": "G/SG/N/6/TUR/28/Suppl.1"
+   },
+   {
+    "kind": "Soruşturma Kapanış / Investigation Complete",
+    "number": "2025/6",
+    "rg_no": "32979",
+    "rg_date": "07.08.2025",
+    "published": "",
+    "wto": ""
+   },
+   {
+    "kind": "Önlem Karar / Measurement Decree",
+    "number": "2025/10174",
+    "rg_no": "10174",
+    "rg_date": "07.08.2025",
+    "published": "2025-08-11",
+    "wto": "G/SG/N/8/TUR/20/Suppl.1\nG/SG/N/10/TUR/20/Suppl.1\nG/SG/N/11/TUR/27/Suppl.1"
+   },
+   {
+    "kind": "Kontenjan Dağıtım Genel ve GYÜ/ Tariff Quate",
+    "number": "2025/7",
+    "rg_no": "32995",
+    "rg_date": "23.08.2025",
+    "published": "",
+    "wto": ""
+   }
+  ]
+ },
+ {
+  "seq": 8,
+  "file_no": "254",
+  "product": "FİLMAŞİN ÜRÜNLERİ/\nWIRE RODS PRODUCTS",
+  "gtip": "7213.10.00.00.00, 7213.91.10.00.00, 7213.91.41.00.11, 7213.91.41.00.12, 7213.91.41.00.13, 7213.91.41.00.19, 7213.91.49.00.11, 7213.91.49.00.12, 7213.91.49.00.13, 7213.91.49.00.19, 7213.91.70.10.11, 7213.91.70.10.12, 7213.91.70.10.13, 7213.91.70.10.19, 7213.91.70.90.00, 7213.91.90.00.00, 7213.99.10.00.11, 7213.99.10.00.13, 7213.99.10.00.19, 7213.99.90.10.11, 7213.99.90.10.13, 7213.99.90.10.19, 7213.99.90.90.00, 7227.10.00.00.00, 7227.20.00.00.00, 7227.90.10.00.00, 7227.90.50.00.00, 7227.90.95.00.00",
+  "country": "Tüm Ülkeler/\nAll Countries",
+  "stage": "İLK ÖNLEM (2024-2027)",
+  "original_start": "2024-01-07",
+  "expires": "2027-01-06",
+  "amounts": [
+   "Geçici Önlem 175 ABD Doları/Ton (07.01.2024-24.07.2024)",
+   "175 ABD Doları/Ton (15.06.2024-06.01.2025)",
+   "170 ABD Doları/Ton (07.01.2025-06.01.2026)",
+   "165 ABD Doları/Ton (07.01.2026-06.01.2027)",
+   "GYÜ Kont: 33.898 Ton"
+  ],
+  "acts": [
+   {
+    "kind": "Soruşturma Açılış / Investigation İnitiation",
+    "number": "2023/6",
+    "rg_no": "32358",
+    "rg_date": "03,11,2023",
+    "published": "2023-11-08",
+    "wto": "G/SG/N/6/TUR/29"
+   },
+   {
+    "kind": "Geçici Önlem Tebliğ/Provisional Measure",
+    "number": "2023/8",
+    "rg_no": "32416",
+    "rg_date": "31.12.2023",
+    "published": "",
+    "wto": ""
+   },
+   {
+    "kind": "Geçici Önlem Karar /Provisional Measurement Decree",
+    "number": "2023/8041",
+    "rg_no": "8041",
+    "rg_date": "31.12.2023",
+    "published": "",
+    "wto": "G/SG/N/7/TUR/14\nG/SG/N/11/TUR/29"
+   },
+   {
+    "kind": "Soruşturma Kapanış / Investigation Complete",
+    "number": "2024/8",
+    "rg_no": "32588",
+    "rg_date": "30.06.2024",
+    "published": "2024-07-02",
+    "wto": "G/SG/N/8/TUR/22 G/SG/N/10/TUR/23 G/SG/N/11/TUR/29/Suppl.1"
+   },
+   {
+    "kind": "Kontenjan Dağıtım Genel ve GYÜ/ Tariff Quate",
+    "number": "2024/6",
+    "rg_no": "32591",
+    "rg_date": "2024-07-03",
+    "published": "",
+    "wto": ""
+   }
+  ]
+ },
+ {
+  "seq": 9,
+  "file_no": "255",
+  "product": "KAĞIT (FLUTING VE TESTLAYNER)/\nOTHER PAPER AND CARDBOARD",
+  "gtip": "4805.12.00.00.00\n4805.19.10.00.00\n4805.19.90.00.00\n4805.24.00.00.00\n4805.25.00.00.00",
+  "country": "Tüm Ülkeler/\nAll Countries",
+  "stage": "İLK ÖNLEM\n(2024-2027)",
+  "original_start": "2024-07-28",
+  "expires": "2027-07-27",
+  "amounts": [
+   "87 ABD Doları/Ton (28.07.2024-27.07.2025)",
+   "86 ABD Doları/Ton (28.07.2025-27.07.2026)",
+   "85 ABD Doları/Ton (28.07.2026-27.07.2027)",
+   "GYÜ Kont: 30.624 Ton"
+  ],
+  "acts": [
+   {
+    "kind": "Soruşturma Açılış / Investigation İnitiation",
+    "number": "2024/1",
+    "rg_no": "32427",
+    "rg_date": "12.01.2024",
+    "published": "2024-01-17",
+    "wto": "G/SG/N/6/TUR/31"
+   },
+   {
+    "kind": "Soruşturma Kapanış / Investigation Complete",
+    "number": "2024/7",
+    "rg_no": "32586",
+    "rg_date": "28.06.2024",
+    "published": "",
+    "wto": ""
+   },
+   {
+    "kind": "Önlem Karar / Measurement Decree",
+    "number": "2024/8651",
+    "rg_no": "32586",
+    "rg_date": "28.06.2024",
+    "published": "2024-07-02",
+    "wto": "G/SG/N/8/TUR/21 G/SG/N/10/TUR/22 G/SG/N/11/TUR/30"
+   },
+   {
+    "kind": "Kontenjan Dağıtım Genel ve GYÜ/ Tariff Quate",
+    "number": "2024/7",
+    "rg_no": "32613",
+    "rg_date": "2024-07-26",
+    "published": "",
+    "wto": ""
+   }
+  ]
+ },
+ {
+  "seq": 10,
+  "file_no": "256",
+  "product": "ETİL ASETAT/\nETHYL ACETATE",
+  "gtip": "2915.31.00.00.00",
+  "country": "Tüm Ülkeler/\nAll Countries",
+  "stage": "İLK ÖNLEM\n(2025-2028)",
+  "original_start": "2025-06-23",
+  "expires": "2028-06-22",
+  "amounts": [
+   "110 ABD Doları/Ton (23.06.2025-22.06.2026)",
+   "104 ABD Doları/Ton (23.06.2026-22.06.2027)",
+   "99 ABD Doları/Ton\n(23.06.2027-22.06.2028)",
+   "Genel Kontenjan: 10.000 ton",
+   "GYÜ Kont: 4.644 ton"
+  ],
+  "acts": [
+   {
+    "kind": "Soruşturma Açılış / Investigation İnitiation",
+    "number": "2024/4",
+    "rg_no": "32512",
+    "rg_date": "06.04.2024",
+    "published": "2024-04-08",
+    "wto": "G/SG/N/6/TUR/32"
+   },
+   {
+    "kind": "Soruşturma Kapanış / Investigation Complete",
+    "number": "2025/4",
+    "rg_no": "32908",
+    "rg_date": "23.05.2025",
+    "published": "",
+    "wto": ""
+   },
+   {
+    "kind": "Önlem Karar / Measurement Decree",
+    "number": "2025/9873",
+    "rg_no": "32908",
+    "rg_date": "23.05.2025",
+    "published": "2025-05-27",
+    "wto": "G/SG/N/8/TUR/23\nG/SG/N/10/TUR/24\nG/SG/N/11/TUR/31"
+   },
+   {
+    "kind": "Kontenjan Dağıtım Genel Tariff Quate",
+    "number": "2024/4",
+    "rg_no": "32931",
+    "rg_date": "19.06.2025",
+    "published": "",
+    "wto": ""
+   },
+   {
+    "kind": "Kontenjan DağıtımGYÜ/ Tariff Quate",
+    "number": "2025/5",
+    "rg_no": "32931",
+    "rg_date": "19.06.2025",
+    "published": "",
+    "wto": ""
+   }
+  ]
+ },
+ {
+  "seq": 11,
+  "file_no": "257",
+  "product": "PET RESİN",
+  "gtip": "3907.61.00.00.00",
+  "country": "Tüm Ülkeler/All Countries",
+  "stage": "İLK ÖNLEM\n(2025-2028)",
+  "original_start": "2025-12-31",
+  "expires": "2028-12-30",
+  "amounts": [
+   "Geçici Önlem-100 ABD Doları/Ton (31.12.2025-18.07.2026)",
+   "120 ABD Doları/Ton (19.7.2026-30.12.2026)",
+   "115 ABD Doları/Ton (31.12.2026-30.12.2027)",
+   "110 ABD Doları/Ton (31.12.2027-31.12.2028)",
+   "Geçici Önlem-GYÜ Kont: 11.079 ton"
+  ],
+  "acts": [
+   {
+    "kind": "Soruşturma Açılış / Investigation İnitiation",
+    "number": "2026/1",
+    "rg_no": "33124",
+    "rg_date": "31.12.2025",
+    "published": "2026-01-07",
+    "wto": "G/SG/N/6/TUR/35\nG/SG/N/7/TUR/15\nG/SG/N/11/TUR/32"
+   },
+   {
+    "kind": "Geçici Önlem-Kontenjan Dağıtım Genel ve GYÜ Tariff Quate",
+    "number": "2026/4",
+    "rg_no": "33140",
+    "rg_date": "2026-01-17",
+    "published": "2026-01-17",
+    "wto": ""
+   },
+   {
+    "kind": "Soruşturma Kapanış / Investigation Complete",
+    "number": "2026/4",
+    "rg_no": "33307",
+    "rg_date": "11.7.2026",
+    "published": "11.7.2026",
+    "wto": ""
+   },
+   {
+    "kind": "Önlem Karar / Measurement Decree",
+    "number": "2026/11509",
+    "rg_no": "33307",
+    "rg_date": "11.7.2026",
+    "published": "17.7.2026",
+    "wto": "G/SG/N/8/TUR/24\nG/SG/N/10/TUR/25\nG/SG/N/11/TUR/32/Suppl.1"
+   },
+   {
+    "kind": "Kontenjan Dağıtım Genel ve GYÜ/ Tariff Quate",
+    "number": "",
+    "rg_no": "",
+    "rg_date": "",
+    "published": "",
+    "wto": ""
+   }
+  ]
+ }
+]
