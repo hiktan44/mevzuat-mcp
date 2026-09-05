@@ -40,11 +40,11 @@ kaynak denetimi (evil origin 403), yönetici erişim kontrolü (403/303), mobild
    ürünlerinin GV sütunları ve EFTA/Faroe EMY sütunu hiç yazılmıyor; yerine "askıya alma" satırı üretiliyor.
 4. ✅ DÜZELTİLDİ (5 Eyl) — **İGV Ek-2/Ek-3 sayfaları sessizce atlanıyor.** `tariff_engine.py:442-447` sayfa adında `"ek 2"` (boşluklu)
    arıyor; sayfa `EK-2` ise sonuç boş (doğrulandı). Tarım/işlenmiş tarım İGV'si "yok" görünür.
-5. **A.TR ile gelen üçüncü ülke menşeli eşya uyarısı yok.** Almanya → İGV %0 koşulsuz veriliyor ve maliyete
+5. ✅ DÜZELTİLDİ (5 Eyl) — **A.TR ile gelen üçüncü ülke menşeli eşya uyarısı yok.** Almanya → İGV %0 koşulsuz veriliyor ve maliyete
    otomatik alınıyor (`calculate`, `tariff_engine.py:1077`). Tedarikçi beyanı/menşe şahadetnamesi yoksa İGV ve
    EMY menşe (ya da DÜ) sütunundan alınır. `CustomsInquiry.dispatch_country` tanımlı ama hiçbir yerde okunmuyor;
    "tedarikçi beyanı" ifadesi depoda geçmiyor. Müşavirin en sık düzelttiği hata budur.
-6. **Menşe belgesi kuralı fasıla bakmıyor.** `origin_documents.py:138` yalnız ülke alıyor: AB'den domates (fasıl
+6. ✅ DÜZELTİLDİ (5 Eyl) — **Menşe belgesi kuralı fasıla bakmıyor.** `origin_documents.py:138` yalnız ülke alıyor: AB'den domates (fasıl
    07) ve AKÇT çelik (7216) için A.TR öneriliyor; doğrusu EUR.1/menşe beyanı. Birleşik Krallık, G.Kore,
    Singapur için "EUR.1" deniyor; bu anlaşmalarda EUR.1 yoktur (fatura üzeri menşe beyanı). Testler yanlışı
    kilitliyor (`tests/test_origin_documents.py:21-25`).
@@ -54,7 +54,7 @@ kaynak denetimi (evil origin 403), yönetici erişim kontrolü (403/303), mobild
 8. ✅ DÜZELTİLDİ (5 Eyl, mekanizma) — **Çok ekli tebliğlerde yalnız tek Ek indeksleniyor.** `control_engine.py:192-219` en yoğun tek "Ek-N"
    bölümünü alıyor. 2026/5 Tarım (Ek-1/A…), 2026/19 (Ek-1 tütün, Ek-2 alkol), 2026/3 ve 2026/6 (Ek-2 **ithali
    yasak**), 2026/20 Sağlık, 2026/23 hurda listelerinin kalan ekleri kaybolur → yanlış negatif.
-9. **Kullanıcı oranı resmî oranı sessizce eziyor.** `/api/tariff/cost` gövdesinde `customs_duty_rate: 0`
+9. ✅ DÜZELTİLDİ (5 Eyl) — **Kullanıcı oranı resmî oranı sessizce eziyor.** `/api/tariff/cost` gövdesinde `customs_duty_rate: 0`
    gönderilince Çin porselen için resmî %12 yerine 0 kabul ediliyor, uyarı yok (`tariff_engine.py:1075-1083`).
    Ayrıca `LandedCostInput` bilinmeyen alanı yutuyor (`customs_duty_rat` yazım hatası → resmî oran otomatik girer).
 
@@ -71,7 +71,7 @@ kaynak denetimi (evil origin 403), yönetici erişim kontrolü (403/303), mobild
     `additional_financial_liability_rate`, `customs_duty_rate`/`additional_duty_rate` parametreleri yok
     (`mevzuat_mcp_server.py:2643-2660`); MCP'den KKDF önerisi alınamıyor ve toplam hiç tamamlanamıyor.
     `resolve_turkish_tariff_tree` 4 haneli pozisyonu (6911) reddediyor.
-13. **Tanınmayan menşe sessizce "Diğer Ülkeler".** "Germany", "Almanyaa", "Çin Halk Cumhuriyeti" → sütun 7,
+13. ✅ DÜZELTİLDİ (5 Eyl, uyarı + İngilizce ad desteği) — **Tanınmayan menşe sessizce "Diğer Ülkeler".** "Germany", "Almanyaa", "Çin Halk Cumhuriyeti" → sütun 7,
     `status=matched`, uyarı yok. GTS metadata'daki "Çin Halk Cumhuriyeti" anahtarı kullanıcının "Çin" girdisiyle
     eşleşmiyor. Ukrayna, İran/TPS-OIC/D-8 üyeleri de sütunsuz DÜ'ye düşüyor; Ukrayna STA yürürlüğü doğrulanmalı.
 14. **Kullanılmış eşya ve sevk ülkesi ön değerlendirmeye girmiyor.** "Almanya'dan sevk, Çin menşeli kullanılmış
@@ -200,3 +200,27 @@ kaynak denetimi (evil origin 403), yönetici erişim kontrolü (403/303), mobild
   için `control_sources.json`'da henüz `prohibited` tanımı yapılmadı; resmî metin teyidiyle eklenmelidir.
 - Kalan kritikler: 5 (A.TR + üçüncü ülke menşe uyarısı), 6 (fasıl bazlı menşe belgesi), 9 (kullanıcı oranı
   resmî oranı eziyor) — raporun 2. sırası.
+
+### 5 Eylül 2026 — 2. sıra kapatıldı; 142 test geçiyor
+
+- `countries.py`: tarife motoru ve menşe belgesi modülünün ortak ülke kayıt defteri (94 ülke; Türkçe/İngilizce
+  ad, ISO kodu, rejim, sütun-1 üyeliği, kendi sütun belirteci, anlaşmanın menşe ispat belgesi). Şili, Tunus,
+  İsrail, Venezuela STA listesine alındı; Ukrayna/Ürdün/Lübnan/Japonya/Peru/Kolombiya "yürürlükte değil"
+  uyarısıyla işaretli. Tanınmayan ülke adı artık uyarı veriyor (`origin_recognised=false`); "Germany",
+  "Çin Halk Cumhuriyeti" gibi girdiler çözümleniyor. İki liste arasındaki tutarsızlık testle kilitlendi.
+- `origin_documents.py`: belge kuralı fasıl ve sevk ülkesine bakıyor. AB'den 1-24. fasıl temel tarım ürünü →
+  EUR.1/EUR-MED (1/98 OKK); AKÇT kömür-çelik (2601, 2701-2704, 7201-7229, 7301-7302) → EUR.1; sanayi ve 1/95
+  Ek-1 işlenmiş tarım ürünü → A.TR + tedarikçi beyanı. Birleşik Krallık, G.Kore, Singapur → menşe beyanı;
+  Malezya, BAE, Katar, Venezuela, İran → anlaşmaya özgü belge. AB'den sevk edilen üçüncü ülke menşeli eşyada
+  A.TR "gümrük vergisini kaldırır, İGV/EMY'yi kaldırmaz" satırı ekleniyor.
+- `tariff_engine.lookup(..., dispatch_country=)`: sevk ülkesi AB ve eşya A.TR'ye uygunsa gümrük vergisi AB
+  sütunundan (`atr_free_circulation=true`, A.TR ibrazına bağlı uyarısı), İGV/EMY menşe sütunundan. Menşe
+  AB/EFTA/STA iken İGV/EMY tercihi `origin_proof_required` + `fallback_rates` (tevsik yoksa "Diğer Ülkeler"
+  oranı) ile işaretleniyor.
+- `tariff_engine.calculate`: kullanıcı oranı resmî orandan farklıysa `rate_overrides` ve uyarı;
+  `LandedCostInput` bilinmeyen alanı reddediyor (`extra="forbid"`, yazım hatası 422).
+- API/MCP/arayüz: `/api/tariff/lookup|cost|scenarios` ve MCP `lookup_tariff_measures`,
+  `calculate_import_landed_cost` `dispatch_country` alıyor; MCP maliyet aracına `payment_method`, EMY ve
+  doğrulanmış oran parametreleri eklendi (bulgu 12'nin parametre kısmı). Tarife & Maliyet formuna "Sevk ülkesi"
+  alanı; senaryo tablosunda A.TR / menşe tevsiki notları; ön değerlendirme sevk ülkesini kullanıyor.
+- Kalan: bulgu 12'deki 4 haneli karar ağacı, bulgu 10-11 (arayüz toplamı/EMY-İGV yokluğu %0), 14-26.

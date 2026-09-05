@@ -10,8 +10,12 @@ Son güncelleme: 5 Eylül 2026
   IV/V sayılı liste ayrımı, İGV Ek-2/3 sayfa adı toleransı, tebliğ kodu tam eşleşmesi, çok parçalı ek
   birleştirme ve `scope_annexes` / `list_kind` (ithali yasak listesi) altyapısı. Ayrıntı raporun
   "Düzeltme günlüğü" bölümünde.
-- Sıradaki iş: raporun 2. sırası (A.TR + üçüncü ülke menşe uyarısı, fasıl bazlı A.TR/EUR.1 kuralı,
-  ülke listesinin tek kaynağa alınması, kullanıcı oranı ile resmî oran çakışmasında uyarı, `extra="forbid"`).
+- Raporun 2. sırası da kapatıldı (142 test): `countries.py` ortak ülke kayıt defteri, fasıl + sevk ülkesine
+  göre menşe belgesi kuralı (A.TR / EUR.1 tarım / EUR.1 AKÇT / menşe beyanı), `dispatch_country` ile A.TR
+  serbest dolaşım mantığı ve İGV/EMY menşe tevsiki bayrağı, kullanıcı-oran çakışma uyarısı, `extra="forbid"`,
+  MCP maliyet aracına ödeme şekli/EMY/oran parametreleri. Ayrıntı raporun "Düzeltme günlüğü" bölümünde.
+- Sıradaki iş: raporun 3. sırası (Tarife & Maliyet formuna eksik alanlar, "İGV listesinde yok → %0" mantığı,
+  4 haneli karar ağacı) ve 4. sırası (sunucu tarafı doğrulama, görsel redaksiyon atlaması, görsel boyut kontrolü).
 - Cloudflare "Workers Builds: mevzuat-mcp" kontrolü depoya dışarıdan bağlı ve her commit'te kırmızı;
   depoda Workers yapılandırması yok. Cloudflare panosundan Workers & Pages → mevzuat-mcp → Settings →
   Builds → Disconnect ile kaldırılmalı (MCP'de bu işlem için araç yok).

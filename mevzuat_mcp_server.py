@@ -2591,6 +2591,10 @@ async def lookup_tariff_measures(
         description="Noktalı veya düz 6/8 haneli HS/CN ya da 10/12 haneli Türk tarife kodu.",
     ),
     origin_country: Optional[str] = Field(None, max_length=100, description="Menşe ülke; sevk ülkesinden ayrıdır."),
+    dispatch_country: Optional[str] = Field(
+        None, max_length=100,
+        description="Sevk/çıkış ülkesi menşeden farklıysa; AB'den A.TR ile gelen üçüncü ülke menşeli eşyada gümrük vergisi ve İGV ayrı sütunlardan değerlendirilir.",
+    ),
 ) -> TariffLookupResult:
     """Return source-row-level customs duty and additional-duty evidence.
 
@@ -2599,7 +2603,7 @@ async def lookup_tariff_measures(
     conditional end-use rates, workbook/sheet/row, archive checksum and warnings.
     A rate is automatic only when every matching subline has the same unfootnoted rate.
     """
-    return await tariff_engine.lookup(gtip, origin_country=origin_country)
+    return await tariff_engine.lookup(gtip, origin_country=origin_country, dispatch_country=dispatch_country)
 
 
 @app.tool(
@@ -2658,6 +2662,11 @@ async def calculate_import_landed_cost(
     sct_amount: Optional[float] = Field(None, ge=0, le=1_000_000_000, description="Doğrulanmış ÖTV toplamı; uygulanmadığı doğrulandıysa 0."),
     surveillance_unit_value: Optional[float] = Field(None, ge=0, le=1_000_000_000, description="Gözetim birim kıymeti; uygulanmadığı doğrulandıysa 0."),
     has_surveillance_certificate: Optional[bool] = Field(None),
+    payment_method: Optional[str] = Field(None, max_length=100, description="Ödeme şekli (peşin, mal mukabili, vadeli akreditif, kredili...); KKDF önerisi için."),
+    dispatch_country: Optional[str] = Field(None, max_length=100, description="Sevk/çıkış ülkesi menşeden farklıysa (A.TR/serbest dolaşım değerlendirmesi)."),
+    customs_duty_rate: Optional[float] = Field(None, ge=0, le=1000, description="Yalnızca kullanıcıca doğrulanmış gümrük vergisi oranı; resmî orandan farklıysa uyarı döner."),
+    additional_duty_rate: Optional[float] = Field(None, ge=0, le=1000, description="Yalnızca kullanıcıca doğrulanmış İGV oranı; resmî orandan farklıysa uyarı döner."),
+    additional_financial_liability_rate: Optional[float] = Field(None, ge=0, le=1000, description="Doğrulanmış ek mali yükümlülük oranı; uygulanmıyorsa 0."),
 ) -> dict:
     """Calculate a reproducible landed cost with official safe-to-use tariff rates.
 
@@ -2683,7 +2692,12 @@ async def calculate_import_landed_cost(
             sct_amount=sct_amount,
             surveillance_unit_value=surveillance_unit_value,
             has_surveillance_certificate=has_surveillance_certificate,
+            payment_method=payment_method,
+            customs_duty_rate=customs_duty_rate,
+            additional_duty_rate=additional_duty_rate,
+            additional_financial_liability_rate=additional_financial_liability_rate,
         ),
+        dispatch_country=dispatch_country,
     )
 
 
