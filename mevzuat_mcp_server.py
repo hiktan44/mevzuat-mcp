@@ -2667,6 +2667,12 @@ async def calculate_import_landed_cost(
     customs_duty_rate: Optional[float] = Field(None, ge=0, le=1000, description="Yalnızca kullanıcıca doğrulanmış gümrük vergisi oranı; resmî orandan farklıysa uyarı döner."),
     additional_duty_rate: Optional[float] = Field(None, ge=0, le=1000, description="Yalnızca kullanıcıca doğrulanmış İGV oranı; resmî orandan farklıysa uyarı döner."),
     additional_financial_liability_rate: Optional[float] = Field(None, ge=0, le=1000, description="Doğrulanmış ek mali yükümlülük oranı; uygulanmıyorsa 0."),
+    trt_bandrol_rate: Optional[float] = Field(None, ge=0, le=100, description="TRT bandrol ücreti oranı (uygulanıyorsa)."),
+    exchange_rate: Optional[float] = Field(None, gt=0, le=1_000_000, description="Beyanname tescil tarihli TCMB döviz satış kuru (1 birim döviz = kaç TL); verilirse TL özeti üretilir."),
+    exchange_rate_date: Optional[str] = Field(None, pattern=r"^\d{4}-\d{2}-\d{2}$", description="Kur tarihi (YYYY-AA-GG)."),
+    stamp_duty_try: Optional[float] = Field(None, ge=0, le=1_000_000_000, description="Beyanname damga vergisi (TL, maktu)."),
+    port_storage_try: Optional[float] = Field(None, ge=0, le=1_000_000_000, description="Tescile kadar liman/ardiye/tahmil-tahliye giderleri (TL)."),
+    gekap_try: Optional[float] = Field(None, ge=0, le=1_000_000_000, description="GEKAP tutarı (TL, beyanla ödenir)."),
 ) -> dict:
     """Calculate a reproducible landed cost with official safe-to-use tariff rates.
 
@@ -2696,6 +2702,12 @@ async def calculate_import_landed_cost(
             customs_duty_rate=customs_duty_rate,
             additional_duty_rate=additional_duty_rate,
             additional_financial_liability_rate=additional_financial_liability_rate,
+            trt_bandrol_rate=trt_bandrol_rate,
+            exchange_rate=exchange_rate,
+            exchange_rate_date=exchange_rate_date,
+            stamp_duty_try=stamp_duty_try,
+            port_storage_try=port_storage_try,
+            gekap_try=gekap_try,
         ),
         dispatch_country=dispatch_country,
     )
@@ -2848,6 +2860,12 @@ async def prepare_customs_precheck(
     sct_amount: Optional[float] = Field(None, ge=0, le=1_000_000_000),
     surveillance_unit_value: Optional[float] = Field(None, ge=0, le=1_000_000_000),
     has_surveillance_certificate: Optional[bool] = Field(None),
+    trt_bandrol_rate: Optional[float] = Field(None, ge=0, le=100, description="TRT bandrol ücreti oranı (uygulanıyorsa)."),
+    exchange_rate: Optional[float] = Field(None, gt=0, le=1_000_000, description="Beyanname tescil tarihli TCMB döviz satış kuru (1 birim döviz = kaç TL); verilirse TL özeti üretilir."),
+    exchange_rate_date: Optional[str] = Field(None, pattern=r"^\d{4}-\d{2}-\d{2}$", description="Kur tarihi (YYYY-AA-GG)."),
+    stamp_duty_try: Optional[float] = Field(None, ge=0, le=1_000_000_000, description="Beyanname damga vergisi (TL, maktu)."),
+    port_storage_try: Optional[float] = Field(None, ge=0, le=1_000_000_000, description="Tescile kadar liman/ardiye/tahmil-tahliye giderleri (TL)."),
+    gekap_try: Optional[float] = Field(None, ge=0, le=1_000_000_000, description="GEKAP tutarı (TL, beyanla ödenir)."),
 ) -> CustomsEvidencePack:
     """Prepare the evidence required for a cautious product-specific import answer.
 
@@ -2894,6 +2912,12 @@ async def prepare_customs_precheck(
         sct_amount=sct_amount,
         surveillance_unit_value=surveillance_unit_value,
         has_surveillance_certificate=has_surveillance_certificate,
+        trt_bandrol_rate=trt_bandrol_rate,
+        exchange_rate=exchange_rate,
+        exchange_rate_date=exchange_rate_date,
+        stamp_duty_try=stamp_duty_try,
+        port_storage_try=port_storage_try,
+        gekap_try=gekap_try,
     )
     guard_data(inquiry.model_dump(mode="json"), path="MCP gümrük sorusu")
     return await customs_advisor_service.evidence_pack(inquiry)

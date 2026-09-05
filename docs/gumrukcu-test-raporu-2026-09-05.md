@@ -60,7 +60,7 @@ kaynak denetimi (evil origin 403), yönetici erişim kontrolü (403/303), mobild
 
 ## YÜKSEK — kullanıcı hemen fark eder
 
-10. **Tarife & Maliyet sekmesi hiçbir zaman toplam vermiyor.** Form yalnız fatura/navlun/sigorta/KDV/ödeme
+10. ✅ DÜZELTİLDİ (5 Eyl) — **Tarife & Maliyet sekmesi hiçbir zaman toplam vermiyor.** Form yalnız fatura/navlun/sigorta/KDV/ödeme
     gönderiyor (`web/app.js:2158`); damping, ÖTV, gözetim, EMY ve miktar alanı yok → `landed_total` daima
     "Oran eksik". `cost.missing_rates` ve `unit_landed_cost` ekranda hiç basılmıyor. Tam girdiyle API "complete"
     dönüyor; sorun arayüzde.
@@ -156,11 +156,12 @@ kaynak denetimi (evil origin 403), yönetici erişim kontrolü (403/303), mobild
   bazlı olduğundan henüz tabloya alınmadı.
 - GTİP'e özgü gözetim, tarife kontenjanı, damping/sübvansiyon (menşe + üretici), korunma önlemi tabloları
   (bugün hepsi `not_integrated`; LLM'e giden "kanıt" genel sayfa metni).
-- GTİP bazlı KDV oranı (I/II sayılı liste) ve ÖTV listesi tespiti; TRT bandrolü, GEKAP, beyanname damga vergisi,
-  ardiye/liman gibi tescil öncesi giderler ayrı satır olarak.
+- GTİP bazlı KDV oranı (I/II sayılı liste) ve ÖTV listesi tespiti (canlı liste gerekir). ✅ (5 Eyl) TRT bandrolü (oranla,
+  KDV matrahına dahil), beyanname damga vergisi, tescil öncesi liman/ardiye ve GEKAP ayrı satır olarak.
 - İthalat Tebliğleri indeksi: kullanılmış/yenileştirilmiş eşya (2026/9), ozon (2026/14), yasak/izne tabi eşya;
   ÜGD eklerinin "kapsam / yasak / muaf" ayrımı.
-- TCMB kuru ile TL beyanname özeti; beyanname tescil tarihine göre snapshot seçimi.
+- ✅ (5 Eyl, kur kullanıcıdan) TCMB kuru ile TL beyanname özeti; TCMB'den otomatik kur çekme ve beyanname tescil tarihine
+  göre snapshot seçimi canlı erişim gerektirir.
 - ✅ (5 Eyl) Toplu hesap (CSV/XLSX ile çok satırlı beyanname, 200 satır, şablon indirme, para birimi bazında toplam). ✅ (5 Eyl) CSV dışa aktarım ve panoya kopyalama: tarife satırları,
   maliyet defteri, senaryo tablosu (Tarife & Maliyet ve ön değerlendirme ekranlarında).
 - ✅ (5 Eyl) Kanonik ülke listesi (ISO kodu, TR/EN ad) ve seçici; Türkçe sayı biçimi girişi.
@@ -240,3 +241,11 @@ kaynak denetimi (evil origin 403), yönetici erişim kontrolü (403/303), mobild
   `/api/tariff/bulk/template` şablonu; başlıklar Türkçe/İngilizce takma adlarla eşleşir, sayılar Türkçe biçimde
   okunur; her satır tek satır hesabıyla aynı motor ve uyarılarla hesaplanır, eksik girdili satır `partial` kalır ve
   toplama alınmaz. Tarife & Maliyet sekmesinde "Toplu hesap" bölümü, sonuç tablosu ve CSV/kopyala.
+- Tarife & Maliyet formu tamamlandı: miktar, diğer tescil öncesi gider, EMY, KKDF, damping, ÖTV, gözetim ve gözetim
+  belgesi alanları eklendi; tam girdiyle "complete" toplam, birim maliyet ve eksik girdi listesi ekranda (bulgu 10).
+- TL beyanname özeti (`formula_version` v4): kur + kur tarihi girilince bütün defter TL'ye çevrilir; beyanname damga
+  vergisi ve tescil öncesi liman/ardiye TL olarak KDV matrahına eklenir, GEKAP toplama eklenir ama matraha girmez;
+  KDV TL matrah üzerinden yeniden hesaplanır. TRT bandrol ücreti oranla hesaplanıp KDV matrahına dahil edilir. Alanlar
+  Ürüne Sor maliyet bölümünde, Tarife & Maliyet formunda, MCP `calculate_import_landed_cost` /
+  `prepare_customs_precheck` araçlarında ve toplu hesap şablonunda (Kur, Kur tarihi, Damga vergisi, TRT bandrol,
+  Liman/ardiye, GEKAP sütunları) mevcut; CSV dışa aktarımına TL satırları eklendi.

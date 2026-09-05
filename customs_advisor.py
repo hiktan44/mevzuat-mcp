@@ -139,6 +139,12 @@ class CustomsInquiry(BaseModel):
     sct_amount: float | None = Field(None, ge=0, le=1_000_000_000)
     surveillance_unit_value: float | None = Field(None, ge=0, le=1_000_000_000)
     has_surveillance_certificate: bool | None = None
+    trt_bandrol_rate: float | None = Field(None, ge=0, le=100)
+    exchange_rate: float | None = Field(None, gt=0, le=1_000_000)
+    exchange_rate_date: str | None = Field(None, pattern=r"^\d{4}-\d{2}-\d{2}$")
+    stamp_duty_try: float | None = Field(None, ge=0, le=1_000_000_000)
+    port_storage_try: float | None = Field(None, ge=0, le=1_000_000_000)
+    gekap_try: float | None = Field(None, ge=0, le=1_000_000_000)
 
     @field_validator("candidate_gtip")
     @classmethod
@@ -934,6 +940,12 @@ def _deterministic_cost(
             sct_amount=inquiry.sct_amount,
             surveillance_unit_value=inquiry.surveillance_unit_value,
             has_surveillance_certificate=inquiry.has_surveillance_certificate,
+            trt_bandrol_rate=inquiry.trt_bandrol_rate,
+            exchange_rate=inquiry.exchange_rate,
+            exchange_rate_date=inquiry.exchange_rate_date,
+            stamp_duty_try=inquiry.stamp_duty_try,
+            port_storage_try=inquiry.port_storage_try,
+            gekap_try=inquiry.gekap_try,
         )
     )
     by_code = {line["code"]: line for line in result.lines}
@@ -954,6 +966,7 @@ def _deterministic_cost(
         "status": f"{rate_origin}_rates_complete" if rates_complete else "rates_missing",
         "lines": result.lines,
         "missing_rates": result.missing_rates,
+        "try_summary": result.try_summary,
         "warnings": result.warnings,
         "formula_version": result.formula_version,
         "note": (

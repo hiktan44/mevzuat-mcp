@@ -45,21 +45,29 @@ _COLUMN_ALIASES: dict[str, tuple[str, ...]] = {
     "additional_financial_liability_rate": ("emy", "ek mali yukumluluk", "ek mali yukumluluk orani"),
     "customs_duty_rate": ("gv", "gumruk vergisi", "gumruk vergisi orani", "customs duty"),
     "additional_duty_rate": ("igv", "ilave gumruk vergisi", "additional duty"),
+    "trt_bandrol_rate": ("trt", "trt bandrol", "bandrol", "trt bandrol orani"),
+    "exchange_rate": ("kur", "doviz kuru", "tcmb kuru", "exchange rate", "rate"),
+    "exchange_rate_date": ("kur tarihi", "tescil tarihi", "exchange rate date"),
+    "stamp_duty_try": ("damga", "damga vergisi", "stamp duty"),
+    "port_storage_try": ("liman", "ardiye", "liman ardiye", "tahmil tahliye", "port storage"),
+    "gekap_try": ("gekap", "geri kazanim katilim payi"),
 }
 _NUMERIC_FIELDS = {
     "invoice_value", "freight", "insurance", "other_costs", "quantity", "vat_rate", "kkdf_rate",
     "anti_dumping_amount", "sct_amount", "surveillance_unit_value", "additional_financial_liability_rate",
-    "customs_duty_rate", "additional_duty_rate",
+    "customs_duty_rate", "additional_duty_rate", "trt_bandrol_rate", "exchange_rate", "stamp_duty_try",
+    "port_storage_try", "gekap_try",
 }
 _DEFAULT_ZERO = {"freight", "insurance", "other_costs"}
 
 TEMPLATE_HEADERS = [
     "GTİP", "Menşe", "Sevk ülkesi", "Açıklama", "Fatura bedeli", "Navlun", "Sigorta", "Diğer gider", "Miktar",
     "Para birimi", "KDV", "Ödeme şekli", "KKDF", "Damping", "ÖTV", "Gözetim", "EMY", "GV", "İGV",
+    "Kur", "Kur tarihi", "Damga vergisi", "TRT bandrol", "Liman/ardiye", "GEKAP",
 ]
 TEMPLATE_ROWS = [
-    ["6911.10.00.00.11", "Çin", "", "Porselen yemek takımı", "10000", "1200", "50", "300", "2000", "USD", "20", "mal mukabili", "", "0", "0", "0", "0", "", ""],
-    ["6103.42.00.00.00", "Almanya", "Almanya", "Pamuklu erkek pantolon", "25.000,00", "800", "0", "0", "1500", "EUR", "10", "peşin", "0", "0", "0", "0", "0", "", ""],
+    ["6911.10.00.00.11", "Çin", "", "Porselen yemek takımı", "10000", "1200", "50", "300", "2000", "USD", "20", "mal mukabili", "", "0", "0", "0", "0", "", "", "41,25", "2026-09-05", "1.250", "0", "18.000", "0"],
+    ["6103.42.00.00.00", "Almanya", "Almanya", "Pamuklu erkek pantolon", "25.000,00", "800", "0", "0", "1500", "EUR", "10", "peşin", "0", "0", "0", "0", "0", "", "", "", "", "", "", "", ""],
 ]
 
 
@@ -204,6 +212,10 @@ def _clean_row(row: dict[str, Any]) -> tuple[dict[str, Any], dict[str, Any]]:
     payment = row.get("payment_method")
     if payment:
         payload["payment_method"] = str(payment)[:100]
+    date_text = str(row.get("exchange_rate_date") or "").strip()
+    if date_text:
+        match = re.fullmatch(r"(\d{1,2})[./-](\d{1,2})[./-](\d{4})", date_text)
+        payload["exchange_rate_date"] = f"{match.group(3)}-{int(match.group(2)):02d}-{int(match.group(1)):02d}" if match else date_text[:10]
     certificate = row.get("has_surveillance_certificate")
     if certificate is not None:
         payload["has_surveillance_certificate"] = parse_bool(certificate) if not isinstance(certificate, bool) else certificate
@@ -252,6 +264,8 @@ async def calculate_rows(engine: TariffEngine, rows: list[dict[str, Any]]) -> di
                 "total_taxes": cost.get("total_taxes"),
                 "landed_total": cost.get("landed_total"),
                 "unit_landed_cost": cost.get("unit_landed_cost"),
+                "landed_total_try": (cost.get("try_summary") or {}).get("landed_total_try"),
+                "total_taxes_try": (cost.get("try_summary") or {}).get("total_taxes_try"),
                 "missing_rates": cost.get("missing_rates", []),
                 "rate_overrides": cost.get("rate_overrides", []),
                 "warnings": [w for w in [*tariff.get("warnings", []), *cost.get("warnings", [])] if "kapsam matrisi" not in w][:4],

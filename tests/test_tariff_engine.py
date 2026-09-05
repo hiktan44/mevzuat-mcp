@@ -379,3 +379,48 @@ class TariffPrefixLookupTests(unittest.IsolatedAsyncioTestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class LiraSummaryTests(unittest.TestCase):
+    def _inputs(self, **overrides):
+        base = dict(
+            invoice_value=10000, freight=1200, insurance=50, other_costs=300, quantity=2000, currency="USD",
+            customs_duty_rate=12, additional_duty_rate=19, additional_financial_liability_rate=0, anti_dumping_amount=0,
+            sct_amount=0, surveillance_unit_value=0, vat_rate=20, payment_method="mal mukabili",
+        )
+        base.update(overrides)
+        return LandedCostInput(**base)
+
+    def test_lira_summary_adds_lira_only_costs_to_the_vat_base(self) -> None:
+        result = calculate_landed_cost(self._inputs(exchange_rate=40, exchange_rate_date="2026-09-05", stamp_duty_try=1000, port_storage_try=20000, gekap_try=500))
+        self.assertEqual(result.landed_total, 18765.0)
+        summary = result.try_summary
+        self.assertEqual(summary["status"], "complete")
+        # vat_base 15637.5 USD × 40 = 625500 + 1000 + 20000
+        self.assertEqual(summary["vat_base_try"], 646500.0)
+        self.assertEqual(summary["vat_try"], 129300.0)
+        # taxes excl. VAT: 1350 + 2137.5 + 600 = 4087.5 × 40 = 163500 + stamp 1000 + VAT
+        self.assertEqual(summary["total_taxes_try"], 293800.0)
+        self.assertEqual(summary["landed_total_try"], 646500.0 + 129300.0 + 500)
+        self.assertEqual(summary["unit_landed_cost_try"], round((646500.0 + 129300.0 + 500) / 2000, 4))
+
+    def test_trt_bandrol_enters_the_vat_base(self) -> None:
+        without = calculate_landed_cost(self._inputs())
+        with_bandrol = calculate_landed_cost(self._inputs(trt_bandrol_rate=10))
+        bandrol_line = next(line for line in with_bandrol.lines if line["code"] == "trt_bandrol")
+        # base: 11250 + 1350 + 2137.5 + 0 + 0 = 14737.5 → %10
+        self.assertEqual(bandrol_line["amount"], 1473.75)
+        self.assertEqual(with_bandrol.vat_base, round(without.vat_base + 1473.75, 2))
+        self.assertEqual(with_bandrol.total_taxes, round(without.total_taxes + 1473.75 * 1.2, 2))
+
+    def test_lira_costs_without_a_rate_only_warn(self) -> None:
+        result = calculate_landed_cost(self._inputs(stamp_duty_try=1000))
+        self.assertIsNone(result.try_summary)
+        self.assertTrue(any("kur da girilmelidir" in item for item in result.warnings))
+
+    def test_partial_ledger_gives_partial_lira_summary(self) -> None:
+        result = calculate_landed_cost(self._inputs(vat_rate=None, exchange_rate=40))
+        self.assertEqual(result.status, "partial")
+        self.assertEqual(result.try_summary["status"], "partial")
+        self.assertIsNone(result.try_summary["landed_total_try"])
+        self.assertEqual(result.try_summary["customs_value_try"], 450000.0)

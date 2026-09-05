@@ -940,7 +940,7 @@ function renderCost(cost) {
     <tr><td>KDV matrahı tahmini</td><td>${amount(cost.vat_base_estimate)}</td></tr>
     <tr><td>KDV</td><td>${amount(cost.vat)}</td></tr>
     <tr><td>Bilinen kalemlerle toplam</td><td>${amount(cost.known_landed_total)}</td></tr>
-  </tbody></table><p class="rate-warning">${escapeHtml(cost.note)}</p>`;
+  </tbody></table>${(cost.missing_rates || []).length ? `<div class="result-caution"><b>Toplam için eksik girdiler:</b> ${cost.missing_rates.map((item) => escapeHtml(item)).join(" · ")}</div>` : ""}<p class="rate-warning">${escapeHtml(cost.note)}</p>${renderLiraSummary(cost.try_summary)}`;
 }
 
 function renderMeasureCoverage(coverage) {
@@ -1614,6 +1614,18 @@ function customsRequestBody() {
     sct_amount: nullableNumber("#sctAmount"),
     surveillance_unit_value: nullableNumber("#surveillanceUnitValue"),
     has_surveillance_certificate: $("#hasSurveillanceCertificate").value === "" ? null : $("#hasSurveillanceCertificate").value === "true",
+    ...liraFields("assist"),
+  };
+}
+
+function liraFields(prefix) {
+  return {
+    trt_bandrol_rate: nullableNumber(`#${prefix}TrtBandrolRate`),
+    exchange_rate: nullableNumber(`#${prefix}ExchangeRate`),
+    exchange_rate_date: $(`#${prefix}ExchangeRateDate`)?.value || null,
+    stamp_duty_try: nullableNumber(`#${prefix}StampDutyTry`),
+    port_storage_try: nullableNumber(`#${prefix}PortStorageTry`),
+    gekap_try: nullableNumber(`#${prefix}GekapTry`),
   };
 }
 
@@ -2213,6 +2225,13 @@ const exportTables = {
     if (cost.landed_total != null) rows.push(["Genel toplam (vergiler dahil)", "", "", csvNumber(cost.landed_total), currency, ""]);
     if (cost.unit_landed_cost != null) rows.push(["Birim maliyet", "", "", csvNumber(cost.unit_landed_cost), currency, ""]);
     (cost.missing_rates || []).forEach((item) => rows.push(["Eksik girdi", "", "", "", "", item]));
+    const lira = cost.try_summary;
+    if (lira) {
+      (lira.lines || []).forEach((line) => rows.push([`${line.label} (TL)`, "", "", csvNumber(line.amount_try), "TRY", `kur ${lira.exchange_rate}`]));
+      rows.push(["KDV matrahı (TL)", "", "", csvNumber(lira.vat_base_try), "TRY", ""]);
+      rows.push(["Toplam vergi (TL)", "", "", csvNumber(lira.total_taxes_try), "TRY", ""]);
+      rows.push(["Genel toplam (TL)", "", "", csvNumber(lira.landed_total_try), "TRY", ""]);
+    }
     const tariff = data.tariff || data.tariff_lookup || {};
     return {
       name: `maliyet-${tariff.gtip || "gtip"}-${fileStamp()}.csv`,
@@ -2226,11 +2245,11 @@ const exportTables = {
       row.status, row.resolved_country_group || "", csvNumber(row.rates?.customs_duty), csvNumber(row.rates?.additional_duty),
       csvNumber(row.rates?.financial_liability), csvNumber(row.rates?.kkdf), csvNumber(row.rates?.vat),
       csvNumber(row.customs_value), csvNumber(row.total_taxes), csvNumber(row.landed_total), csvNumber(row.unit_landed_cost),
-      row.currency || "", (row.missing_rates || []).join(" | "), row.error || (row.warnings || []).join(" | "),
+      row.currency || "", csvNumber(row.total_taxes_try), csvNumber(row.landed_total_try), (row.missing_rates || []).join(" | "), row.error || (row.warnings || []).join(" | "),
     ]);
     return {
       name: `toplu-hesap-${fileStamp()}.csv`,
-      headers: ["Satır", "GTİP", "Menşe", "Sevk", "Açıklama", "Durum", "Sütun", "GV %", "İGV %", "EMY %", "KKDF %", "KDV %", "Gümrük kıymeti", "Toplam vergi", "Genel toplam", "Birim maliyet", "Para birimi", "Eksik girdiler", "Hata / uyarılar"],
+      headers: ["Satır", "GTİP", "Menşe", "Sevk", "Açıklama", "Durum", "Sütun", "GV %", "İGV %", "EMY %", "KKDF %", "KDV %", "Gümrük kıymeti", "Toplam vergi", "Genel toplam", "Birim maliyet", "Para birimi", "Toplam vergi (TL)", "Genel toplam (TL)", "Eksik girdiler", "Hata / uyarılar"],
       rows,
     };
   },
@@ -2272,6 +2291,18 @@ document.addEventListener("click", (event) => {
   showToast(`${table.name} indirildi.`);
 });
 
+function renderLiraSummary(summary) {
+  if (!summary) return "";
+  const lira = (value) => value == null ? "—" : `${numberFormat.format(value)} TL`;
+  return `<div class="formula-ledger lira-ledger"><h3>TL beyanname özeti · ${escapeHtml(summary.status === "complete" ? "tam" : "eksik girdi")}</h3>
+    ${(summary.lines || []).map((line) => `<div class="formula-line"><span>${escapeHtml(line.label)}</span><code>${lira(line.amount_try)}</code></div>`).join("")}
+    <div class="formula-line"><strong>KDV matrahı (TL)</strong><code>${lira(summary.vat_base_try)}</code></div>
+    <div class="formula-line"><strong>Toplam vergi (TL)</strong><code>${lira(summary.total_taxes_try)}</code></div>
+    <div class="formula-line"><strong>Genel toplam (TL)</strong><code>${lira(summary.landed_total_try)}</code></div>
+    ${summary.unit_landed_cost_try != null ? `<div class="formula-line"><strong>Birim maliyet (TL)</strong><code>${lira(summary.unit_landed_cost_try)}</code></div>` : ""}
+    <p class="rate-warning">${(summary.notes || []).map((item) => escapeHtml(item)).join(" ")}</p></div>`;
+}
+
 function renderTariffTool(data) {
   exportStore.tool = data;
   const tariff = data.tariff || data;
@@ -2281,7 +2312,9 @@ function renderTariffTool(data) {
     ${(cost.lines || []).map((line) => `<div class="formula-line"><span>${escapeHtml(line.label)} <small>${escapeHtml(line.formula)}</small></span><code>${line.amount == null ? "—" : `${numberFormat.format(line.amount)} ${escapeHtml(cost.currency)}`}</code></div>`).join("")}
     <div class="formula-line"><strong>Toplam vergi</strong><code>${cost.total_taxes == null ? "Oran eksik" : `${numberFormat.format(cost.total_taxes)} ${escapeHtml(cost.currency)}`}</code></div>
     <div class="formula-line"><strong>Genel toplam (vergiler dahil)</strong><code>${cost.landed_total == null ? "Oran eksik" : `${numberFormat.format(cost.landed_total)} ${escapeHtml(cost.currency)}`}</code></div>
-    <p class="rate-warning">Toplamlar sabit beyanname harcını içermez; kredili/vadeli ödemede KKDF eklenir, peşin ödemede bu kalem %0'dır. Kesin tutar için beyan öncesi gümrük müşaviri teyidi alın.</p></div>` : "";
+    ${cost.unit_landed_cost != null ? `<div class="formula-line"><strong>Birim maliyet</strong><code>${numberFormat.format(cost.unit_landed_cost)} ${escapeHtml(cost.currency)}</code></div>` : ""}
+    ${(cost.missing_rates || []).length ? `<div class="result-caution"><b>Toplam için eksik girdiler:</b> ${cost.missing_rates.map((item) => escapeHtml(item)).join(" · ")}</div>` : ""}
+    <p class="rate-warning">Kredili/vadeli ödemede KKDF eklenir, peşin ödemede bu kalem %0'dır. Beyanname damga vergisi ve TL giderler kur girildiğinde TL özetinde gösterilir. Kesin tutar için beyan öncesi gümrük müşaviri teyidi alın.</p></div>${renderLiraSummary(cost.try_summary)}` : "";
   return `<div class="answer-head"><span class="answer-status${tariff.status === "matched" ? "" : " warning"}">${escapeHtml(tariff.status)}</span><div><h2>${escapeHtml(tariff.gtip)} · ${escapeHtml(tariff.origin_country || "menşe seçilmedi")}</h2><p>Ülke grubu: ${escapeHtml(tariff.resolved_country_group || "çözümlenmedi")} · ${escapeHtml(tariff.as_of)}</p></div></div>
     ${tariffMatchSummary(tariff)}
     <table class="evidence-table"><thead><tr><th>GTİP / Önlem</th><th>Oran</th><th>Menşe sütunu</th><th>Kaynak satırı</th><th>Kanıt</th></tr></thead><tbody>${tariffRows(tariff.measures)}</tbody></table>
@@ -2341,8 +2374,14 @@ $("#tariffForm").addEventListener("submit", async (event) => {
       ? await fetchJson("/api/tariff/lookup", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(common) })
       : await fetchJson("/api/tariff/cost", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({
           ...common, invoice_value: invoice, freight: nullableNumber("#tariffFreight") || 0,
-          insurance: nullableNumber("#tariffInsurance") || 0, currency: $("#tariffCurrency").value,
+          insurance: nullableNumber("#tariffInsurance") || 0, other_costs: nullableNumber("#tariffOtherCosts") || 0,
+          quantity: nullableNumber("#tariffQuantity"), currency: $("#tariffCurrency").value,
           vat_rate: nullableNumber("#tariffVat"), payment_method: $("#tariffPayment").value || null,
+          additional_financial_liability_rate: nullableNumber("#tariffEmy"), kkdf_rate: nullableNumber("#tariffKkdf"),
+          anti_dumping_amount: nullableNumber("#tariffAntiDumping"), sct_amount: nullableNumber("#tariffSct"),
+          surveillance_unit_value: nullableNumber("#tariffSurveillance"),
+          has_surveillance_certificate: $("#tariffSurveillanceCertificate").value === "" ? null : $("#tariffSurveillanceCertificate").value === "true",
+          ...liraFields("tariff"),
         }) });
     output.innerHTML = renderTariffTool(data);
     const scenarioBox = $("#scenarioBox");
@@ -2395,7 +2434,7 @@ function renderBulkResult(data) {
       <td>${pct(row.rates?.customs_duty)} / ${pct(row.rates?.additional_duty)}</td>
       <td>${money(row.customs_value, row.currency)}</td>
       <td>${money(row.total_taxes, row.currency)}</td>
-      <td>${money(row.landed_total, row.currency)}</td>
+      <td>${money(row.landed_total, row.currency)}${row.landed_total_try != null ? `<small>${numberFormat.format(row.landed_total_try)} TL</small>` : ""}</td>
       <td>${escapeHtml(row.error || (row.missing_rates || []).join(", ") || (row.warnings || [])[0] || "")}</td>
     </tr>`).join("");
   const totals = (data.totals || []).map((item) => `<div class="formula-line"><span><strong>${escapeHtml(item.currency)}</strong> <small>${item.complete_rows}/${item.rows} satır tam</small></span><code>kıymet ${numberFormat.format(item.customs_value)} · vergi ${numberFormat.format(item.total_taxes)} · toplam ${numberFormat.format(item.landed_total)}</code></div>`).join("");

@@ -240,6 +240,15 @@ class LandedCostInput(BaseModel):
     surveillance_unit_value: float | None = Field(None, ge=0, le=1_000_000_000)
     has_surveillance_certificate: bool | None = None
     payment_method: str | None = Field(None, max_length=100)
+    # TRT bandrol ücreti (3093 s. Kanun): oran ürün grubuna göre; matrah gümrük kıymeti + ithalat vergileri (ÖTV/KDV hariç).
+    trt_bandrol_rate: float | None = Field(None, ge=0, le=100)
+    # TL beyanname özeti: beyanname tescil tarihindeki TCMB döviz satış kuru (1 birim döviz = kaç TL).
+    exchange_rate: float | None = Field(None, gt=0, le=1_000_000)
+    exchange_rate_date: str | None = Field(None, max_length=10, pattern=r"^\d{4}-\d{2}-\d{2}$")
+    # Yalnız TL olarak ödenen kalemler; kur verilince TL özetine girer.
+    stamp_duty_try: float | None = Field(None, ge=0, le=1_000_000_000)      # beyanname damga vergisi (KDV matrahına dahil)
+    port_storage_try: float | None = Field(None, ge=0, le=1_000_000_000)    # tescile kadar liman/ardiye/tahmil-tahliye (KDV matrahına dahil)
+    gekap_try: float | None = Field(None, ge=0, le=1_000_000_000)           # GEKAP; gümrükte değil beyanla ödenir (KDV matrahı dışı)
 
     @field_validator("currency")
     @classmethod
@@ -261,8 +270,9 @@ class LandedCostResult(BaseModel):
     unit_landed_cost: float | None = None
     missing_rates: list[str] = Field(default_factory=list)
     rate_overrides: list[dict[str, Any]] = Field(default_factory=list)
+    try_summary: dict[str, Any] | None = None
     warnings: list[str] = Field(default_factory=list)
-    formula_version: str = "tr-landed-cost-v3"
+    formula_version: str = "tr-landed-cost-v4"
 
 
 @dataclass(slots=True)
@@ -1337,6 +1347,18 @@ def calculate_landed_cost(data: LandedCostInput) -> LandedCostResult:
     else:
         lines.append({"code": "sct", "label": "ÖTV", "base": None, "rate": None, "amount": round(data.sct_amount, 2), "formula": "doğrulanmış toplam tutar"})
 
+    trt_bandrol = None
+    if data.trt_bandrol_rate is not None:
+        bandrol_base = customs_value + (duty or 0.0) + (additional or 0.0) + (emy or 0.0) + (data.anti_dumping_amount or 0.0)
+        trt_bandrol = percentage("trt_bandrol", "TRT bandrol ücreti", bandrol_base, data.trt_bandrol_rate)
+        if data.trt_bandrol_rate > 0:
+            warnings.append(
+                "TRT bandrol ücreti matrahı gümrük kıymeti + ithalat vergileri (ÖTV ve KDV hariç) olarak alındı; "
+                "ürün grubuna göre oran ve matrah 3093 sayılı Kanun ve güncel bandrol tebliğinden doğrulanmalıdır."
+            )
+    else:
+        warnings.append("TRT bandrol ücreti (TV, radyo, telefon, taşıt vb.) uygulanıyorsa oranını girin; girilmedi, hesaba alınmadı.")
+
     pre_vat_known = all(
         value is not None
         for value in (duty, additional, emy, data.anti_dumping_amount, kkdf_amount, data.sct_amount, data.surveillance_unit_value)
@@ -1344,7 +1366,10 @@ def calculate_landed_cost(data: LandedCostInput) -> LandedCostResult:
     vat_base = None
     vat = None
     if pre_vat_known:
-        vat_base = customs_value + duty + additional + emy + data.anti_dumping_amount + kkdf_amount + data.sct_amount + data.other_costs
+        vat_base = (
+            customs_value + duty + additional + emy + data.anti_dumping_amount + kkdf_amount + data.sct_amount
+            + (trt_bandrol or 0.0) + data.other_costs
+        )
         vat = percentage("vat", "KDV oranı", vat_base, data.vat_rate)
     else:
         if data.vat_rate is None:
@@ -1352,13 +1377,16 @@ def calculate_landed_cost(data: LandedCostInput) -> LandedCostResult:
         lines.append({"code": "vat", "label": "KDV", "base": None, "rate": data.vat_rate, "amount": None, "formula": "önceki vergi oranları eksik"})
     total = vat_base + vat if vat_base is not None and vat is not None else None
     unit = total / data.quantity if total is not None and data.quantity else None
-    tax_components = (duty, additional, emy, data.anti_dumping_amount, kkdf_amount, data.sct_amount, vat)
+    tax_components = (duty, additional, emy, data.anti_dumping_amount, kkdf_amount, data.sct_amount, trt_bandrol or 0.0, vat)
     total_taxes = sum(component for component in tax_components if component is not None) if all(
         component is not None for component in tax_components
     ) else None
-    warnings.append(
-        "Gümrük beyannamesi başına sabit işlem harcı ayrıca uygulanır; tutarı her yıl yeniden belirlendiği için güncel miktarı teyit edin."
-    )
+    try_summary = _try_summary(data, customs_value, vat_base, total_taxes, vat, lines, warnings)
+    if data.stamp_duty_try is None and data.exchange_rate is None:
+        warnings.append(
+            "Gümrük beyannamesi damga vergisi (maktu, TL) ayrıca ödenir ve KDV matrahına dahildir; tutarı her yıl yeniden "
+            "belirlendiği için kur ile birlikte girildiğinde TL özetine alınır."
+        )
     status: Literal["complete", "partial", "blocked"] = "complete" if total is not None and not missing else "partial"
     return LandedCostResult(
         status=status, currency=data.currency, lines=lines, customs_value=round(customs_value, 2),
@@ -1366,5 +1394,72 @@ def calculate_landed_cost(data: LandedCostInput) -> LandedCostResult:
         total_taxes=round(total_taxes, 2) if total_taxes is not None else None,
         landed_total=round(total, 2) if total is not None else None,
         unit_landed_cost=round(unit, 4) if unit is not None else None,
-        missing_rates=list(dict.fromkeys(missing)), warnings=warnings,
+        missing_rates=list(dict.fromkeys(missing)), try_summary=try_summary, warnings=warnings,
     )
+
+
+def _try_summary(
+    data: LandedCostInput,
+    customs_value: float,
+    vat_base: float | None,
+    total_taxes: float | None,
+    vat: float | None,
+    lines: list[dict[str, Any]],
+    warnings: list[str],
+) -> dict[str, Any] | None:
+    """Convert the ledger to Turkish lira and add the lira-only declaration costs.
+
+    Customs value and every import tax are converted with the declaration-date exchange
+    rate; stamp duty and pre-registration port/storage costs enter the VAT base in lira,
+    GEKAP is a post-clearance cost outside the VAT base.  VAT is recalculated on the lira
+    base so the lira summary is internally consistent.
+    """
+    lira_items = {
+        "stamp_duty": data.stamp_duty_try, "port_storage": data.port_storage_try, "gekap": data.gekap_try,
+    }
+    if data.exchange_rate is None:
+        if any(value for value in lira_items.values()):
+            warnings.append("Damga vergisi / liman-ardiye / GEKAP TL tutarları girildi; TL özeti için beyanname tarihli kur da girilmelidir.")
+        return None
+    rate = float(data.exchange_rate)
+    if data.currency == "TRY":
+        rate = 1.0
+    to_try = lambda value: round(float(value) * rate, 2)  # noqa: E731
+    try_lines = [
+        {"code": line["code"], "label": line["label"], "amount_try": to_try(line["amount"]) if line.get("amount") is not None else None}
+        for line in lines if line["code"] != "vat"
+    ]
+    stamp = float(data.stamp_duty_try or 0.0)
+    port = float(data.port_storage_try or 0.0)
+    gekap = float(data.gekap_try or 0.0)
+    try_lines.append({"code": "stamp_duty", "label": "Beyanname damga vergisi (TL)", "amount_try": round(stamp, 2) if data.stamp_duty_try is not None else None})
+    try_lines.append({"code": "port_storage", "label": "Tescil öncesi liman / ardiye / tahmil-tahliye (TL)", "amount_try": round(port, 2) if data.port_storage_try is not None else None})
+    complete = vat_base is not None and vat is not None and total_taxes is not None
+    vat_base_try = round(vat_base * rate + stamp + port, 2) if complete else None
+    vat_try = round(vat_base_try * (data.vat_rate or 0.0) / 100, 2) if complete and data.vat_rate is not None else None
+    try_lines.append({"code": "vat", "label": "KDV (TL matrah üzerinden)", "amount_try": vat_try})
+    try_lines.append({"code": "gekap", "label": "GEKAP (beyanla ödenir, KDV matrahı dışı)", "amount_try": round(gekap, 2) if data.gekap_try is not None else None})
+    taxes_ex_vat = (total_taxes - vat) if complete else None
+    total_taxes_try = round(taxes_ex_vat * rate + stamp + vat_try, 2) if complete and vat_try is not None else None
+    landed_total_try = round(vat_base_try + vat_try + gekap, 2) if complete and vat_try is not None else None
+    unit_try = round(landed_total_try / data.quantity, 4) if landed_total_try is not None and data.quantity else None
+    notes = [
+        f"Kur: 1 {data.currency} = {rate:g} TL" + (f" ({data.exchange_rate_date})" if data.exchange_rate_date else "") + "; beyanname tescil tarihindeki TCMB döviz satış kuru esas alınmalıdır.",
+        "Damga vergisi ve tescil öncesi liman/ardiye giderleri KDV matrahına dahil edildi; GEKAP toplama eklendi, KDV matrahına alınmadı.",
+    ]
+    if data.stamp_duty_try is None:
+        notes.append("Beyanname damga vergisi girilmedi; maktu tutarı ekleyin.")
+    return {
+        "status": "complete" if landed_total_try is not None else "partial",
+        "exchange_rate": rate,
+        "exchange_rate_date": data.exchange_rate_date,
+        "currency": data.currency,
+        "customs_value_try": to_try(customs_value),
+        "lines": try_lines,
+        "vat_base_try": vat_base_try,
+        "vat_try": vat_try,
+        "total_taxes_try": total_taxes_try,
+        "landed_total_try": landed_total_try,
+        "unit_landed_cost_try": unit_try,
+        "notes": notes,
+    }
