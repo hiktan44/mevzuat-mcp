@@ -39,6 +39,7 @@ from mevzuat_mcp_server import (
     tariff_engine,
     ticaret_client,
 )
+from countries import COUNTRIES, PENDING_AGREEMENTS
 from origin_documents import origin_document_requirements
 from mevzuat_mcp_server import (
     app as mcp,
@@ -1517,6 +1518,34 @@ async def web_email_precheck(request: Request):
     except Exception:
         logger.exception("Precheck e-mail delivery failed")
         return JSONResponse({"error": "E-posta şu anda gönderilemedi; kısa süre sonra yeniden deneyin."}, status_code=502)
+
+
+@mcp.custom_route("/api/tariff/countries", methods=["GET"])
+async def web_tariff_countries(request: Request):
+    """Canonical origin/dispatch country list shared by the tariff and origin-document modules."""
+    limited = _rate_limit_response(request, "tariff-countries", limit=60, window_seconds=60)
+    if limited:
+        return limited
+    regime_labels = {
+        "eu": "AB (Gümrük Birliği)", "efta": "EFTA", "fta": "STA", "pta": "Tercihli Ticaret Anlaşması",
+        "kktc": "KKTC", "mfn": "Tercihsiz",
+    }
+    items = [
+        {
+            "key": country.key,
+            "name": country.name,
+            "iso2": country.iso2,
+            "regime": country.regime,
+            "regime_label": regime_labels.get(country.regime, country.regime),
+            "aliases": list(country.aliases),
+            "agreement": country.agreement or None,
+            "pending_note": PENDING_AGREEMENTS.get(country.key),
+        }
+        for country in sorted(COUNTRIES, key=lambda item: item.name.casefold())
+    ]
+    response = JSONResponse({"items": items, "count": len(items)})
+    response.headers["Cache-Control"] = "public, max-age=3600"
+    return response
 
 
 @mcp.custom_route("/api/tariff/status", methods=["GET"])

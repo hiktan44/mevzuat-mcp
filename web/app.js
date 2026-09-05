@@ -95,11 +95,67 @@ function safeUrl(value) {
   }
 }
 
-function nullableNumber(selector) {
-  const value = $(selector)?.value?.trim();
+function parseLocalizedNumber(raw) {
+  // Accepts Turkish ("1.234,56", "12,5"), plain ("1234.56") and thousands-only ("12.500") input.
+  let value = String(raw ?? "").trim().replace(/\s+/g, "").replace(/[₺$€£]|TL|USD|EUR|GBP|%/gi, "");
   if (!value) return null;
+  if (value.includes(",")) {
+    value = value.replace(/\./g, "").replace(",", ".");
+  } else if (/^-?\d{1,3}(\.\d{3})+$/.test(value)) {
+    value = value.replace(/\./g, "");
+  }
   const number = Number(value);
   return Number.isFinite(number) ? number : null;
+}
+
+function nullableNumber(selector) {
+  const input = $(selector);
+  const number = parseLocalizedNumber(input?.value);
+  if (number == null) {
+    input?.classList.toggle("input-invalid", Boolean(input?.value?.trim()));
+    return null;
+  }
+  const min = input?.dataset?.min != null ? Number(input.dataset.min) : null;
+  const max = input?.dataset?.max != null ? Number(input.dataset.max) : null;
+  const outOfRange = (min != null && number < min) || (max != null && number > max);
+  input?.classList.toggle("input-invalid", outOfRange);
+  return outOfRange ? null : number;
+}
+
+const localizedNumberFormat = new Intl.NumberFormat("tr-TR", { maximumFractionDigits: 4 });
+
+function bindLocalizedNumberInputs() {
+  document.querySelectorAll("input[data-number]").forEach((input) => {
+    input.addEventListener("blur", () => {
+      const number = parseLocalizedNumber(input.value);
+      if (number == null) {
+        input.classList.toggle("input-invalid", Boolean(input.value.trim()));
+        return;
+      }
+      input.classList.remove("input-invalid");
+      input.value = localizedNumberFormat.format(number);
+    });
+    input.addEventListener("focus", () => {
+      // Raw digits are easier to edit; the value is re-formatted on blur.
+      const number = parseLocalizedNumber(input.value);
+      if (number != null) input.value = String(number).replace(".", ",");
+    });
+  });
+}
+
+async function loadCountryList() {
+  const list = $("#countryList");
+  if (!list) return;
+  try {
+    const data = await fetchJson("/api/tariff/countries");
+    list.innerHTML = (data.items || []).map((item) => {
+      const label = `${item.iso2} · ${item.regime_label}${item.pending_note ? " · yürürlük doğrulanmalı" : ""}`;
+      return `<option value="${escapeHtml(item.name)}" label="${escapeHtml(label)}"></option>`;
+    }).join("");
+    state.countryList = data.items || [];
+  } catch (error) {
+    console.warn("Ülke listesi yüklenemedi", error);
+  }
 }
 
 function formatDate(value, includeTime = false) {
@@ -2418,5 +2474,7 @@ $("#themeToggle").addEventListener("click", () => {
 
 loadCatalogStatus();
 loadAuthState();
+loadCountryList();
+bindLocalizedNumberInputs();
 if (new URLSearchParams(location.search).get("scope") === "customs" || location.hash === "#customs") switchScope("customs");
 runTicaretSearch({ offset: 0 });

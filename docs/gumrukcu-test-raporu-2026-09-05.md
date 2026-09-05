@@ -100,7 +100,7 @@ kaynak denetimi (evil origin 403), yönetici erişim kontrolü (403/303), mobild
     `pendingSubmit` sonsuza dek bekler.
 24. **"Bu cihazda kayıtlı ön değerlendirmeler" paneli ölü**; `gumrukce-scenarios` anahtarı hiç yazılmıyor.
 25. **Gözetim için miktar birimi yok** (adet/kg/çift/m²); `quantity` hem gözetim çarpanı hem birim maliyet böleni.
-26. **Sayı girişi Türkçe biçimi yutuyor**: "1.234,56" → `null`, fatura yok sayılıyor; API "TL" para birimini
+26. ✅ DÜZELTİLDİ (5 Eyl) — **Sayı girişi Türkçe biçimi yutuyor**: "1.234,56" → `null`, fatura yok sayılıyor; API "TL" para birimini
     reddediyor (TRY olmalı, seçici yok).
 
 ## ORTA
@@ -151,8 +151,9 @@ kaynak denetimi (evil origin 403), yönetici erişim kontrolü (403/303), mobild
 
 ## Bir müşavirin bekleyip bulamayacağı özellikler
 
-- Menşe ↔ sevk/çıkış ülkesi ayrımı; A.TR + tedarikçi beyanı/menşe şahadetnamesi koşulu; fasıl bazlı A.TR /
-  EUR.1 / menşe beyanı / AKÇT kuralı; onaylanmış ihracatçı ve fatura beyanı eşikleri.
+- ✅ (5 Eyl, eşik tutarları hariç) Menşe ↔ sevk/çıkış ülkesi ayrımı; A.TR + tedarikçi beyanı/menşe şahadetnamesi koşulu;
+  fasıl bazlı A.TR / EUR.1 / menşe beyanı / AKÇT kuralı. Onaylanmış ihracatçı ve fatura beyanı eşik tutarları anlaşma
+  bazlı olduğundan henüz tabloya alınmadı.
 - GTİP'e özgü gözetim, tarife kontenjanı, damping/sübvansiyon (menşe + üretici), korunma önlemi tabloları
   (bugün hepsi `not_integrated`; LLM'e giden "kanıt" genel sayfa metni).
 - GTİP bazlı KDV oranı (I/II sayılı liste) ve ÖTV listesi tespiti; TRT bandrolü, GEKAP, beyanname damga vergisi,
@@ -161,7 +162,7 @@ kaynak denetimi (evil origin 403), yönetici erişim kontrolü (403/303), mobild
   ÜGD eklerinin "kapsam / yasak / muaf" ayrımı.
 - TCMB kuru ile TL beyanname özeti; beyanname tescil tarihine göre snapshot seçimi.
 - Toplu hesap (Excel/CSV ile çok satırlı beyanname), Excel/CSV dışa aktarım, panoya kopyalama.
-- Kanonik ülke listesi (ISO kodu, TR/EN ad) ve seçici; Türkçe sayı biçimi girişi.
+- ✅ (5 Eyl) Kanonik ülke listesi (ISO kodu, TR/EN ad) ve seçici; Türkçe sayı biçimi girişi.
 - İzleme listesinin sunucuda tutulması ve değişiklikte e-posta; danışman e-posta bildirimi.
 - Ekip paketinde vadedilen paylaşılan kanıt dosyaları (ekip/kuruluş kavramı yok).
 - Zorunlu belge listesinin yapılandırılmış satırlara dönüştürülmesi (muafiyet, numune, sanayici istisnası).
@@ -224,3 +225,10 @@ kaynak denetimi (evil origin 403), yönetici erişim kontrolü (403/303), mobild
   doğrulanmış oran parametreleri eklendi (bulgu 12'nin parametre kısmı). Tarife & Maliyet formuna "Sevk ülkesi"
   alanı; senaryo tablosunda A.TR / menşe tevsiki notları; ön değerlendirme sevk ülkesini kullanıyor.
 - Kalan: bulgu 12'deki 4 haneli karar ağacı, bulgu 10-11 (arayüz toplamı/EMY-İGV yokluğu %0), 14-26.
+
+### 5 Eylül 2026 (akşam) — eksik özellik listesi, 1. kalem
+
+- `/api/tariff/countries`: `countries.py` kayıt defterini (94 ülke; ad, ISO kodu, rejim, yürürlük notu) arayüze
+  açıyor; menşe ve sevk ülkesi alanları `datalist` ile öneri listesi gösteriyor.
+- Para/oran alanları Türkçe biçim kabul ediyor ("1.234,56", "12.500", "12,5"); ayrıştırılamayan veya aralık dışı
+  değer kırmızı çerçeveyle işaretleniyor ve hesaba girmiyor; odak kaybında değer tr-TR biçimiyle yeniden yazılıyor.
