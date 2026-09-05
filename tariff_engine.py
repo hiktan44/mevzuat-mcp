@@ -72,6 +72,17 @@ def _number(value: Any) -> tuple[float | None, str]:
     return float(canonical), text[:160]
 
 
+
+def _list_name_is(file_key: str, numeral: str) -> bool:
+    """True when the (normalised) file name names exactly this Roman-numeral list."""
+    return re.search(rf"(?:^|[^a-z]){numeral}\s*say", file_key) is not None
+
+
+def _annex_sheet_is(sheet_key: str, number: int) -> bool:
+    """Match 'Ek-2', 'EK 2', 'Ek2' and similar official sheet names."""
+    return re.search(rf"(?:^|[^a-z])ek\s*[-–]?\s*{number}(?!\d)", sheet_key) is not None
+
+
 def _official_url(url: str) -> bool:
     return (urlsplit(url).hostname or "").lower().rstrip(".") in _OFFICIAL_HOSTS
 
@@ -274,10 +285,14 @@ _EU_COUNTRIES = {
     "portekiz", "romanya", "slovakya", "slovenya", "yunanistan",
 }
 _EFTA_COUNTRIES = {"izlanda", "lihtenstayn", "norvec", "isvicre"}
+# Countries that have their own column token in at least one official list.
 _EXPLICIT_LABELS = {
     "guney kore": "G.KORE", "kore cumhuriyeti": "G.KORE", "malezya": "MLZ",
     "singapur": "SNG", "kosova": "KOS", "iran": "İRAN", "venezuela": "VNZ",
-    "birlesik arap emirlikleri": "BAE", "bae": "BAE", "gurcistan": "GÜR",
+    "bolivarci venezuela cumhuriyeti": "VNZ",
+    "birlesik arap emirlikleri": "BAE", "bae": "BAE", "united arab emirates": "BAE",
+    "gurcistan": "GÜR", "bosna-hersek": "B-HER", "bosna hersek": "B-HER",
+    "birlesik krallik": "BK", "ingiltere": "BK", "faroe adalari": "F.ADA",
 }
 
 
@@ -439,25 +454,27 @@ class TariffEngine:
                 return -1, {}, "", None
             if "ek-1" in file_key:
                 return 0, {2: "1", 3: "2", 4: "3", 5: "4", 6: "5", 7: "6", 8: "7"}, "İGV Ek-1", None
-            if "ek 2" in sheet_key:
+            if _annex_sheet_is(sheet_key, 2):
                 groups = {2: "AB/BK/B-HER/EFTA/F.ADA/G.KORE/MLZ", 3: "KOS", 4: "SNG", 5: "VNZ", 6: "BAE", 7: "EAGÜ", 8: "ÖTDÜ", 9: "GYÜ", 10: "DÜ"}
                 return 0, groups, "İGV Ek-2", None
-            if "ek 3" in sheet_key:
+            if _annex_sheet_is(sheet_key, 3):
                 groups = {2: "AB/BK/B-HER/EFTA/F.ADA", 3: "G.KORE", 4: "MLZ", 5: "SNG", 6: "KOS", 7: "İRAN", 8: "VNZ", 9: "BAE", 10: "EAGÜ", 11: "ÖTDÜ", 12: "GYÜ", 13: "DÜ"}
                 return 0, groups, "İGV Ek-3", None
             return -1, {}, "", None
 
         if file_key.startswith(("ek-", "ek ")) or "tablo" in file_key:
             return -1, {}, "", None
-        if "v say" in file_key:
-            return 0, {5: "NİHAİ KULLANIM"}, "V Sayılı Liste", "customs_duty_suspension"
-        if "vi say" in file_key:
-            return 2, {5: "NİHAİ KULLANIM"}, "VI Sayılı Liste", "customs_duty_end_use"
-        if "vii say" in file_key:
+        # Roman numerals share substrings ("iv say" contains "v say"), so every
+        # list is matched on a word boundary and the longer names are tested first.
+        if _list_name_is(file_key, "vii"):
             return 0, {3: "NİHAİ KULLANIM"}, "VII Sayılı Liste", "customs_duty_end_use"
-        if "iv say" in file_key:
+        if _list_name_is(file_key, "vi"):
+            return 2, {5: "NİHAİ KULLANIM"}, "VI Sayılı Liste", "customs_duty_end_use"
+        if _list_name_is(file_key, "iv"):
             groups = {2: "EFTA/B-HER/F.ADA", 3: "AB/BK", 4: "G.KORE", 5: "MLZ", 6: "SNG", 7: "KOS", 8: "VNZ", 9: "BAE", 10: "TPS-OIC", 11: "D-8", 12: "DÜ", 13: "EFTA/F.ADA"}
             return 0, groups, "IV Sayılı Liste", None
+        if _list_name_is(file_key, "v"):
+            return 0, {5: "NİHAİ KULLANIM"}, "V Sayılı Liste", "customs_duty_suspension"
         if "iii say" in file_key:
             groups = {2: "AB/BK/B-HER/EFTA/F.ADA", 3: "G.KORE", 4: "MLZ", 5: "SNG", 6: "KOS", 7: "İRAN", 8: "VNZ", 9: "BAE", 10: "EAGÜ", 11: "ÖTDÜ", 12: "GYÜ", 13: "DÜ"}
             return 0, groups, "III Sayılı Liste", None
@@ -699,29 +716,68 @@ class TariffEngine:
         )
 
     @staticmethod
-    def _matching_group(origin: str, labels: set[str], metadata: dict[str, Any], gtip: str) -> tuple[str | None, list[str]]:
+    def _matching_group(
+        origin: str,
+        labels: set[str],
+        metadata: dict[str, Any],
+        gtip: str,
+        measure_type: str = "customs_duty",
+    ) -> tuple[str | None, list[str]]:
+        """Pick the official column for one origin deterministically.
+
+        Column labels such as ``AB/BK/B-HER/EFTA/F.ADA`` are split into tokens and a
+        country is matched only against whole tokens, never substrings.  Labels are
+        visited in sorted order so the result never depends on set iteration order.
+        Priority: the country's own column (G.KORE, MLZ, B-HER, BK...), then the
+        numeric column 1/2/3 of the industrial tables, then the shared AB / EFTA
+        column, then GTS groups, and only then the residual "Diğer Ülkeler" column.
+        A preferential country that has no column in the queried list is reported
+        with a warning instead of being silently attached to the EU column.
+        """
         origin_key = _key(origin).strip()
         warnings: list[str] = []
         if not origin_key:
             return None, warnings
-        if origin_key in _EU_COUNTRIES or origin_key in _EFTA_COUNTRIES or origin_key in _COLUMN_1_COUNTRIES:
-            if "1" in labels:
-                return "1", warnings
-            for label in labels:
-                if any(token in label for token in ("AB", "EFTA")):
-                    return label, warnings
-        if origin_key in {"katar", "qatar"} and "2" in labels:
-            return "2", warnings
-        if origin_key in {"birlesik arap emirlikleri", "bae", "united arab emirates"}:
-            if "3" in labels:
-                return "3", warnings
-            if "BAE" in labels:
-                return "BAE", warnings
+        ordered = sorted(labels)
+        tokens = {label: {_key(part).strip() for part in label.split("/")} for label in ordered}
+
+        def with_token(token: str) -> str | None:
+            wanted = _key(token).strip()
+            for label in ordered:
+                if wanted in tokens[label]:
+                    return label
+            return None
+
+        is_eu = origin_key in _EU_COUNTRIES
+        is_efta = origin_key in _EFTA_COUNTRIES
+        is_column_1 = origin_key in _COLUMN_1_COUNTRIES
         explicit = _EXPLICIT_LABELS.get(origin_key)
         if explicit:
-            for label in labels:
-                if explicit in label:
-                    return label, warnings
+            own = with_token(explicit)
+            if own:
+                return own, warnings
+        if (is_eu or is_efta or is_column_1) and "1" in labels:
+            return "1", warnings
+        if origin_key in {"katar", "qatar"} and "2" in labels:
+            return "2", warnings
+        if origin_key in {"birlesik arap emirlikleri", "bae", "united arab emirates"} and "3" in labels:
+            return "3", warnings
+        if is_eu:
+            shared = with_token("AB")
+            if shared:
+                return shared, warnings
+        if is_efta:
+            shared = with_token("EFTA")
+            if shared:
+                return shared, warnings
+        if is_eu or is_efta or is_column_1 or explicit:
+            if measure_type == "additional_financial_liability":
+                # No EMY column for this origin means the liability does not apply.
+                return None, warnings
+            warnings.append(
+                f"{origin} için sorgulanan listede ayrı tercihli sütun yok; anlaşma tavizi varsa "
+                "anlaşma ekinden/tarife kontenjanından doğrulanmalıdır. 'Diğer Ülkeler' sütunu gösterildi."
+            )
 
         gts = metadata.get("gts_countries", {}).get(origin_key)
         if gts:
@@ -847,28 +903,36 @@ class TariffEngine:
             )
 
         matched_gtips = sorted({row["gtip"] for row, _ in all_rows})
-        selected_by_scope: dict[tuple[str, str], str | None] = {}
+        selected_by_scope: dict[tuple[str, str, str], str | None] = {}
         warnings: list[str] = []
-        scopes = {(row["gtip"], snapshot["id"]) for row, snapshot in all_rows}
-        for matched_gtip, snapshot_id in sorted(scopes):
+        # The column is chosen per measure type: in the IV list the EMY column
+        # carries its own label, so a duty column and an EMY column can both be
+        # primary for the same GTIP without competing with each other.
+        scopes = {(row["gtip"], snapshot["id"], row["measure_type"]) for row, snapshot in all_rows}
+        for matched_gtip, snapshot_id, measure_type in sorted(scopes):
             labels = {
                 row["country_group"]
                 for row, snapshot in all_rows
-                if row["gtip"] == matched_gtip and snapshot["id"] == snapshot_id
+                if row["gtip"] == matched_gtip and snapshot["id"] == snapshot_id and row["measure_type"] == measure_type
             }
             selected_group, group_warnings = self._matching_group(
-                origin_country or "", labels, metadata, matched_gtip
+                origin_country or "", labels, metadata, matched_gtip, measure_type=measure_type
             )
-            selected_by_scope[(matched_gtip, snapshot_id)] = selected_group
+            selected_by_scope[(matched_gtip, snapshot_id, measure_type)] = selected_group
             warnings.extend(group_warnings)
         warnings = list(dict.fromkeys(warnings))
         selected_groups = {group for group in selected_by_scope.values() if group}
         selected = " / ".join(sorted(selected_groups)) if selected_groups else None
-        if len(selected_groups) > 1:
-            warnings.append(
-                "Resmî tablolar aynı menşe grubu için farklı sütun etiketleri kullanıyor: "
-                + " / ".join(sorted(selected_groups))
-            )
+        groups_by_type: dict[str, set[str]] = {}
+        for (_, _, measure_type), group in selected_by_scope.items():
+            if group:
+                groups_by_type.setdefault(measure_type, set()).add(group)
+        for measure_type, groups in sorted(groups_by_type.items()):
+            if len(groups) > 1:
+                warnings.append(
+                    f"Resmî tablolar {measure_type} için aynı menşeye farklı sütun etiketleri kullanıyor: "
+                    + " / ".join(sorted(groups))
+                )
         if any(int(str(snapshot["valid_from"])[:4]) < datetime.now().year for snapshot in snapshots):
             warnings.append(
                 "Aktif tarife snapshot'ı cari yıldan eskidir; oran otomatik karar için kullanılmadan önce yıllık cetvel güncellemesi doğrulanmalıdır."
@@ -880,7 +944,7 @@ class TariffEngine:
             measure = self._measure(row, snapshot)
             if measure.measure_type in {"customs_duty_suspension", "customs_duty_end_use"}:
                 conditional.append(measure)
-            elif selected_by_scope.get((measure.gtip, measure.snapshot_id)) == measure.country_group:
+            elif selected_by_scope.get((measure.gtip, measure.snapshot_id, measure.measure_type)) == measure.country_group:
                 primary.append(measure)
             else:
                 alternatives.append(measure)

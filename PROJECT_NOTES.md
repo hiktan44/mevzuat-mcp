@@ -1,6 +1,20 @@
 # Proje Devir Notu — Ticaret Bilgi Masası / mevzuat-mcp
 
-Son güncelleme: 4 Eylül 2026
+Son güncelleme: 5 Eylül 2026
+
+## 5 Eylül 2026 oturumu — gümrük müşaviri testi ve kritik motor düzeltmeleri
+
+- Uygulama bir gümrük müşaviri gibi uçtan uca test edildi; 55 bulgu ve eksik özellik listesi
+  `docs/gumrukcu-test-raporu-2026-09-05.md` dosyasında (dosya/satır numaralı, önerilen sırayla).
+- Raporun 1. sırası kapatıldı (126 test): belirlenimci ve ölçü türü bazlı menşe sütunu seçimi,
+  IV/V sayılı liste ayrımı, İGV Ek-2/3 sayfa adı toleransı, tebliğ kodu tam eşleşmesi, çok parçalı ek
+  birleştirme ve `scope_annexes` / `list_kind` (ithali yasak listesi) altyapısı. Ayrıntı raporun
+  "Düzeltme günlüğü" bölümünde.
+- Sıradaki iş: raporun 2. sırası (A.TR + üçüncü ülke menşe uyarısı, fasıl bazlı A.TR/EUR.1 kuralı,
+  ülke listesinin tek kaynağa alınması, kullanıcı oranı ile resmî oran çakışmasında uyarı, `extra="forbid"`).
+- Cloudflare "Workers Builds: mevzuat-mcp" kontrolü depoya dışarıdan bağlı ve her commit'te kırmızı;
+  depoda Workers yapılandırması yok. Cloudflare panosundan Workers & Pages → mevzuat-mcp → Settings →
+  Builds → Disconnect ile kaldırılmalı (MCP'de bu işlem için araç yok).
 
 ## 4 Eylül 2026 oturumu — rekabet analizi karşılıkları
 

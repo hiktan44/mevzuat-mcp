@@ -27,18 +27,18 @@ kaynak denetimi (evil origin 403), yönetici erişim kontrolü (403/303), mobild
 
 ## KRİTİK — yanlış vergi veya yanlış kapsam üretir
 
-1. **Menşe sütunu süreçten sürece değişiyor (belirlenimsiz).** `tariff_engine.py:707-712` `_matching_group`
+1. ✅ DÜZELTİLDİ (5 Eyl) — **Menşe sütunu süreçten sürece değişiyor (belirlenimsiz).** `tariff_engine.py:707-712` `_matching_group`
    `labels` kümesi üzerinde dolaşıyor; I/IV sayılı liste ve İGV Ek-2/3 etiketlerinde birden çok etiket "AB"/"EFTA"
    içerdiğinden `PYTHONHASHSEED=0` ile Almanya → `EFTA/F.ADA` (EMY sütunu), `PYTHONHASHSEED=1` ile `AB/BK` çıkıyor.
    Aynı sorgu iki dağıtımda farklı oran verir. Düzeltme: `sorted(labels)` + açık öncelik tablosu.
-2. **STA ülkeleri AB sütununa yapıştırılıyor.** Aynı fonksiyon, `"1"` etiketi olmayan tablolarda Güney Kore,
+2. ✅ DÜZELTİLDİ (5 Eyl) — **STA ülkeleri AB sütununa yapıştırılıyor.** Aynı fonksiyon, `"1"` etiketi olmayan tablolarda Güney Kore,
    Malezya, Singapur, Kosova, Fas, Tunus, Mısır, İsrail, Şili… için kendi sütunları varken `AB/...` sütununu
    seçiyor. Tarım ürünlerinde (I sayılı liste) bu ülkelerin taviz sütunu yoktur; Fas menşeli domates için "%0"
    üretmek doğrudan yanlış vergidir. `_EXPLICIT_LABELS` hiç sıraya gelmiyor.
-3. **IV sayılı liste V sayılı liste olarak okunuyor.** `tariff_engine.py:452` `"v say" in file_key` kontrolü
+3. ✅ DÜZELTİLDİ (5 Eyl) — **IV sayılı liste V sayılı liste olarak okunuyor.** `tariff_engine.py:452` `"v say" in file_key` kontrolü
    `"iv say"` kontrolünden önce geldiği için `IV SAYILI LİSTE.xlsx` → "V Sayılı Liste" (doğrulandı). Balık ve su
    ürünlerinin GV sütunları ve EFTA/Faroe EMY sütunu hiç yazılmıyor; yerine "askıya alma" satırı üretiliyor.
-4. **İGV Ek-2/Ek-3 sayfaları sessizce atlanıyor.** `tariff_engine.py:442-447` sayfa adında `"ek 2"` (boşluklu)
+4. ✅ DÜZELTİLDİ (5 Eyl) — **İGV Ek-2/Ek-3 sayfaları sessizce atlanıyor.** `tariff_engine.py:442-447` sayfa adında `"ek 2"` (boşluklu)
    arıyor; sayfa `EK-2` ise sonuç boş (doğrulandı). Tarım/işlenmiş tarım İGV'si "yok" görünür.
 5. **A.TR ile gelen üçüncü ülke menşeli eşya uyarısı yok.** Almanya → İGV %0 koşulsuz veriliyor ve maliyete
    otomatik alınıyor (`calculate`, `tariff_engine.py:1077`). Tedarikçi beyanı/menşe şahadetnamesi yoksa İGV ve
@@ -48,10 +48,10 @@ kaynak denetimi (evil origin 403), yönetici erişim kontrolü (403/303), mobild
    07) ve AKÇT çelik (7216) için A.TR öneriliyor; doğrusu EUR.1/menşe beyanı. Birleşik Krallık, G.Kore,
    Singapur için "EUR.1" deniyor; bu anlaşmalarda EUR.1 yoktur (fatura üzeri menşe beyanı). Testler yanlışı
    kilitliyor (`tests/test_origin_documents.py:21-25`).
-7. **Kontrol tebliği keşfi alt dize eşleşmesiyle yanlış tebliği indeksliyor.** `control_engine.py:483`
+7. ✅ DÜZELTİLDİ (5 Eyl) — **Kontrol tebliği keşfi alt dize eşleşmesiyle yanlış tebliği indeksliyor.** `control_engine.py:483`
    `_key("2026/1") in _key("... 2026/12)")` → True (doğrulandı). 2026/1 (TSE) listesi 2026/12-19 metniyle,
    2026/2 → 2026/20-25, 2026/3 → 2026/31-35 ile üzerine yazılabilir; TSE kapsamındaki ürün "kapsam dışı" çıkar.
-8. **Çok ekli tebliğlerde yalnız tek Ek indeksleniyor.** `control_engine.py:192-219` en yoğun tek "Ek-N"
+8. ✅ DÜZELTİLDİ (5 Eyl, mekanizma) — **Çok ekli tebliğlerde yalnız tek Ek indeksleniyor.** `control_engine.py:192-219` en yoğun tek "Ek-N"
    bölümünü alıyor. 2026/5 Tarım (Ek-1/A…), 2026/19 (Ek-1 tütün, Ek-2 alkol), 2026/3 ve 2026/6 (Ek-2 **ithali
    yasak**), 2026/20 Sağlık, 2026/23 hurda listelerinin kalan ekleri kaybolur → yanlış negatif.
 9. **Kullanıcı oranı resmî oranı sessizce eziyor.** `/api/tariff/cost` gövdesinde `customs_duty_rate: 0`
@@ -177,3 +177,26 @@ kaynak denetimi (evil origin 403), yönetici erişim kontrolü (403/303), mobild
 3. Yüksek 10-12: Tarife & Maliyet formuna eksik alanlar, "İGV listesinde yok → %0" mantığı, MCP parametreleri.
 4. Yüksek 17-19: sunucu tarafı doğrulama, görsel redaksiyon atlaması, görsel boyut kontrolü sırası.
 5. Arayüz: danışman sekmesi, PDF, localStorage, yarış, mobil sekmeler, sayı biçimi.
+
+## Düzeltme günlüğü
+
+### 5 Eylül 2026 — 1. sıra (kritik motor hataları) kapatıldı; 126 test geçiyor
+
+- `tariff_engine._matching_group`: etiketler sıralı geziliyor, ülke adı yalnız bütün sütun belirteciyle
+  (`AB`, `EFTA`, `G.KORE`, `B-HER`, `BK`, `F.ADA`…) eşleşiyor; ülkenin kendi sütunu paylaşılan AB/EFTA
+  sütununa göre önce geliyor; sorgulanan listede sütunu olmayan STA ülkesi uyarıyla "Diğer Ülkeler"e düşüyor.
+  Sütun seçimi artık (GTİP, snapshot, ölçü türü) başına yapılıyor; IV sayılı listede GV ve EMY sütunu aynı anda
+  "primary" olabiliyor (bulgu 1, 2 ve rapordaki yüksek öncelikli 8 numaralı sütun-çakışması).
+- `tariff_engine._group_map`: Romen rakamlı liste adları kelime sınırıyla ve uzun addan kısaya doğru
+  eşleşiyor (`VII → VI → IV → V`); İGV Ek-2/Ek-3 sayfa adları `EK-2`, `Ek 2`, `EK2` biçimlerini kabul ediyor.
+- `control_engine.communique_code_matches`: tebliğ numarası iki yanı sınırlı tam eşleşmeyle aranıyor;
+  aynı koda ikinci bir belge düşerse hata kaydediliyor, ilk belge korunuyor.
+- `control_engine.extract_annex_scope`: aynı ekin bütün parçaları (`Ek-1/A`, `Ek-1/B`…) birleştiriliyor;
+  gövde içindeki "Ek-1'de", "Ek-1 sayılı listede" atıfları başlık sayılmıyor. `control_sources.json`'a
+  `scope_annexes: [1, {"annex": 2, "kind": "prohibited"}]` biçiminde çok ek ve **ithali yasak** listesi
+  tanımı eklenebiliyor; `control_scope` tablosu `list_kind` sütunu ve yeni birincil anahtarla otomatik
+  taşınıyor; sorgu sonucunda yasak liste eşleşmesi ayrı değerlendirmeyle dönüyor.
+  Hangi tebliğin hangi ekinin yasak listesi olduğu bu ortamdan (resmî metinlere erişim yok) doğrulanamadığı
+  için `control_sources.json`'da henüz `prohibited` tanımı yapılmadı; resmî metin teyidiyle eklenmelidir.
+- Kalan kritikler: 5 (A.TR + üçüncü ülke menşe uyarısı), 6 (fasıl bazlı menşe belgesi), 9 (kullanıcı oranı
+  resmî oranı eziyor) — raporun 2. sırası.
