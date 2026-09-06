@@ -497,10 +497,9 @@ def _quota_rows_from_cells(rows: Iterable[list[str]]) -> list[dict[str, str]]:
                 elif ("madde" in label or "tanim" in label or "esya" in label or "urun" in label) and "description" not in columns:
                     columns["description"] = index
             continue
-        offset = 0
-        if not header and len(cells) > 1 and re.fullmatch(r"\d{1,3}", cells[0]) and _ROW_CODE_RE.match(cells[1]):
-            offset = 1  # baştaki "Sıra No" sütunu
-        code_index = gtip_col if header else offset
+        code_index = gtip_col if header else 0
+        if code_index + 1 < len(cells) and re.fullmatch(r"\d{1,3}", cells[code_index]) and _ROW_CODE_RE.match(cells[code_index + 1]):
+            code_index += 1  # baştaki "Sıra No" sütunu
         if code_index >= len(cells):
             continue
         code = cells[code_index]
@@ -508,17 +507,25 @@ def _quota_rows_from_cells(rows: Iterable[list[str]]) -> list[dict[str, str]]:
             continue
         item: dict[str, str] = {"gtip": code, "description": ""}
         if header:
+            desc_index = columns.get("description", code_index + 1)
+            # Açıklama hücresi boş bırakılıp sütunlar sola kaydığında (kısa satır) miktar açıklama yerine gelir.
+            shift = 1 if desc_index < len(cells) and _QUANTITY_RE.match(cells[desc_index]) and len(cells) < len(header) else 0
             for field_name, index in columns.items():
-                if index < len(cells) and cells[index]:
-                    item[field_name] = cells[index]
-            if "description" not in columns and code_index + 1 < len(cells) and not any(index == code_index + 1 for index in columns.values()):
+                source = index - shift if shift and index > desc_index else index
+                if field_name == "description" and shift:
+                    continue
+                if 0 <= source < len(cells) and cells[source]:
+                    item[field_name] = cells[source]
+            if shift:
+                item["quantity"] = cells[desc_index]
+            elif "description" not in columns and code_index + 1 < len(cells) and not any(index == code_index + 1 for index in columns.values()):
                 item["description"] = cells[code_index + 1]
         else:
             item["description"] = cells[code_index + 1] if len(cells) > code_index + 1 else ""
             if len(cells) > code_index + 2:
                 item["quantity"] = cells[code_index + 2]
         if _QUANTITY_RE.match(item.get("description", "")):
-            item.setdefault("quantity", item["description"])
+            item["quantity"] = item["description"]
             item["description"] = ""
         if "quantity" not in item:
             candidate = next((cell for cell in cells if _QUANTITY_RE.match(cell)), "")
