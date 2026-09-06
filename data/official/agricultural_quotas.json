@@ -847,92 +847,93 @@
    {
     "gtip": "0407.21",
     "description": "Tavuk yumurtaları (Gallus domesticus türü)",
-    "period": "BAET001",
-    "quantity": "01.01-31.12"
+    "quota_code": "BAET001",
+    "period": "01.01-31.12"
    },
    {
     "gtip": "07.13",
     "description": "Kuru baklagiller (kabuksuz) (taneleri ikiye ayrılmış, tane kabukları çıkarılmış olsun olmasın)",
-    "period": "BAET005",
-    "quantity": "01.01-31.12"
+    "quota_code": "BAET005",
+    "period": "01.01-31.12"
    },
    {
     "gtip": "0804.10",
     "description": "Hurma",
-    "period": "BAET006",
-    "quantity": "01.01-31.12"
+    "quota_code": "BAET006",
+    "period": "01.01-31.12"
    },
    {
     "gtip": "11.04",
     "description": "Diğer şekilde işlenmiş hububat taneleri; hububat embriyonları",
-    "period": "BAET008",
-    "quantity": "01.01-31.12"
+    "quota_code": "BAET008",
+    "period": "01.01-31.12"
    },
    {
     "gtip": "11.05",
     "description": "Patates unu, ezmesi, tozları, flokonları, granülleri ve pelletleri",
-    "period": "BAET009",
-    "quantity": "01.01-31.12"
+    "quota_code": "BAET009",
+    "period": "01.01-31.12"
    },
    {
     "gtip": "11.07",
     "description": "Malt (kavrulmuş olsun olmasın)",
-    "period": "BAET010",
-    "quantity": "01.01-31.12"
+    "quota_code": "BAET010",
+    "period": "01.01-31.12"
    },
    {
     "gtip": "12.02",
     "description": "Yer fıstığı (kavrulmamış veya başka şekilde pişirilmemiş, kabuklu veya kırılmış olsun olmasın)",
-    "period": "BAET011",
-    "quantity": "01.01-31.12"
+    "quota_code": "BAET011",
+    "period": "01.01-31.12",
+    "quantity": "20 ton"
    },
    {
     "gtip": "12.09",
     "description": "Ekim amacıyla kullanılan tohum, meyve ve sporlar",
-    "period": "BAET012",
-    "quantity": "01.01-31.12"
+    "quota_code": "BAET012",
+    "period": "01.01-31.12"
    },
    {
     "gtip": "12.11",
     "description": "Bitki ve bitki kısımları (tohum ve meyveler dahil)",
-    "period": "BAET013",
-    "quantity": "01.01-31.12"
+    "quota_code": "BAET013",
+    "period": "01.01-31.12"
    },
    {
     "gtip": "15.07",
     "description": "Soya yağı ve fraksiyonları (rafine edilmiş olsun olmasın, fakat kimyasal olarak değiştirilmemiş)",
-    "period": "BAET014",
-    "quantity": "01.01-31.12"
+    "quota_code": "BAET014",
+    "period": "01.01-31.12"
    },
    {
     "gtip": "18.06",
     "description": "Çikolata ve kakao içeren diğer gıda müstahzarları",
-    "period": "BAET016",
-    "quantity": "01.01-31.12"
+    "quota_code": "BAET016",
+    "period": "01.01-31.12"
    },
    {
     "gtip": "19.02",
     "description": "Makarnalar (pişirilmiş veya et ile veya diğer maddelerle doldu- rulmuş veya başka şekilde hazırlanmış olsun olmasın)",
-    "period": "BAET017",
-    "quantity": "01.01-31.12"
+    "quota_code": "BAET017",
+    "period": "01.01-31.12"
    },
    {
     "gtip": "1905.10",
     "description": "Gevrek ekmek",
-    "period": "BAET018",
-    "quantity": "01.01-31.12"
+    "quota_code": "BAET018",
+    "period": "01.01-31.12"
    },
    {
     "gtip": "20.07",
     "description": "Reçeller, jöleler, marmelatlar, meyva veya sert kabuklu meyva püresi, meyva veya sert kabuklu meyva pastları",
-    "period": "BAET020",
-    "quantity": "01.01-31.12"
+    "quota_code": "BAET020",
+    "period": "01.01-31.12"
    },
    {
     "gtip": "21.05",
     "description": "Dondurma ve yenilen diğer buzlar (kakao içersin içermesin)",
-    "period": "BAET021",
-    "quantity": "01.01-31.12"
+    "quota_code": "BAET021",
+    "period": "01.01-31.12"
    }
   ],
   "item_count": 15,
@@ -2007,7 +2008,7 @@
    {
     "gtip": "0702.00.00.00.00",
     "description": "Domates (taze veya soğutulmuş)",
-    "quantity": "01.01-31.12"
+    "quantity": "1.500 Ton"
    },
    {
     "gtip": "0703.10",
@@ -2028,7 +2029,7 @@
    {
     "gtip": "0709.51.00.00.00",
     "description": "Agaricus cinsi mantarlar",
-    "quantity": "01.01-31.12"
+    "quantity": "100Ton"
    },
    {
     "gtip": "0709.59",
@@ -2037,7 +2038,7 @@
    {
     "gtip": "0710.80.51.00.00",
     "description": "Tatlı biberler",
-    "quantity": "01.01-31.12"
+    "quantity": "100 Ton"
    },
    {
     "gtip": "0710.90.00.00.00",
@@ -2046,7 +2047,7 @@
    {
     "gtip": "0712.20.00.00.00",
     "description": "Soğanlar",
-    "quantity": "01.01-31.12"
+    "quantity": "300 Ton"
    },
    {
     "gtip": "0712.90",
@@ -2055,12 +2056,12 @@
    {
     "gtip": "0713.33.90.00.19",
     "description": "Diğerleri",
-    "quantity": "01.01-31.12"
+    "quantity": "500 Ton"
    },
    {
     "gtip": "0807.11.00.00.00",
     "description": "Karpuzlar",
-    "quantity": "01.01-31.12"
+    "quantity": "1.000 Ton"
    },
    {
     "gtip": "0807.19.00.00.00",
@@ -2069,7 +2070,7 @@
    {
     "gtip": "0904.21",
     "description": "Kurutulmuş, ezilmemiş öğütülmemiş",
-    "quantity": "01.01-31.12"
+    "quantity": "100 Ton"
    },
    {
     "gtip": "0904.22",
@@ -2078,7 +2079,7 @@
    {
     "gtip": "1006.30",
     "description": "Yarı veya tam olarak değirmenden geçirilmiş pirinç (parlatılmış veya perdahlanmış olsun olmasın)",
-    "quantity": "01.01-31.12"
+    "quantity": "8.000 Ton"
    },
    {
     "gtip": "1211.50.00.00.00",
@@ -2087,7 +2088,7 @@
    {
     "gtip": "2001.10.00.00.00",
     "description": "Hıyarlar ve kornişonlar",
-    "quantity": "01.01-31.12"
+    "quantity": "200Ton"
    },
    {
     "gtip": "2001.90.70.00.00",
@@ -2096,7 +2097,7 @@
    {
     "gtip": "2001.90.50.00.00",
     "description": "Mantarlar",
-    "quantity": "01.01-31.12"
+    "quantity": "100 Ton"
    },
    {
     "gtip": "2003.10",
@@ -2109,7 +2110,7 @@
    {
     "gtip": "2001.90.97.00.13",
     "description": "Diğer meyvalar ve sert kabuklu meyvalar",
-    "quantity": "01.01-31.12"
+    "quantity": "100 Ton"
    },
    {
     "gtip": "2001.90.97.00.18",
@@ -2130,7 +2131,7 @@
    {
     "gtip": "2005.99.80.00.00",
     "description": "Diğerleri [Yalnızca Ajvar]",
-    "quantity": "01.01-31.12"
+    "quantity": "200 Ton"
    }
   ],
   "item_count": 29,
@@ -3191,13 +3192,11 @@
    },
    {
     "gtip": "1512.11.91.00.00",
-    "description": "Ayçiçeği tohumu yağı",
-    "quantity": "25.000"
+    "description": "Ayçiçeği tohumu yağı"
    },
    {
     "gtip": "1512.19.90.00.11",
-    "description": "Ayçiçeği tohumu yağı",
-    "quantity": "10.000"
+    "description": "Ayçiçeği tohumu yağı"
    },
    {
     "gtip": "15.17",
@@ -3241,8 +3240,7 @@
    },
    {
     "gtip": "19.05",
-    "description": "Ekmek, pasta,kek bisküvi ve diğer ekmekçilik mamulleri (kakao içersin içermesin); hosti, eczacılıkta kullanılan boş ilaç kapsülleri, mühür güllacı,prinç kağıdı ve benzeri ürünler",
-    "quantity": "1.000"
+    "description": "Ekmek, pasta,kek bisküvi ve diğer ekmekçilik mamulleri (kakao içersin içermesin); hosti, eczacılıkta kullanılan boş ilaç kapsülleri, mühür güllacı,prinç kağıdı ve benzeri ürünler"
    },
    {
     "gtip": "2001.10.00.00.00",
@@ -3368,8 +3366,7 @@
   "items": [
    {
     "gtip": "0603.11.00.00.00",
-    "description": "Güller",
-    "quantity": "01.01-31.12"
+    "description": "Güller"
    },
    {
     "gtip": "0603.12.00.00.00",
@@ -3393,28 +3390,23 @@
    },
    {
     "gtip": "0701.90",
-    "description": "Diğerleri",
-    "quantity": "01.01-31.12"
+    "description": "Diğerleri"
    },
    {
     "gtip": "0702.00.00.00.00",
-    "description": "Domates (taze veya soğutulmuş)",
-    "quantity": "01.06-30.09"
+    "description": "Domates (taze veya soğutulmuş)"
    },
    {
     "gtip": "0703.10",
-    "description": "Soğanlar ve şalotlar",
-    "quantity": "01.01-31.12"
+    "description": "Soğanlar ve şalotlar"
    },
    {
     "gtip": "0703.20",
-    "description": "Sarımsaklar",
-    "quantity": "01.01-31.12"
+    "description": "Sarımsaklar"
    },
    {
     "gtip": "0704.10",
-    "description": "Karnabaharlar ve başlı brokoli",
-    "quantity": "01.01-31.12"
+    "description": "Karnabaharlar ve başlı brokoli"
    },
    {
     "gtip": "0704.90",
@@ -3422,28 +3414,23 @@
    },
    {
     "gtip": "0705.11.00.00.00",
-    "description": "Baş marul",
-    "quantity": "01.01-31.12"
+    "description": "Baş marul"
    },
    {
     "gtip": "0707.00",
-    "description": "Hıyarlar ve kornişonlar (taze veya soğutulmuş)",
-    "quantity": "01.01-31.12"
+    "description": "Hıyarlar ve kornişonlar (taze veya soğutulmuş)"
    },
    {
     "gtip": "0709.30.00.00.00",
-    "description": "Patlıcanlar",
-    "quantity": "01.01-31.12"
+    "description": "Patlıcanlar"
    },
    {
     "gtip": "0709.60",
-    "description": "Capsicum veya Pimenta cinsi meyveler",
-    "quantity": "01.01-31.12"
+    "description": "Capsicum veya Pimenta cinsi meyveler"
    },
    {
     "gtip": "0709.91.00.00.00",
-    "description": "Enginarlar",
-    "quantity": "01.01-31.12"
+    "description": "Enginarlar"
    },
    {
     "gtip": "0709.93",
@@ -3455,23 +3442,19 @@
    },
    {
     "gtip": "0711.40.00.00.00",
-    "description": "Hıyarlar ve kornişonlar",
-    "quantity": "01.01-31.12"
+    "description": "Hıyarlar ve kornişonlar"
    },
    {
     "gtip": "0711.59.00.00.00",
-    "description": "Diğerleri",
-    "quantity": "01.01-31.12"
+    "description": "Diğerleri"
    },
    {
     "gtip": "0713.20",
-    "description": "Nohut (garbanzos)",
-    "quantity": "01.01-31.12"
+    "description": "Nohut (garbanzos)"
    },
    {
     "gtip": "0802.11",
-    "description": "Kabuklu",
-    "quantity": "01.01-31.12"
+    "description": "Kabuklu"
    },
    {
     "gtip": "0802.12",
@@ -3479,23 +3462,19 @@
    },
    {
     "gtip": "0802.32.00.00.00",
-    "description": "Kabuksuz",
-    "quantity": "01.01-31.12"
+    "description": "Kabuksuz"
    },
    {
     "gtip": "0804.10.00.00.00",
-    "description": "Hurma",
-    "quantity": "01.01-31.12"
+    "description": "Hurma"
    },
    {
     "gtip": "0804.20",
-    "description": "İncir",
-    "quantity": "01.01-31.12"
+    "description": "İncir"
    },
    {
     "gtip": "0805.40.00.00.00",
-    "description": "Greyfurt (pomelolar dahil)",
-    "quantity": "01.01-31.12"
+    "description": "Greyfurt (pomelolar dahil)"
    },
    {
     "gtip": "0805.50",
@@ -3507,13 +3486,11 @@
    },
    {
     "gtip": "0806.10",
-    "description": "Taze",
-    "quantity": "01.01-31.12"
+    "description": "Taze"
    },
    {
     "gtip": "0807.11.00.00.00",
-    "description": "Karpuzlar",
-    "quantity": "15.12-15.04"
+    "description": "Karpuzlar"
    },
    {
     "gtip": "0807.19.00.00.00",
@@ -3521,13 +3498,11 @@
    },
    {
     "gtip": "0808.10",
-    "description": "Elma",
-    "quantity": "01.01-31.12"
+    "description": "Elma"
    },
    {
     "gtip": "0808.30",
-    "description": "Armut",
-    "quantity": "01.01-31.12"
+    "description": "Armut"
    },
    {
     "gtip": "0808.40.00.00.00",
@@ -3535,13 +3510,11 @@
    },
    {
     "gtip": "0809.10.00.00.00",
-    "description": "Kayısı (zerdali dahil)",
-    "quantity": "15.11-01.05"
+    "description": "Kayısı (zerdali dahil)"
    },
    {
     "gtip": "0809.21.00.00.00",
-    "description": "Vişne (Prunus cerasus)",
-    "quantity": "01.01-31.12"
+    "description": "Vişne (Prunus cerasus)"
    },
    {
     "gtip": "0809.29.00.00.00",
@@ -3549,38 +3522,31 @@
    },
    {
     "gtip": "0810.50.00.00.00",
-    "description": "Kivi",
-    "quantity": "01.01-31.12"
+    "description": "Kivi"
    },
    {
     "gtip": "0810.90",
-    "description": "Diğerleri",
-    "quantity": "01.01-31.12"
+    "description": "Diğerleri"
    },
    {
     "gtip": "0813.20.00.00.00",
-    "description": "Erik",
-    "quantity": "01.01-31.12"
+    "description": "Erik"
    },
    {
     "gtip": "0813.30.00.00.00",
-    "description": "Elma",
-    "quantity": "01.01-31.12"
+    "description": "Elma"
    },
    {
     "gtip": "0813.40",
-    "description": "Diğer meyveler",
-    "quantity": "01.01-31.12"
+    "description": "Diğer meyveler"
    },
    {
     "gtip": "0814.00.00.00.00",
-    "description": "Turunçgillerin veya kavunların (karpuzlar dahil) kabukları (taze, dondurulmuş, kurutulmuş veya salamurada, kükürtlü su içinde veya diğer koruyucu eriyikler içinde geçici olarak konserve edilmiş)",
-    "quantity": "01.01-31.12"
+    "description": "Turunçgillerin veya kavunların (karpuzlar dahil) kabukları (taze, dondurulmuş, kurutulmuş veya salamurada, kükürtlü su içinde veya diğer koruyucu eriyikler içinde geçici olarak konserve edilmiş)"
    },
    {
     "gtip": "0904.11.00.00.00",
-    "description": "Ezilmemiş, öğütülmemiş",
-    "quantity": "01.01-31.12"
+    "description": "Ezilmemiş, öğütülmemiş"
    },
    {
     "gtip": "0908.31.00.00.00",
@@ -3612,8 +3578,7 @@
    },
    {
     "gtip": "1209.91",
-    "description": "Sebze tohumları",
-    "quantity": "01.01-31.12"
+    "description": "Sebze tohumları"
    },
    {
     "gtip": "1209.99",
@@ -3621,8 +3586,7 @@
    },
    {
     "gtip": "1211.40.00.00.00",
-    "description": "Haşhaş kellesi",
-    "quantity": "01.01-31.12"
+    "description": "Haşhaş kellesi"
    },
    {
     "gtip": "1211.50.00.00.00",
@@ -3630,18 +3594,15 @@
    },
    {
     "gtip": "2001.10.00.00.00",
-    "description": "Hıyarlar ve kornişonlar",
-    "quantity": "01.01-31.12"
+    "description": "Hıyarlar ve kornişonlar"
    },
    {
     "gtip": "2002.90",
-    "description": "Diğerleri",
-    "quantity": "01.01-31.12"
+    "description": "Diğerleri"
    },
    {
     "gtip": "2007.10",
-    "description": "Homojenize müstahzarlar",
-    "quantity": "01.01-31.12"
+    "description": "Homojenize müstahzarlar"
    },
    {
     "gtip": "2007.99",
@@ -3649,13 +3610,11 @@
    },
    {
     "gtip": "2008.19",
-    "description": "Diğerleri (karışımlar dahil)",
-    "quantity": "01.01-31.12"
+    "description": "Diğerleri (karışımlar dahil)"
    },
    {
     "gtip": "2009.11",
-    "description": "Dondurulmuş",
-    "quantity": "01.01-31.12"
+    "description": "Dondurulmuş"
    },
    {
     "gtip": "2009.12.00.00.00",
@@ -3667,18 +3626,15 @@
    },
    {
     "gtip": "2009.49",
-    "description": "Diğerleri",
-    "quantity": "01.01-31.12"
+    "description": "Diğerleri"
    },
    {
     "gtip": "2009.69",
-    "description": "Diğerleri",
-    "quantity": "01.01-31.12"
+    "description": "Diğerleri"
    },
    {
     "gtip": "2009.71",
-    "description": "Brix değeri 20'yi geçmeyenler",
-    "quantity": "01.01-31.12"
+    "description": "Brix değeri 20'yi geçmeyenler"
    },
    {
     "gtip": "2009.79",
@@ -3686,13 +3642,11 @@
    },
    {
     "gtip": "2009.81",
-    "description": "Yaban Mersini Suyu (Vaccinium macrocarpon, Vaccinium oxycoccos Vaccinium vitis-idaea)",
-    "quantity": "01.01-31.12"
+    "description": "Yaban Mersini Suyu (Vaccinium macrocarpon, Vaccinium oxycoccos Vaccinium vitis-idaea)"
    },
    {
     "gtip": "2209.00",
-    "description": "Sirkeler ve asetik asitten elde edilen sirke yerine geçen maddeler",
-    "quantity": "01.01-31.12"
+    "description": "Sirkeler ve asetik asitten elde edilen sirke yerine geçen maddeler"
    }
   ],
   "item_count": 71,
