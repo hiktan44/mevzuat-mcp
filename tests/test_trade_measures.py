@@ -163,6 +163,31 @@ class ParserTests(unittest.TestCase):
         self.assertEqual(tm._doc_table_rows(b"not an OLE document"), [])
         self.assertEqual(tm._decode_doc_pieces(b"", b""), "")
 
+    def test_quota_header_ignores_merged_title_and_realigns_short_rows(self):
+        """Başlık hücresine karışan künye ("Tarihi") dönem sütununu kapmamalı, kısa satırlar hizalanmalı."""
+        merged_title = "BİRLEŞİK ARAP EMİRLİKLERİ MENŞELİ ... Resmî Gazete'nin Tarihi Sayısı Tarife Kontenjanı Kod No"
+        rows = [
+            [merged_title, "GTİP", "Eşyanın Tanımı", "Tarife Kontenjanı Dönemi", "Azami Miktar", "Tahsisat Yöntemi"],
+            ["BAET001", "0407.21", "Tavuk yumurtaları", "01.01-31.12"],
+        ]
+        item = tm._quota_rows_from_cells(rows)[0]
+        self.assertEqual(item["quota_code"], "BAET001")
+        self.assertEqual(item["period"], "01.01-31.12")
+        self.assertNotIn("quantity", item)
+        self.assertEqual(item["description"], "Tavuk yumurtaları")
+
+        shifted = [
+            ["G.T.İ.P.", "Madde İsmi", "Kontenjan Miktarı", "Vergi"],
+            ["1", "0406.90.99.00.11", "100 ton", "0"],   # başlıkta olmayan sıra numarası
+            ["01.02", "8.000 ton", "0"],                  # birleştirilmiş açıklama hücresi
+            ["0102.29", "Diğerleri", "2.260 ton", "0"],
+        ]
+        parsed = tm._quota_rows_from_cells(shifted)
+        self.assertEqual([row["gtip"] for row in parsed], ["0406.90.99.00.11", "01.02", "0102.29"])
+        self.assertEqual([row["quantity"] for row in parsed], ["100 ton", "8.000 ton", "2.260 ton"])
+        self.assertEqual([row["duty_rate"] for row in parsed], ["0", "0", "0"])
+        self.assertEqual(parsed[2]["description"], "Diğerleri")
+
 
 class EngineTests(unittest.TestCase):
     def setUp(self):

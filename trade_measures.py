@@ -563,8 +563,40 @@ def _legacy_doc_text(payload: bytes) -> str:
             pass
 
 
+_QUOTA_HEADER_RULES: tuple[tuple[str, tuple[str, ...]], ...] = (
+    ("quota_code", ("kodno", "kontenjankodu", "kotakodu")),
+    ("period", ("donemi", "donem")),
+    ("quantity", ("miktar",)),
+    ("duty_rate", ("vergi", "oran")),
+    ("description", ("maddeismi", "esyanintanimi", "esyatanimi", "urunadi", "tanimi", "tanim")),
+)
+_HEADER_TAIL_CHARS = 40
+
+
+def _quota_columns(cells: list[str]) -> tuple[int, dict[str, int]]:
+    """Başlık satırından GTİP sütununu ve alan sütunlarını çıkarır.
+
+    Resmî eklerde başlık hücresine tebliğ başlığı ya da Resmî Gazete künyesi
+    karışabildiğinden yalnız hücrenin sonundaki caption kısmı eşleştirilir; aksi
+    hâlde künyedeki "Tarihi" gibi kelimeler yanlış sütunu kapar.
+    """
+    gtip_col = next(index for index, cell in enumerate(cells) if _is_code_header(cell))
+    columns: dict[str, int] = {}
+    for index, cell in enumerate(cells):
+        if index == gtip_col:
+            continue
+        label = _ascii_key(cell)[-_HEADER_TAIL_CHARS:]
+        for field_name, needles in _QUOTA_HEADER_RULES:
+            if field_name in columns:
+                continue
+            if any(needle in label for needle in needles):
+                columns[field_name] = index
+                break
+    return gtip_col, columns
+
+
 def _quota_rows_from_cells(rows: Iterable[list[str]]) -> list[dict[str, str]]:
-    """Karar/tebliğ eklerindeki tablo satırlarını GTİP sütununu başlıktan bularak okur."""
+    """Karar/tebliğ eklerindeki tablo satırlarını başlıktaki sütun adlarına göre okur."""
     items: list[dict[str, str]] = []
     header: list[str] = []
     gtip_col = 0
@@ -574,65 +606,60 @@ def _quota_rows_from_cells(rows: Iterable[list[str]]) -> list[dict[str, str]]:
         if not cells:
             continue
         if any(_is_code_header(cell) for cell in cells):
-            header = [_ascii_key(cell) for cell in cells]
-            gtip_col = next(index for index, cell in enumerate(cells) if _is_code_header(cell))
-            columns = {}
-            for index, label in enumerate(header):
-                if index == gtip_col:
-                    continue
-                if ("donem" in label or "tarih" in label) and "period" not in columns:
-                    columns["period"] = index
-                elif ("vergi" in label or "oran" in label) and "duty_rate" not in columns:
-                    columns["duty_rate"] = index
-                elif "kod" in label and "quota_code" not in columns:
-                    columns["quota_code"] = index
-                elif ("miktar" in label or "kontenjan" in label) and "quantity" not in columns:
-                    columns["quantity"] = index
-                elif ("madde" in label or "tanim" in label or "esya" in label or "urun" in label) and "description" not in columns:
-                    columns["description"] = index
+            header = cells
+            gtip_col, columns = _quota_columns(cells)
             continue
         code_index = gtip_col if header else 0
-        seq_shift = 0
+        offset = 0
         if code_index + 1 < len(cells) and re.fullmatch(r"\d{1,3}", cells[code_index]) and _ROW_CODE_RE.match(cells[code_index + 1]):
-            code_index += 1  # baştaki "Sıra No" sütunu başlıkta yoksa satır sağa kayar
-            seq_shift = 1
-        if code_index >= len(cells):
+            code_index += 1  # başlıkta yer almayan "Sıra No" sütunu satırı sağa kaydırır
+            offset = 1
+        if code_index >= len(cells) or not _ROW_CODE_RE.match(cells[code_index]):
             continue
-        code = cells[code_index]
-        if not _ROW_CODE_RE.match(code):
-            continue
-        item: dict[str, str] = {"gtip": code, "description": ""}
+        item: dict[str, str] = {"gtip": cells[code_index], "description": ""}
+        used = {code_index}
         if header:
-            desc_index = columns.get("description", code_index) + seq_shift
-            if desc_index <= code_index:
-                desc_index = code_index + 1
-            # Açıklama hücresi boş bırakılıp sütunlar sola kaydığında (kısa satır) miktar açıklama yerine gelir.
-            shift = 1 if desc_index < len(cells) and _QUANTITY_RE.match(cells[desc_index]) and len(cells) < len(header) + seq_shift else 0
+            def value(index: int, shift: int = 0) -> str:
+                position = index + offset - shift
+                return cells[position] if 0 <= position < len(cells) else ""
+
+            description_column = columns.get("description")
+            quantity_column = columns.get("quantity")
+            # Birleştirilmiş/boş bırakılmış açıklama hücresinde satır sola kayar: miktar açıklama sütununa düşer.
+            shifted = int(
+                description_column is not None
+                and quantity_column is not None
+                and bool(_QUANTITY_RE.match(value(description_column)))
+                and not _QUANTITY_RE.match(value(quantity_column))
+            )
             for field_name, index in columns.items():
-                source = index + seq_shift
-                if shift and source > desc_index:
-                    source -= 1
-                if field_name == "description" and shift:
+                if field_name == "description" and shifted:
                     continue
-                if 0 <= source < len(cells) and cells[source]:
-                    item[field_name] = cells[source]
-            if shift:
-                item["quantity"] = cells[desc_index]
-            elif "description" not in columns and code_index + 1 < len(cells) and not any(index == code_index + 1 for index in columns.values()):
+                shift = shifted if description_column is not None and index > description_column else 0
+                position = index + offset - shift
+                if 0 <= position < len(cells) and cells[position]:
+                    item[field_name] = cells[position]
+                    used.add(position)
+            if shifted and description_column is not None:
+                item["quantity"] = value(description_column)
+                used.add(description_column + offset)
+            if not item["description"] and description_column is None and code_index + 1 < len(cells) and code_index + 1 not in used:
                 item["description"] = cells[code_index + 1]
+                used.add(code_index + 1)
         else:
-            item["description"] = cells[code_index + 1] if len(cells) > code_index + 1 else ""
-            if len(cells) > code_index + 2:
-                item["quantity"] = cells[code_index + 2]
-        if _QUANTITY_RE.match(item.get("description", "")):
-            item["quantity"] = item["description"]
+            if code_index + 1 < len(cells):
+                item["description"] = cells[code_index + 1]
+                used.add(code_index + 1)
+        if _QUANTITY_RE.match(item["description"]):
+            item.setdefault("quantity", item["description"])
             item["description"] = ""
         if "quantity" not in item:
-            candidate = next((cell for cell in cells if _QUANTITY_RE.match(cell)), "")
+            candidate = next((cell for index, cell in enumerate(cells) if index not in used and _QUANTITY_RE.match(cell)), "")
             if candidate:
                 item["quantity"] = candidate
         items.append(item)
     return items
+
 
 def parse_quota_document(payload: bytes, filename: str, meta: dict[str, Any] | None = None) -> dict[str, Any]:
     """Tarım ürünleri tarife kontenjanı kararı (.docx/.doc) ekindeki GTİP / miktar / vergi tablosu."""
