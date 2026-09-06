@@ -355,7 +355,7 @@ def parse_communique_index(html_text: str, base_url: str, year: int) -> list[dic
     entries: list[dict[str, str]] = []
     seen: set[str] = set()
     for anchor in soup.find_all("a", href=True):
-        title = re.sub(r"\s+", " ", anchor.get_text(" ", strip=True))
+        title = re.sub(r"\s+", " ", anchor.get_text(" ", strip=True)).strip("–—- ")
         href = urljoin(base_url, anchor["href"])
         if not title or href in seen:
             continue

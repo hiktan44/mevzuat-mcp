@@ -174,3 +174,4 @@ data/
 .dev-data/
 # yerel Claude Code başlatma yapılandırması
 .claude/
+trade_measures.sqlite3

@@ -345,6 +345,12 @@
           </aside>
         </form>
 
+        <details class="advanced-fields declaration-box" id="declarationBox">
+          <summary><span>Beyanname durumu (Eylemio gümrük otomasyonu)</span><small id="declarationHint">Giriş gerekir</small></summary>
+          <p class="field-help">Eylemio'daki gümrük konektörü, müşavirin BİLGE web servis hesabıyla Ticaret Bakanlığı'ndan gerçek beyanname detay ve durumunu okur. Beyan oluşturmaz, tescil etmez.</p>
+          <div class="declaration-row"><input id="declarationNo" type="text" placeholder="Beyanname no (ör. 26341300IM000123)" autocomplete="off" spellcheck="false"><button type="button" id="declarationQuery">Sorgula</button></div>
+          <div class="tool-output" id="declarationOutput" aria-live="polite"></div>
+        </details>
         <section class="customs-result" id="customsResult" hidden aria-live="polite">
           <div class="analysis-loading" id="analysisLoading" hidden><i></i><div><b>Resmî kaynaklar taranıyor</b><span>TAREKS, tarife, vergi ve ürün güvenliği kanıtları karşılaştırılıyor…</span></div></div>
           <div id="customsOutput"></div>

@@ -1011,7 +1011,7 @@ function renderCustomsResult(data) {
         <time>${escapeHtml(formatDate(data.as_of, true))}</time>
       </header>
       <section class="answer-section"><h3>Aday GTİP / CN kodları</h3>${candidates}</section>
-      ${data.tariff_lookup ? `<section class="answer-section"><h3>Resmî tarife snapshot eşleşmesi</h3>${tariffMatchSummary(data.tariff_lookup)}${renderMeasureCoverage(data.tariff_lookup.measure_coverage)}<table class="evidence-table"><thead><tr><th>GTİP / Önlem</th><th>Oran</th><th>Menşe sütunu</th><th>Kaynak satırı</th><th>Kanıt</th></tr></thead><tbody>${tariffRows(data.tariff_lookup.measures)}</tbody></table>${exportBar("precheck", [{ table: "measures", label: "Tarife satırları" }, ...(data.deterministic_cost ? [{ table: "cost", label: "Maliyet taslağı" }] : [])])}${applyRatesButton(data.tariff_lookup, "precheck")}${(data.tariff_lookup.warnings || []).length ? `<div class="result-caution">${data.tariff_lookup.warnings.map((item) => escapeHtml(item)).join(" · ")}</div>` : ""}</section>` : ""}
+      ${data.tariff_lookup ? `<section class="answer-section"><h3>Resmî tarife snapshot eşleşmesi</h3>${tariffMatchSummary(data.tariff_lookup)}${renderMeasureCoverage(data.tariff_lookup.measure_coverage)}${renderTradeMeasures(data.tariff_lookup.trade_measures)}<table class="evidence-table"><thead><tr><th>GTİP / Önlem</th><th>Oran</th><th>Menşe sütunu</th><th>Kaynak satırı</th><th>Kanıt</th></tr></thead><tbody>${tariffRows(data.tariff_lookup.measures)}</tbody></table>${exportBar("precheck", [{ table: "measures", label: "Tarife satırları" }, ...(data.deterministic_cost ? [{ table: "cost", label: "Maliyet taslağı" }] : [])])}${applyRatesButton(data.tariff_lookup, "precheck")}${(data.tariff_lookup.warnings || []).length ? `<div class="result-caution">${data.tariff_lookup.warnings.map((item) => escapeHtml(item)).join(" · ")}</div>` : ""}</section>` : ""}
       ${data.origin_documents ? `<section class="answer-section"><h3>Menşe belgeleri · ${escapeHtml(data.origin_documents.regime_name)}</h3><ul class="missing-list">${(data.origin_documents.documents || []).map((item) => `<li><b>${escapeHtml(item.name)}</b> — ${escapeHtml(item.applicability)}${item.note ? ` <small>${escapeHtml(item.note)}</small>` : ""}</li>`).join("")}</ul><div class="result-caution">${escapeHtml((data.origin_documents.caveats || []).join(" "))}</div></section>` : ""}
       ${data.control_lookup ? `<section class="answer-section"><h3>Resmî kontrol tebliği Ek-1 eşleşmeleri</h3>${renderControlTool(data.control_lookup)}</section>` : ""}
       <section class="answer-section"><h3>Eksik veya teyit edilmesi gereken bilgiler</h3><ul class="missing-list">${(data.missing_information?.length ? data.missing_information : ["Kritik eksik alan bildirilmedi."]).map((item) => `<li>${escapeHtml(item)}</li>`).join("")}</ul></section>
@@ -2304,6 +2304,30 @@ function renderLiraSummary(summary) {
     <p class="rate-warning">${(summary.notes || []).map((item) => escapeHtml(item)).join(" ")}</p></div>`;
 }
 
+const TRADE_MEASURE_LABELS = { anti_dumping: "Damping / sübvansiyon", safeguard: "Korunma önlemleri", surveillance: "Gözetim tebliğleri", communiques: "İthalat Tebliğleri" };
+function tradeSourceText(sources) {
+  return Object.entries(sources || {}).map(([kind, meta]) => {
+    const state = meta.origin === "synced" ? `resmî eşitleme ${String(meta.fetched_at || "").slice(0, 10)}` : meta.origin === "seed" ? "depo tohum verisi" : "yüklü değil";
+    return `${TRADE_MEASURE_LABELS[kind] || kind}: ${state}`;
+  }).join(" · ");
+}
+function renderTradeMeasures(trade) {
+  if (!trade) return "";
+  const statusLabel = { in_force: "yürürlükte", expired: "süresi dolmuş", unknown: "süre bilgisi yok" };
+  const groups = [
+    ["Damping / sübvansiyon", (trade.anti_dumping || []).filter((hit) => hit.origin_match !== false)],
+    ["Korunma önlemi", (trade.safeguard || []).filter((hit) => hit.origin_match !== false)],
+    ["Gözetim", trade.surveillance || []],
+  ];
+  const rows = groups.flatMap(([label, hits]) => hits.map((hit) => `<tr><td>${escapeHtml(label)}</td><td><code>${escapeHtml(hit.matched_code)}</code> ${escapeHtml(hit.product || "")}</td><td>${escapeHtml(hit.country || "")}</td><td>${escapeHtml(hit.rate_text || "—")} ${escapeHtml(hit.unit || "")}</td><td>${escapeHtml(hit.legal_act || "")}<br><small>${escapeHtml(hit.gazette || "")}${hit.expires ? ` · bitiş ${escapeHtml(hit.expires)}` : ""}${hit.notes ? ` · ${escapeHtml(hit.notes)}` : ""}</small></td><td><span class="measure-status ${escapeHtml(hit.status || "")}">${escapeHtml(statusLabel[hit.status] || hit.status || "")}</span></td></tr>`));
+  const hidden = (trade.anti_dumping || []).filter((hit) => hit.origin_match === false).length;
+  const empty = `<p class="missing-list">Bu GTİP için resmî listelerde ${trade.origin_country ? "bu menşeye uygulanan " : ""}damping, korunma veya gözetim satırı bulunmadı.</p>`;
+  return `<details class="advanced-fields trade-measures" ${rows.length ? "open" : ""}><summary><span>Damping, korunma ve gözetim kapsamı</span><small>${rows.length ? `${rows.length} resmî satır` : "eşleşen önlem yok"}</small></summary>
+    ${rows.length ? `<div class="scenario-table-wrap"><table class="evidence-table"><thead><tr><th>Önlem</th><th>Kapsam</th><th>Ülke</th><th>Oran / kıymet</th><th>Dayanak</th><th>Durum</th></tr></thead><tbody>${rows.join("")}</tbody></table></div>` : empty}
+    ${hidden ? `<p class="rate-warning">${hidden} damping satırı başka menşe ülkelere ait olduğu için gösterilmedi.</p>` : ""}
+    <p class="rate-warning">${escapeHtml(tradeSourceText(trade.sources))}. Oran ve tutarlar resmî tabloda yazıldığı gibidir; firma bazlı oranlar ve kontenjan muafiyetleri için tebliğ metnini doğrulayın.</p></details>`;
+}
+
 function renderTariffTool(data) {
   exportStore.tool = data;
   const tariff = data.tariff || data;
@@ -2318,6 +2342,7 @@ function renderTariffTool(data) {
     <p class="rate-warning">Kredili/vadeli ödemede KKDF eklenir, peşin ödemede bu kalem %0'dır. Beyanname damga vergisi ve TL giderler kur girildiğinde TL özetinde gösterilir. Kesin tutar için beyan öncesi gümrük müşaviri teyidi alın.</p></div>${renderLiraSummary(cost.try_summary)}` : "";
   return `<div class="answer-head"><span class="answer-status${tariff.status === "matched" ? "" : " warning"}">${escapeHtml(tariff.status)}</span><div><h2>${escapeHtml(tariff.gtip)} · ${escapeHtml(tariff.origin_country || "menşe seçilmedi")}</h2><p>Ülke grubu: ${escapeHtml(tariff.resolved_country_group || "çözümlenmedi")} · ${escapeHtml(tariff.as_of)}</p></div></div>
     ${tariffMatchSummary(tariff)}
+    ${renderTradeMeasures(tariff.trade_measures)}
     <table class="evidence-table"><thead><tr><th>GTİP / Önlem</th><th>Oran</th><th>Menşe sütunu</th><th>Kaynak satırı</th><th>Kanıt</th></tr></thead><tbody>${tariffRows(tariff.measures)}</tbody></table>
     ${exportBar("tool", [{ table: "measures", label: "Tarife satırları" }, ...(cost ? [{ table: "cost", label: "Maliyet defteri" }] : [])])}
     ${applyRatesButton(tariff, "tool")}
@@ -2750,7 +2775,16 @@ async function loadChanges() {
       const table = rows ? `<details class="advanced-fields"><summary><span>Satır farkları</span><small>${Math.min(total, 50)} / ${total}</small></summary><div class="scenario-table-wrap"><table class="evidence-table"><thead><tr><th>GTİP</th><th>Önlem</th><th>Sütun</th><th>Önce</th><th>Sonra</th></tr></thead><tbody>${rows}</tbody></table></div></details>` : "";
       return `<article class="candidate-card"><code>${escapeHtml(sourceLabel)}</code><b>${escapeHtml(statusText)}</b><p>${escapeHtml(note)}</p>${table}</article>`;
     }).join("");
-    output.innerHTML = `<div class="candidate-grid">${tariffSummaries || '<p class="missing-list">Tarife sürümü henüz yok.</p>'}</div>
+    const tradeStatus = data.trade_measure_status || {};
+    const tradeDatasets = Object.entries(tradeStatus.datasets || {}).map(([kind, meta]) => `<div class="formula-line"><span><strong>${escapeHtml(meta.label || TRADE_MEASURE_LABELS[kind] || kind)}</strong><br><small>${escapeHtml(meta.origin === "synced" ? `resmî eşitleme ${String(meta.fetched_at || "").slice(0, 16).replace("T", " ")}` : meta.origin === "seed" ? "depo tohum verisi (ilk eşitleme bekleniyor)" : "yüklü değil")}</small></span><code>${escapeHtml(meta.item_count ?? 0)} satır</code></div>`).join("");
+    const lastSync = tradeStatus.last_sync?.finished_at ? `Son eşitleme ${escapeHtml(String(tradeStatus.last_sync.finished_at).slice(0, 16).replace("T", " "))}` : "Eşitleme henüz çalışmadı";
+    const tradeRows = (data.trade_measures || []).map((change) => {
+      const detail = change.detail || {};
+      const items = [...(detail.added || []).map((item) => `<li><b>Yeni:</b> ${escapeHtml(item.summary)}</li>`), ...(detail.removed || []).map((item) => `<li><b>Kaldırıldı:</b> ${escapeHtml(item.summary)}</li>`), ...(detail.modified || []).map((item) => `<li><b>Değişti:</b> ${escapeHtml(item.before)} → ${escapeHtml(item.after)}</li>`)].slice(0, 40).join("");
+      return `<details class="advanced-fields"><summary><span>${escapeHtml(detail.label || TRADE_MEASURE_LABELS[change.kind] || change.kind)}</span><small>${escapeHtml(String(change.changed_at || "").slice(0, 10))} · +${escapeHtml(change.added)} / −${escapeHtml(change.removed)} / ~${escapeHtml(change.modified)}</small></summary><ul class="missing-list">${items}</ul></details>`;
+    }).join("");
+    const tradeLedger = `<div class="formula-ledger"><h3>Damping, korunma, gözetim ve İthalat Tebliğleri (günlük eşitleme)</h3>${tradeDatasets}<p class="rate-warning">${lastSync}. Her gün Ticaret Bakanlığı ve mevzuat.gov.tr'den yeniden okunur; farklar aşağıda ve izleme listesi bildirimlerinde görünür.</p>${tradeRows || '<p class="missing-list">Önlem listelerinde henüz kaydedilmiş fark yok.</p>'}</div>`;
+    output.innerHTML = `<div class="candidate-grid">${tariffSummaries || '<p class="missing-list">Tarife sürümü henüz yok.</p>'}</div>${tradeLedger}
       <div class="formula-ledger"><h3>Kontrol tebliği değişiklikleri</h3>${controlRows.length ? controlRows.map((item) => `<div class="formula-line"><span><strong>${escapeHtml(item.code)}</strong> · ${escapeHtml(item.title)}<br><small>${escapeHtml(item.changed_at)}</small></span><code>${item.scope_count_delta > 0 ? "+" : ""}${escapeHtml(item.scope_count_delta)}</code></div>`).join("") : '<p class="missing-list">Karşılaştırılabilir ikinci tebliğ sürümü henüz oluşmadı.</p>'}</div>`;
   } catch (error) { output.innerHTML = `<div class="answer-error"><p>${escapeHtml(error.message)}</p></div>`; }
 }
@@ -2800,6 +2834,33 @@ async function fetchCustomsRate(prefix) {
 document.querySelectorAll(".fx-fetch").forEach((button) => {
   button.addEventListener("click", () => fetchCustomsRate(button.dataset.prefix));
 });
+
+async function loadDeclarationStatus() {
+  const hint = $("#declarationHint");
+  if (!hint) return;
+  try {
+    const data = await fetchJson("/api/customs/declaration/status");
+    hint.textContent = data.configured ? (state.auth?.authenticated ? "Hazır" : "Giriş gerekir") : "Sunucuda Eylemio hesabı tanımlı değil";
+  } catch { hint.textContent = "Durum alınamadı"; }
+}
+async function queryDeclaration() {
+  const output = $("#declarationOutput");
+  const button = $("#declarationQuery");
+  const number = ($("#declarationNo")?.value || "").trim();
+  if (!number) { output.innerHTML = '<div class="answer-error"><p>Beyanname numarasını girin.</p></div>'; return; }
+  button.disabled = true;
+  output.innerHTML = '<div class="analysis-loading"><i></i><div><b>Beyanname sorgulanıyor</b><span>Eylemio üzerinden Ticaret Bakanlığı servisine bağlanılıyor…</span></div></div>';
+  try {
+    const data = await fetchJson("/api/customs/declaration", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ declaration_no: number }) });
+    const rows = (data.summary || []).map((pair) => `<div class="formula-line"><span>${escapeHtml(pair.label)}</span><code>${escapeHtml(pair.value)}</code></div>`).join("");
+    output.innerHTML = `<div class="formula-ledger"><h3>${escapeHtml(data.declaration_no)} · ${escapeHtml(data.message || "sorgu tamamlandı")}</h3>${rows || '<p class="missing-list">Konektör alan döndürmedi.</p>'}<details class="advanced-fields"><summary><span>Ham yanıt</span><small>${escapeHtml(data.account?.name || "")}</small></summary><pre class="raw-json">${escapeHtml(JSON.stringify(data.data || {}, null, 2))}</pre></details><p class="rate-warning">${escapeHtml(data.source || "")}</p></div>`;
+  } catch (error) {
+    output.innerHTML = `<div class="answer-error"><p>${escapeHtml(error.message)}</p></div>`;
+  } finally { button.disabled = false; }
+}
+$("#declarationQuery")?.addEventListener("click", queryDeclaration);
+$("#declarationNo")?.addEventListener("keydown", (event) => { if (event.key === "Enter") { event.preventDefault(); queryDeclaration(); } });
+loadDeclarationStatus();
 
 bindLocalizedNumberInputs();
 if (new URLSearchParams(location.search).get("scope") === "customs" || location.hash === "#customs") switchScope("customs");

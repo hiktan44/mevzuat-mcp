@@ -946,7 +946,9 @@ class TariffEngine:
         with self._connect() as db:
             snapshots = db.execute("SELECT * FROM tariff_snapshots WHERE active=1 ORDER BY source_id").fetchall()
             if not snapshots:
-                return TariffLookupResult(status="unavailable", gtip=normalised, origin_country=origin_country, dispatch_country=dispatch_country, as_of=_now(), warnings=["Resmî tarife tabloları henüz eşitlenmedi."])
+                result = TariffLookupResult(status="unavailable", gtip=normalised, origin_country=origin_country, dispatch_country=dispatch_country, as_of=_now(), warnings=["Resmî tarife tabloları henüz eşitlenmedi."])
+                self._attach_trade_measures(result)
+                return result
             all_rows: list[tuple[sqlite3.Row, sqlite3.Row]] = []
             metadata: dict[str, Any] = {}
             for snapshot in snapshots:
@@ -964,7 +966,7 @@ class TariffEngine:
                 all_rows.extend((row, snapshot) for row in rows)
         if not all_rows:
             coverage = self._measure_coverage(snapshots)
-            return TariffLookupResult(
+            result = TariffLookupResult(
                 status="not_found", gtip=normalised, match_mode=match_mode, origin_country=origin_country,
                 dispatch_country=dispatch_country,
                 snapshots=[self._snapshot(row) for row in snapshots], measure_coverage=coverage,
@@ -972,6 +974,8 @@ class TariffEngine:
                 as_of=_now(),
                 warnings=["Bu kod aktif resmî tarife/İGV tablolarında bulunamadı; kod ve fasıl doğrulaması gerekir."],
             )
+            self._attach_trade_measures(result)
+            return result
 
         matched_gtips = sorted({row["gtip"] for row, _ in all_rows})
         selected_by_scope: dict[tuple[str, str, str], str | None] = {}
