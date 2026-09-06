@@ -1011,7 +1011,7 @@ function renderCustomsResult(data) {
         <time>${escapeHtml(formatDate(data.as_of, true))}</time>
       </header>
       <section class="answer-section"><h3>Aday GTİP / CN kodları</h3>${candidates}</section>
-      ${data.tariff_lookup ? `<section class="answer-section"><h3>Resmî tarife snapshot eşleşmesi</h3>${tariffMatchSummary(data.tariff_lookup)}${renderMeasureCoverage(data.tariff_lookup.measure_coverage)}${renderTradeMeasures(data.tariff_lookup.trade_measures)}<table class="evidence-table"><thead><tr><th>GTİP / Önlem</th><th>Oran</th><th>Menşe sütunu</th><th>Kaynak satırı</th><th>Kanıt</th></tr></thead><tbody>${tariffRows(data.tariff_lookup.measures)}</tbody></table>${exportBar("precheck", [{ table: "measures", label: "Tarife satırları" }, ...(data.deterministic_cost ? [{ table: "cost", label: "Maliyet taslağı" }] : [])])}${applyRatesButton(data.tariff_lookup, "precheck")}${(data.tariff_lookup.warnings || []).length ? `<div class="result-caution">${data.tariff_lookup.warnings.map((item) => escapeHtml(item)).join(" · ")}</div>` : ""}</section>` : ""}
+      ${data.tariff_lookup ? `<section class="answer-section"><h3>Resmî tarife snapshot eşleşmesi</h3>${tariffMatchSummary(data.tariff_lookup)}${renderMeasureCoverage(data.tariff_lookup.measure_coverage)}${renderTradeMeasures(data.tariff_lookup.trade_measures)}${renderExciseTax(data.tariff_lookup.excise_tax)}<table class="evidence-table"><thead><tr><th>GTİP / Önlem</th><th>Oran</th><th>Menşe sütunu</th><th>Kaynak satırı</th><th>Kanıt</th></tr></thead><tbody>${tariffRows(data.tariff_lookup.measures)}</tbody></table>${exportBar("precheck", [{ table: "measures", label: "Tarife satırları" }, ...(data.deterministic_cost ? [{ table: "cost", label: "Maliyet taslağı" }] : [])])}${applyRatesButton(data.tariff_lookup, "precheck")}${(data.tariff_lookup.warnings || []).length ? `<div class="result-caution">${data.tariff_lookup.warnings.map((item) => escapeHtml(item)).join(" · ")}</div>` : ""}</section>` : ""}
       ${data.origin_documents ? `<section class="answer-section"><h3>Menşe belgeleri · ${escapeHtml(data.origin_documents.regime_name)}</h3><ul class="missing-list">${(data.origin_documents.documents || []).map((item) => `<li><b>${escapeHtml(item.name)}</b> — ${escapeHtml(item.applicability)}${item.note ? ` <small>${escapeHtml(item.note)}</small>` : ""}</li>`).join("")}</ul><div class="result-caution">${escapeHtml((data.origin_documents.caveats || []).join(" "))}</div></section>` : ""}
       ${data.control_lookup ? `<section class="answer-section"><h3>Resmî kontrol tebliği Ek-1 eşleşmeleri</h3>${renderControlTool(data.control_lookup)}</section>` : ""}
       <section class="answer-section"><h3>Eksik veya teyit edilmesi gereken bilgiler</h3><ul class="missing-list">${(data.missing_information?.length ? data.missing_information : ["Kritik eksik alan bildirilmedi."]).map((item) => `<li>${escapeHtml(item)}</li>`).join("")}</ul></section>
@@ -2312,6 +2312,22 @@ function tradeSourceText(sources) {
     return `${TRADE_MEASURE_LABELS[kind] || kind}: ${state}`;
   }).join(" · ");
 }
+function renderExciseTax(excise) {
+  if (!excise) return "";
+  const rows = (excise.matches || []).map((hit) => {
+    const values = Object.entries(hit.values || {}).map(([key, value]) => `${escapeHtml(key)}: ${escapeHtml(String(value))}`).join("<br>");
+    return `<tr><td><code>${escapeHtml(hit.matched_code)}</code></td><td>${escapeHtml(hit.list_label)}</td><td>${escapeHtml(hit.description || "")}</td><td>${values || "—"}</td></tr>`;
+  });
+  const related = (excise.related_positions || []).map((hit) => `<li><code>${escapeHtml(hit.matched_code)}</code> · ${escapeHtml(hit.list_label)} ${escapeHtml(hit.description || "")}</li>`);
+  const empty = related.length
+    ? `<p class="missing-list">Bu GTİP ekli listelerde yok; aynı pozisyonda ÖTV satırları var:</p><ul class="missing-list">${related.join("")}</ul>`
+    : `<p class="missing-list">Bu GTİP 4760 sayılı Kanunun ekli listelerinde bulunamadı (ÖTV'ye tabi görünmüyor).</p>`;
+  return `<details class="advanced-fields trade-measures" ${rows.length || related.length ? "open" : ""}><summary><span>ÖTV kapsamı</span><small>${rows.length ? `${rows.length} liste satırı` : (related.length ? "kod değişmiş olabilir" : "kapsam dışı")}</small></summary>
+    ${rows.length ? `<div class="scenario-table-wrap"><table class="evidence-table"><thead><tr><th>Kod</th><th>Liste</th><th>Eşya</th><th>Oran / tutar</th></tr></thead><tbody>${rows.join("")}</tbody></table></div>` : empty}
+    ${(excise.warnings || []).map((item) => `<p class="rate-warning">${escapeHtml(item)}</p>`).join("")}
+    <p class="rate-warning">Kaynak: ${escapeHtml(excise.legal_basis || "")}.</p></details>`;
+}
+
 function renderTradeMeasures(trade) {
   if (!trade) return "";
   const statusLabel = { in_force: "yürürlükte", expired: "süresi dolmuş", unknown: "süre bilgisi yok" };
@@ -2345,6 +2361,7 @@ function renderTariffTool(data) {
   return `<div class="answer-head"><span class="answer-status${tariff.status === "matched" ? "" : " warning"}">${escapeHtml(tariff.status)}</span><div><h2>${escapeHtml(tariff.gtip)} · ${escapeHtml(tariff.origin_country || "menşe seçilmedi")}</h2><p>Ülke grubu: ${escapeHtml(tariff.resolved_country_group || "çözümlenmedi")} · ${escapeHtml(tariff.as_of)}</p></div></div>
     ${tariffMatchSummary(tariff)}
     ${renderTradeMeasures(tariff.trade_measures)}
+    ${renderExciseTax(tariff.excise_tax)}
     <table class="evidence-table"><thead><tr><th>GTİP / Önlem</th><th>Oran</th><th>Menşe sütunu</th><th>Kaynak satırı</th><th>Kanıt</th></tr></thead><tbody>${tariffRows(tariff.measures)}</tbody></table>
     ${exportBar("tool", [{ table: "measures", label: "Tarife satırları" }, ...(cost ? [{ table: "cost", label: "Maliyet defteri" }] : [])])}
     ${applyRatesButton(tariff, "tool")}

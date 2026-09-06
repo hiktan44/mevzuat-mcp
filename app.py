@@ -37,6 +37,7 @@ from mevzuat_mcp_server import (
     classification_engine,
     control_engine,
     customs_advisor_service,
+    excise_tax_index,
     exchange_rate_service,
     eylemio_client,
     tariff_engine,
@@ -54,6 +55,7 @@ from security_firewall import AgentTokenVerifier, SecurityViolation, guard_data,
 from exchange_rates import ExchangeRateError, parse_registration_date
 from eylemio_client import EylemioError, summarise_declaration
 from trade_measures import KIND_LABELS as TRADE_MEASURE_LABELS, summary_lines as trade_measure_summary
+from tax_lists import summary_lines as excise_tax_summary
 from tariff_engine import LandedCostInput
 
 logger = logging.getLogger(__name__)
@@ -1735,6 +1737,23 @@ async def web_trade_measures_status(request: Request):
     if limited:
         return limited
     return JSONResponse(trade_measure_engine.status())
+
+
+@mcp.custom_route("/api/tariff/excise", methods=["POST"])
+async def web_excise_tax(request: Request):
+    """4760 sayılı ÖTV Kanunu ekli listelerinde GTİP kapsamı."""
+    limited = _rate_limit_response(request, "excise-tax", limit=60, window_seconds=60)
+    if limited:
+        return limited
+    try:
+        body = await request.json()
+        if not isinstance(body, dict):
+            raise ValueError("İstek bir nesne olmalıdır.")
+    except ValueError as exc:
+        return JSONResponse({"error": str(exc)}, status_code=422)
+    report = excise_tax_index.lookup(str(body.get("gtip", "")))
+    report["summary"] = excise_tax_summary(report)
+    return JSONResponse(report)
 
 
 @mcp.custom_route("/api/tariff/communiques", methods=["GET"])

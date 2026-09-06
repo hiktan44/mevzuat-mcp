@@ -12,6 +12,7 @@ import hashlib
 import html
 import io
 import json
+import logging
 import os
 import re
 import sqlite3
@@ -27,6 +28,8 @@ from urllib.parse import urljoin, urlsplit
 import httpx
 import xlrd
 from bs4 import BeautifulSoup
+
+logger = logging.getLogger(__name__)
 from openpyxl import load_workbook
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 
@@ -173,6 +176,7 @@ class TariffLookupResult(BaseModel):
     unresolved_measure_types: list[str] = Field(default_factory=list)
     warnings: list[str] = Field(default_factory=list)
     trade_measures: dict[str, Any] | None = None
+    excise_tax: dict[str, Any] | None = None
     as_of: str
 
 
@@ -314,6 +318,7 @@ _EXPLICIT_LABELS = {alias: label for alias, label in explicit_labels().items() i
 
 class TariffEngine:
     trade_measures: Any = None  # trade_measures.TradeMeasureEngine; sunucu başlangıcında bağlanır
+    excise_tax: Any = None  # tax_lists.ExciseTaxIndex; sunucu başlangıcında bağlanır
     """Synchronise, query and diff official tariff snapshots."""
 
     def __init__(self, config_path: str | Path | None = None, data_dir: str | Path | None = None) -> None:
@@ -865,7 +870,20 @@ class TariffEngine:
             ),
         )
 
+    def _attach_excise_tax(self, result: "TariffLookupResult") -> None:
+        index = self.excise_tax
+        if index is None:
+            return
+        try:
+            report = index.lookup(result.gtip)
+        except Exception:  # noqa: BLE001 – ÖTV verisi tarife sonucunu düşürmemeli
+            logger.exception("Excise tax lookup failed for %s", result.gtip)
+            return
+        result.excise_tax = report
+        result.warnings.extend(report.get("warnings", []))
+
     def _attach_trade_measures(self, result: "TariffLookupResult") -> None:
+        self._attach_excise_tax(result)
         engine = self.trade_measures
         if engine is None:
             return
@@ -923,8 +941,13 @@ class TariffEngine:
                 note="Ödeme şekli ve istisnaya göre KKDF oranı doğrulanıp girilmelidir.",
             ),
             "sct": MeasureCoverage(
-                status="user_confirmation_required",
-                note="ÖTV kapsamı ve matrahı doğrulanıp toplam tutar girilmelidir.",
+                status="partial_snapshot" if self.excise_tax is not None and self.excise_tax.ready else "user_confirmation_required",
+                source_ids=["excise_tax_lists"] if self.excise_tax is not None and self.excise_tax.ready else [],
+                note=(
+                    "4760 sayılı Kanunun ekli listelerinden ÖTV kapsamı otomatik belirlenir; "
+                    "yürürlükteki oran/tutar Cumhurbaşkanı kararıyla değişebileceğinden matrah ve "
+                    "tutar doğrulanıp girilmelidir."
+                ),
             ),
         }
 

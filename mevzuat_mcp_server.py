@@ -38,6 +38,7 @@ from customs_advisor import (
 from exchange_rates import ExchangeRateError, ExchangeRateService, parse_registration_date
 from eylemio_client import EylemioClient, EylemioError, summarise_declaration
 from trade_measures import KIND_LABELS as TRADE_MEASURE_LABELS, TradeMeasureEngine, summary_lines as trade_measure_summary
+from tax_lists import ExciseTaxIndex, summary_lines as excise_tax_summary
 from tariff_engine import (
     LandedCostInput,
     TariffDecisionTreeResult,
@@ -75,7 +76,9 @@ ticaret_client = TicaretApiClient()
 tariff_engine = TariffEngine()
 exchange_rate_service = ExchangeRateService()
 trade_measure_engine = TradeMeasureEngine()
+excise_tax_index = ExciseTaxIndex()
 tariff_engine.trade_measures = trade_measure_engine
+tariff_engine.excise_tax = excise_tax_index
 eylemio_client = EylemioClient()
 control_engine = ImportControlEngine()
 classification_engine = ClassificationEvidenceEngine()
@@ -2681,6 +2684,33 @@ async def lookup_trade_measures(
     payload = report.as_dict()
     payload["summary"] = trade_measure_summary(report)
     return payload
+
+
+@app.tool(
+    app=True,
+    annotations={
+        "title": "GTİP'in ÖTV kapsamını sorgula",
+        "readOnlyHint": True,
+        "destructiveHint": False,
+        "idempotentHint": True,
+        "openWorldHint": False,
+    }
+)
+async def lookup_excise_tax(
+    gtip: str = Field(..., min_length=4, max_length=20, description="4-12 haneli GTİP; kısa pozisyon kodları ön ek olarak eşlenir."),
+) -> dict:
+    """Return whether a code falls under an annexed list of the Turkish excise tax law (ÖTV).
+
+    Kaynak, 4760 sayılı Özel Tüketim Vergisi Kanununun ekli (I)-(IV) sayılı listeleridir.
+    Kanun metnindeki oran/tutarlar ile Cumhurbaşkanı kararlarıyla yeniden tespit edilen
+    "uygulanacak" değerler ayrı alanlarda döner; ikincisi boşsa kanuni değer geçerlidir.
+    (III) sayılı listede sütunlar resmî PDF'te birleşik basıldığından oran gösterilmez.
+    Sorgulanan kod listelerde yoksa fakat aynı pozisyonda satır varsa, Armonize Sistem
+    revizyonu nedeniyle kodun değişmiş olabileceği uyarısı verilir.
+    """
+    report = excise_tax_index.lookup(gtip)
+    report["summary"] = excise_tax_summary(report)
+    return report
 
 
 @app.tool(
