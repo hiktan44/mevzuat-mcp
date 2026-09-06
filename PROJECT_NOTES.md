@@ -202,3 +202,4 @@ Aşağıdaki dokuz madde aynı gün kapatıldı (Playwright ile doğrulandı, 10
 - Resmî veri sandbox üzerinden çekildi: mevzuat.gov.tr ara sertifika (GeoTrust) göndermediği için `trusted_certificates` ile doğrulama; gözetim metinlerinin 193/194'ü tohumda (856 satır / 851 GTİP; 10 metinde tablo yok); tarım tarife kontenjanları 13 karar / 428 satır (.docx), .doc ekleri sunucuda antiword ile günlük eşitlemede (site 150 istek sonrası yavaşlıyor; eşitleme istekler arasında bekler).
 - `eylemio_client.py`: Eylemio `ticaret-beyanname` konektörü ile beyanname durumu (login → hesap listesi → read). Depo bulunamadığı için API şekli canlı siteden çıkarıldı; yanıt alanları genel olarak gösterilir.
 - Testler: 183 (exchange_rates 6, trade_measures 11, eylemio 4).
+- Tarife kontenjanı ekleri: 21 ülke / 863 satır tohumda; `.doc` dosyaları `olefile` ile saf Python'da okunuyor (antiword yalnız son çare), başlık eşleştirmesi caption sonuna bakıyor ve kısa/kaymış satırları hizalıyor.
