@@ -170,6 +170,7 @@ class TariffLookupResult(BaseModel):
     measure_coverage: dict[str, "MeasureCoverage"] = Field(default_factory=dict)
     unresolved_measure_types: list[str] = Field(default_factory=list)
     warnings: list[str] = Field(default_factory=list)
+    trade_measures: dict[str, Any] | None = None
     as_of: str
 
 
@@ -310,6 +311,7 @@ _EXPLICIT_LABELS = {alias: label for alias, label in explicit_labels().items() i
 
 
 class TariffEngine:
+    trade_measures: Any = None  # trade_measures.TradeMeasureEngine; sunucu başlangıcında bağlanır
     """Synchronise, query and diff official tariff snapshots."""
 
     def __init__(self, config_path: str | Path | None = None, data_dir: str | Path | None = None) -> None:
@@ -844,8 +846,51 @@ class TariffEngine:
             snapshot_id=snapshot["id"], automatic_calculation_allowed=bool(row["automatic_calculation_allowed"]),
         )
 
-    @staticmethod
-    def _measure_coverage(snapshots: list[sqlite3.Row]) -> dict[str, MeasureCoverage]:
+    def _trade_coverage(self, kind: str, default_note: str) -> MeasureCoverage:
+        engine = self.trade_measures
+        if engine is None:
+            return MeasureCoverage(status="not_integrated", note=default_note)
+        meta = engine.store.metadata(kind)
+        if meta.get("origin") == "missing":
+            return MeasureCoverage(status="not_integrated", note=default_note)
+        stamp = meta.get("fetched_at") or "depo tohum verisi"
+        return MeasureCoverage(
+            status="partial_snapshot",
+            source_ids=[f"trade_measures:{kind}"],
+            note=(
+                f"{meta.get('source_label')} ({stamp}); GTİP ön ekiyle eşleşen resmî satırlar gösterilir, "
+                "oran/tutar kullanıcı doğrulamasıyla hesaba girer."
+            ),
+        )
+
+    def _attach_trade_measures(self, result: "TariffLookupResult") -> None:
+        engine = self.trade_measures
+        if engine is None:
+            return
+        try:
+            report = engine.lookup(result.gtip, result.origin_country)
+        except Exception:  # noqa: BLE001 – önlem verisi tarife sonucunu düşürmemeli
+            logger.exception("Trade measure lookup failed for %s", result.gtip)
+            return
+        result.trade_measures = report.as_dict()
+        for hit in report.applicable_anti_dumping[:3]:
+            label = "sübvansiyona karşı" if hit.measure_type == "countervailing" else "dampinge karşı"
+            result.warnings.append(
+                f"Resmî listede {hit.country} menşeli '{hit.product}' ({hit.matched_code}) için {label} önlem var: "
+                f"{hit.rate_text} [{hit.legal_act}]. Oran/tutar firma bazlı olabilir; tebliğ metniyle doğrulayın."
+            )
+        for hit in [h for h in report.safeguard if h.status != "expired" and h.origin_match is not False][:3]:
+            result.warnings.append(
+                f"Korunma önlemi kapsamı: '{hit.product}' ({hit.matched_code}) – {hit.rate_text} [{hit.legal_act}]. "
+                + (hit.notes or "")
+            )
+        for hit in report.surveillance[:3]:
+            result.warnings.append(
+                f"Gözetim tebliği kapsamı: {hit.matched_code} '{hit.product}' birim gümrük kıymeti {hit.rate_text} {hit.unit or ''} "
+                f"[{hit.legal_act}]; gözetim belgesi yoksa kıymet bu eşiğe yükseltilir."
+            )
+
+    def _measure_coverage(self, snapshots: list[sqlite3.Row]) -> dict[str, MeasureCoverage]:
         active = {str(snapshot["source_id"]) for snapshot in snapshots}
         return {
             "customs_duty": MeasureCoverage(
@@ -863,18 +908,9 @@ class TariffEngine:
                 source_ids=["import_regime"] if "import_regime" in active else [],
                 note="Konsolide cetveldeki IV sayılı liste okunur; diğer ek mali yükümlülük kararları ayrıca doğrulanmalıdır.",
             ),
-            "anti_dumping": MeasureCoverage(
-                status="not_integrated",
-                note="Ürün, menşe ve üretici/ihracatçı bazlı güncel damping/sübvansiyon önlemi henüz yapılandırılmış hesap motorunda değildir.",
-            ),
-            "surveillance": MeasureCoverage(
-                status="not_integrated",
-                note="Gözetim tebliği, birim kıymet, menşe ve yürürlük tarihi ayrıca doğrulanmalıdır.",
-            ),
-            "safeguard": MeasureCoverage(
-                status="not_integrated",
-                note="Korunma önlemi ve varsa ülke/istisna kapsamı ayrıca doğrulanmalıdır.",
-            ),
+            "anti_dumping": self._trade_coverage("anti_dumping", "Ürün, menşe ve üretici/ihracatçı bazlı güncel damping/sübvansiyon önlemi henüz yapılandırılmış hesap motorunda değildir."),
+            "surveillance": self._trade_coverage("surveillance", "Gözetim tebliği, birim kıymet, menşe ve yürürlük tarihi ayrıca doğrulanmalıdır."),
+            "safeguard": self._trade_coverage("safeguard", "Korunma önlemi ve varsa ülke/istisna kapsamı ayrıca doğrulanmalıdır."),
             "tariff_quota": MeasureCoverage(
                 status="not_integrated",
                 note="Tarife kontenjanı tahsis ve bakiye durumu işlem tarihinde ayrıca doğrulanmalıdır.",
@@ -1081,7 +1117,7 @@ class TariffEngine:
                 "Bu sonuç bütün ticaret politikası ve iç vergi kalemlerinin doğrulandığı anlamına gelmez; "
                 "kapsam matrisi 'partial/not_integrated/user_confirmation_required' kalemlerini ayrı gösterir."
             )
-        return TariffLookupResult(
+        result = TariffLookupResult(
             status="matched" if primary and not ambiguous_measure_types else "partial",
             gtip=normalised, match_mode=match_mode, matched_gtips=matched_gtips[:500],
             matched_gtip_count=len(matched_gtips), origin_country=origin_country,
@@ -1093,6 +1129,8 @@ class TariffEngine:
             alternatives=alternatives[:120], snapshots=[self._snapshot(row) for row in snapshots],
             measure_coverage=coverage, unresolved_measure_types=unresolved, warnings=warnings, as_of=_now(),
         )
+        self._attach_trade_measures(result)
+        return result
 
     async def decision_tree(
         self,
@@ -1253,6 +1291,31 @@ class TariffEngine:
         cost = calculate_landed_cost(enriched)
         cost.rate_overrides = overrides
         cost.warnings.extend(conflicts)
+        trade = lookup.trade_measures or {}
+        if trade:
+            live_dumping = [
+                hit for hit in trade.get("anti_dumping", []) if hit.get("origin_match") is not False and hit.get("status") != "expired"
+            ]
+            if live_dumping and data.anti_dumping_amount is None:
+                cost.warnings.append(
+                    "Resmî listede bu GTİP ve menşe için dampinge/sübvansiyona karşı önlem var; tebliğdeki oran veya birim tutarı "
+                    "uygulayıp 'Damping / sübvansiyon toplamı' alanına girin: "
+                    + "; ".join(f"{hit['country']} – {hit['rate_text']}" for hit in live_dumping[:3])
+                )
+            live_safeguard = [hit for hit in trade.get("safeguard", []) if hit.get("status") != "expired" and hit.get("origin_match") is not False]
+            if live_safeguard and data.additional_financial_liability_rate is None and data.anti_dumping_amount is None:
+                cost.warnings.append(
+                    "Korunma önlemi (ek mali yükümlülük) kapsamı: "
+                    + "; ".join(f"{hit['product']} – {hit['rate_text']}" for hit in live_safeguard[:2])
+                    + ". Kontenjan dışıysa tutarı ek mali yükümlülük veya damping alanına girin."
+                )
+            threshold = trade.get("surveillance_unit_value")
+            if threshold and data.surveillance_unit_value is None:
+                units = {hit.get("unit") for hit in trade.get("surveillance", []) if hit.get("unit")}
+                cost.warnings.append(
+                    f"Gözetim tebliği kapsamı: birim gümrük kıymeti eşiği {threshold:g} {'/'.join(sorted(units)) or 'ABD Doları'}; "
+                    "gözetim belgesi yoksa kıymet bu eşiğe yükseltilir. 'Gözetim birim kıymeti' alanını doldurun."
+                )
         return {
             "tariff": lookup.model_dump(mode="json"),
             "cost": cost.model_dump(mode="json"),

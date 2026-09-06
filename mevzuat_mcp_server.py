@@ -36,6 +36,8 @@ from customs_advisor import (
     decode_image_data_url,
 )
 from exchange_rates import ExchangeRateError, ExchangeRateService, parse_registration_date
+from eylemio_client import EylemioClient, EylemioError, summarise_declaration
+from trade_measures import KIND_LABELS as TRADE_MEASURE_LABELS, TradeMeasureEngine, summary_lines as trade_measure_summary
 from tariff_engine import (
     LandedCostInput,
     TariffDecisionTreeResult,
@@ -72,6 +74,9 @@ logger = logging.getLogger(__name__)
 ticaret_client = TicaretApiClient()
 tariff_engine = TariffEngine()
 exchange_rate_service = ExchangeRateService()
+trade_measure_engine = TradeMeasureEngine()
+tariff_engine.trade_measures = trade_measure_engine
+eylemio_client = EylemioClient()
 control_engine = ImportControlEngine()
 classification_engine = ClassificationEvidenceEngine()
 customs_advisor_service = CustomsAdvisor(
@@ -83,6 +88,7 @@ customs_advisor_service = CustomsAdvisor(
 
 # Extra background coroutines registered by the web layer (e.g. watch-list notifier).
 BACKGROUND_LOOPS: list[tuple[str, "Callable[[], Coroutine[Any, Any, None]]"]] = []
+BACKGROUND_LOOPS.append(("trade-measures-sync", trade_measure_engine.periodic_sync_loop))
 
 
 @asynccontextmanager
@@ -2643,6 +2649,88 @@ async def get_customs_exchange_rate(
         return await exchange_rate_service.customs_quote(currency, target)
     except ExchangeRateError as exc:
         return {"error": str(exc), "currency": currency, "registration_date": registration_date}
+
+
+@app.tool(
+    app=True,
+    annotations={
+        "title": "Damping, korunma ve gözetim önlemlerini sorgula",
+        "readOnlyHint": True,
+        "destructiveHint": False,
+        "idempotentHint": True,
+        "openWorldHint": False,
+    }
+)
+async def lookup_trade_measures(
+    gtip: str = Field(..., min_length=4, max_length=20, description="4-12 haneli GTİP; kısa kodlar ön ek olarak eşlenir."),
+    origin_country: Optional[str] = Field(None, max_length=100, description="Menşe ülke; damping önlemleri ülkeye göre süzülür."),
+) -> dict:
+    """Return official anti-dumping / countervailing, safeguard and surveillance coverage for a code.
+
+    Veri, Ticaret Bakanlığı'nın yürürlükteki önlem listeleri ve mevzuat.gov.tr'deki gözetim
+    tebliğlerinden günlük eşitlenir. Satırlar GTİP ön ekiyle eşleşir; oran/tutar resmî tabloda
+    yazıldığı gibi döner ve hesaba otomatik girilmez.
+    """
+    try:
+        report = trade_measure_engine.lookup(gtip, origin_country)
+    except ValueError as exc:
+        return {"error": str(exc)}
+    payload = report.as_dict()
+    payload["summary"] = trade_measure_summary(report)
+    return payload
+
+
+@app.tool(
+    app=True,
+    annotations={
+        "title": "İthalat Tebliğleri dizinini listele",
+        "readOnlyHint": True,
+        "destructiveHint": False,
+        "idempotentHint": True,
+        "openWorldHint": False,
+    }
+)
+async def list_import_communiques(
+    year: Optional[int] = Field(None, ge=2020, le=2100, description="Yıl; boşsa dizindeki tüm yıllar."),
+    query: Optional[str] = Field(None, max_length=120, description="Başlıkta aranacak kelime (ör. 'kontenjan', 'gözetim')."),
+) -> dict:
+    """List the Ministry of Trade import communiqués index (İthalat: YYYY/N) with official links."""
+    entries = trade_measure_engine.communiques(year)
+    if query:
+        needle = query.casefold()
+        entries = [entry for entry in entries if needle in entry.get("title", "").casefold()]
+    return {
+        "count": len(entries),
+        "entries": entries[:200],
+        "dataset": trade_measure_engine.store.metadata("communiques"),
+    }
+
+
+@app.tool(
+    app=True,
+    annotations={
+        "title": "Beyanname durumunu Eylemio üzerinden sorgula",
+        "readOnlyHint": True,
+        "destructiveHint": False,
+        "idempotentHint": True,
+        "openWorldHint": True,
+    }
+)
+async def query_customs_declaration_status(
+    declaration_no: str = Field(..., min_length=8, max_length=24, description="Beyanname (TCGB) numarası."),
+) -> dict:
+    """Read declaration detail/status through the Eylemio customs connector (read-only).
+
+    Eylemio'daki 'ticaret-beyanname' konektörü, gümrük müşavirinin BİLGE web servis hesabıyla
+    Ticaret Bakanlığı'ndan gerçek beyanname bilgisini okur. Sunucuda EYLEMIO_EMAIL /
+    EYLEMIO_PASSWORD tanımlı değilse açıklayıcı hata döner.
+    """
+    try:
+        result = await eylemio_client.declaration_status(declaration_no)
+    except EylemioError as exc:
+        return {"error": str(exc), "declaration_no": declaration_no}
+    result["summary"] = [{"label": label, "value": value} for label, value in summarise_declaration(result)]
+    return result
 
 
 @app.tool(

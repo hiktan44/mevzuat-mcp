@@ -38,8 +38,10 @@ from mevzuat_mcp_server import (
     control_engine,
     customs_advisor_service,
     exchange_rate_service,
+    eylemio_client,
     tariff_engine,
     ticaret_client,
+    trade_measure_engine,
 )
 from bulk_costing import MAX_FILE_BYTES as BULK_MAX_FILE_BYTES, calculate_rows as bulk_calculate_rows, rows_from_upload as bulk_rows_from_upload, template_csv as bulk_template_csv
 from countries import COUNTRIES, PENDING_AGREEMENTS
@@ -50,6 +52,8 @@ from mevzuat_mcp_server import (
 )
 from security_firewall import AgentTokenVerifier, SecurityViolation, guard_data, redact_data
 from exchange_rates import ExchangeRateError, parse_registration_date
+from eylemio_client import EylemioError, summarise_declaration
+from trade_measures import KIND_LABELS as TRADE_MEASURE_LABELS, summary_lines as trade_measure_summary
 from tariff_engine import LandedCostInput
 
 logger = logging.getLogger(__name__)
@@ -1696,6 +1700,83 @@ async def web_tariff_exchange_rate(request: Request):
     return JSONResponse(result, headers={"Cache-Control": "public, max-age=900"})
 
 
+@mcp.custom_route("/api/tariff/measures", methods=["POST"])
+async def web_trade_measures(request: Request):
+    """Damping/sübvansiyon, korunma ve gözetim kapsamı (resmî listeler, günlük eşitlenir)."""
+    limited = _rate_limit_response(request, "trade-measures", limit=60, window_seconds=60)
+    if limited:
+        return limited
+    try:
+        body = await request.json()
+        if not isinstance(body, dict):
+            raise ValueError("İstek bir nesne olmalıdır.")
+        report = trade_measure_engine.lookup(str(body.get("gtip", "")), (body.get("origin_country") or None))
+    except ValueError as exc:
+        return JSONResponse({"error": str(exc)}, status_code=422)
+    payload = report.as_dict()
+    payload["summary"] = trade_measure_summary(report)
+    return JSONResponse(payload)
+
+
+@mcp.custom_route("/api/tariff/measures/status", methods=["GET"])
+async def web_trade_measures_status(request: Request):
+    limited = _rate_limit_response(request, "trade-measures-status", limit=30, window_seconds=60)
+    if limited:
+        return limited
+    return JSONResponse(trade_measure_engine.status())
+
+
+@mcp.custom_route("/api/tariff/communiques", methods=["GET"])
+async def web_import_communiques(request: Request):
+    """Ticaret Bakanlığı İthalat Tebliğleri dizini (resmî bağlantılarla)."""
+    limited = _rate_limit_response(request, "communiques", limit=60, window_seconds=60)
+    if limited:
+        return limited
+    year_text = request.query_params.get("year", "")
+    year = int(year_text) if year_text.isdigit() else None
+    entries = trade_measure_engine.communiques(year)
+    query = (request.query_params.get("q") or "").strip().casefold()
+    if query:
+        entries = [entry for entry in entries if query in entry.get("title", "").casefold()]
+    return JSONResponse({"count": len(entries), "entries": entries[:300], "dataset": trade_measure_engine.store.metadata("communiques")})
+
+
+@mcp.custom_route("/api/customs/declaration", methods=["POST"])
+async def web_customs_declaration(request: Request):
+    """Eylemio gümrük konektörüyle beyanname durumu (salt okunur; oturum gerekir)."""
+    limited = _rate_limit_response(request, "customs-declaration", limit=20, window_seconds=60)
+    if limited:
+        return limited
+    try:
+        user = _required_user(request)
+    except AuthError as exc:
+        return _auth_error(exc)
+    try:
+        body = await request.json()
+        if not isinstance(body, dict):
+            raise ValueError("İstek bir nesne olmalıdır.")
+        result = await eylemio_client.declaration_status(str(body.get("declaration_no", "")))
+    except ValueError as exc:
+        return JSONResponse({"error": str(exc)}, status_code=422)
+    except EylemioError as exc:
+        status = 503 if "yapılandırılmamış" in str(exc) or "ulaşılamadı" in str(exc) else 422
+        return JSONResponse({"error": str(exc)}, status_code=status)
+    except Exception:
+        logger.exception("Eylemio declaration lookup failed")
+        return JSONResponse({"error": "Beyanname sorgusu şu anda tamamlanamadı."}, status_code=502)
+    _record_usage(user, "declaration")
+    result["summary"] = [{"label": label, "value": value} for label, value in summarise_declaration(result)]
+    return JSONResponse(result)
+
+
+@mcp.custom_route("/api/customs/declaration/status", methods=["GET"])
+async def web_customs_declaration_status(request: Request):
+    limited = _rate_limit_response(request, "customs-declaration-status", limit=30, window_seconds=60)
+    if limited:
+        return limited
+    return JSONResponse({"configured": eylemio_client.configured, "base_url": eylemio_client.base_url})
+
+
 @mcp.custom_route("/api/tariff/bulk/template", methods=["GET"])
 async def web_tariff_bulk_template(request: Request):
     return Response(
@@ -1822,10 +1903,38 @@ _MEASURE_LABELS_TR = {
 _CHANGE_SOURCE_TITLES = {"import_regime": "İthalat Rejimi Kararı", "additional_duty": "İlave Gümrük Vergisi Kararı"}
 
 
+def _trade_measure_changes_for(digits: str) -> list[dict[str, Any]]:
+    """Damping/korunma/gözetim listelerindeki farklar; izlenen kodla ön ek eşleşmesi."""
+    found: list[dict[str, Any]] = []
+    section_labels = {"added": "yeni satır", "removed": "kaldırıldı", "modified": "değişti"}
+    for change in trade_measure_engine.store.changes(limit=60):
+        detail = change.get("detail") or {}
+        for section, label in section_labels.items():
+            for entry in detail.get(section, []):
+                codes = entry.get("codes") or []
+                if not any(code.startswith(digits) or digits.startswith(code) for code in codes):
+                    continue
+                found.append(
+                    {
+                        "gtip": next((code for code in codes if code.startswith(digits) or digits.startswith(code)), digits),
+                        "measure_type": change.get("kind"),
+                        "measure_label": TRADE_MEASURE_LABELS.get(change.get("kind"), change.get("kind")),
+                        "country_group": label,
+                        "before": entry.get("before") if section == "modified" else (entry.get("summary") if section == "removed" else None),
+                        "after": entry.get("after") if section == "modified" else (entry.get("summary") if section == "added" else None),
+                        "source_id": f"trade_measures:{change.get('kind')}",
+                        "source_title": detail.get("label") or "Resmî önlem listesi",
+                        "new_snapshot": str(change.get("changed_at", ""))[:10],
+                        "old_snapshot": None,
+                    }
+                )
+    return found
+
+
 def _watch_changes_for(gtip: str, ledgers: dict[str, dict[str, Any]]) -> list[dict[str, Any]]:
     """Official tariff line changes whose 12-digit code starts with the watched code."""
     digits = re.sub(r"\D", "", gtip)
-    found: list[dict[str, Any]] = []
+    found: list[dict[str, Any]] = _trade_measure_changes_for(digits) if digits else []
     for source_id, ledger in ledgers.items():
         if ledger.get("status") != "compared":
             continue
@@ -2020,6 +2129,8 @@ async def web_changes(request: Request):
                 "additional_duty": tariff_engine.changes("additional_duty", limit=100),
             },
             "controls": control_engine.changes(limit=100),
+            "trade_measures": trade_measure_engine.store.changes(limit=50),
+            "trade_measure_status": trade_measure_engine.status(),
             "generated_at": time.time(),
         }
     )
