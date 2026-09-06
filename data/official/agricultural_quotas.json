@@ -1,0 +1,4381 @@
+[
+ {
+  "title": "Arnavutluk Cumhuriyeti Menşeli Bazı Tarım Ürünleri İthalatında Tarife Kontenjanı Uygulanması Hakkında Karar",
+  "url": "https://ticaret.gov.tr/data/5ba234df13b87610d0a0331d/Arnavutluk Karar..doc",
+  "filename": "Arnavutluk Karar..doc",
+  "origin": "Arnavutluk Cumhuriyeti",
+  "items": [
+   {
+    "gtip": "04.06",
+    "description": "Peynir ve pıhtılaştırılmış ürünler",
+    "quantity": "100 ton"
+   },
+   {
+    "gtip": "0407.00",
+    "description": "Kuş ve kümes hayvanlarının yumurtaları (kabuklu, taze, dayanıklı hale getirilmiş veya pişirilmiş)",
+    "quantity": "2.000.000 adet"
+   },
+   {
+    "gtip": "0409.00",
+    "description": "Tabii bal",
+    "quantity": "100 ton"
+   },
+   {
+    "gtip": "06.02",
+    "description": "Diğer canlı bitkiler (kökleri dahil), çelikler, daldırmalar; mantar miselleri",
+    "quantity": "300 ton"
+   },
+   {
+    "gtip": "0702.00.00.00.00",
+    "description": "Domates (taze veya soğutulmuş)",
+    "quantity": "200 ton"
+   },
+   {
+    "gtip": "0703.10.19.00.11",
+    "description": "Kuru soğan",
+    "quantity": "100 ton"
+   },
+   {
+    "gtip": "0703.10.19.00.12",
+    "description": "Taze (yeşil) soğan"
+   },
+   {
+    "gtip": "07.04",
+    "description": "Lahanalar, karnabaharlar, alabaşlar, yaprak lahanalar ve benzeri yenilen brassikalar (taze veya soğutulmuş)",
+    "quantity": "200 ton"
+   },
+   {
+    "gtip": "0706.10.00.00.11",
+    "description": "Havuçlar",
+    "quantity": "100 ton"
+   },
+   {
+    "gtip": "0707.00.05.00.00",
+    "description": "Hıyarlar",
+    "quantity": "100 ton"
+   },
+   {
+    "gtip": "0708.20",
+    "description": "Fasulye (Vigna spp., Phaseotus spp.)",
+    "quantity": "150 ton"
+   },
+   {
+    "gtip": "0710.80",
+    "description": "Diğer sebzeler",
+    "quantity": "200 ton"
+   },
+   {
+    "gtip": "0712.90",
+    "description": "Diğer sebzeler; sebze karışımları",
+    "quantity": "200 ton"
+   },
+   {
+    "gtip": "0713.10.90.00.11",
+    "description": "Yem bezelyesi",
+    "quantity": "150 ton"
+   },
+   {
+    "gtip": "0713.10.90.00.19",
+    "description": "Diğerleri"
+   },
+   {
+    "gtip": "0807.11.00.00.00",
+    "description": "Karpuzlar",
+    "quantity": "200 ton"
+   },
+   {
+    "gtip": "0807.19.00.00.00",
+    "description": "Diğerleri"
+   },
+   {
+    "gtip": "16.04",
+    "description": "Hazırlanmış veya konserve edilmiş balıklar; havyar ve balık yumurtalarından elde edilen havyar yerine kullanılan ürünler",
+    "quantity": "400 ton"
+   },
+   {
+    "gtip": "18.06",
+    "description": "Çikolata ve kakao içeren diğer gıda müstahzarları",
+    "quantity": "3.500 ton"
+   },
+   {
+    "gtip": "2001.10.00.00.00",
+    "description": "Hıyarlar ve kornişonlar",
+    "quantity": "1.000 ton"
+   },
+   {
+    "gtip": "2002.10",
+    "description": "Domatesler (tüm veya parça halinde)"
+   },
+   {
+    "gtip": "20.07",
+    "description": "Reçeller, jöleler, marmelatlar, meyva veya sert kabuklu meyva püresi, meyva veya sert kabuklu meyva pastları (pişirilerek hazırlanmış) (ilave şeker veya diğer tatlandırıcı maddeleri içersin içermesin)"
+   },
+   {
+    "gtip": "20.08",
+    "description": "Tarifenin başka yerinde belirtilmeyen veya yer almayan meyvalar, sert kabuklu meyvalar ve yenilen diğer bitki parçaları (başka surette hazırlanmış veya konserve edilmiş) (ilave şeker veya diğer tatlandırıcı maddeler veya alkol katılmış olsun olmasın)"
+   },
+   {
+    "gtip": "20.09",
+    "description": "Meyva suları (üzüm şırası dahil) ve sebze suları (fermente edilmemiş ve alkol katılmamış), ilave şeker veya diğer tatlandırıcı maddeler katılmış olsun olmasın"
+   },
+   {
+    "gtip": "2002.90",
+    "description": "Diğerleri",
+    "quantity": "100 ton"
+   },
+   {
+    "gtip": "2105.00",
+    "description": "Dondurma ve yenilen diğer buzlar (kakao içersin içermesin)",
+    "quantity": "50 ton"
+   },
+   {
+    "gtip": "22.04",
+    "description": "Taze üzüm şarabı (kuvvetlendirilmiş şaraplar dahil); üzüm şırası (20.09 pozisyonunda yer alanlar hariç)",
+    "quantity": "250 hl"
+   }
+  ],
+  "item_count": 27,
+  "parser_version": 3,
+  "mevzuat_no": "quota:https://ticaret.gov.tr/data/5ba234df13b87610d0a0331d/Arnavutluk Karar..doc"
+ },
+ {
+  "title": "Avrupa Birliği Menşeli Bazı Tarım Ürünleri İthalatında Tarife Kontenjanı Uygulanması Hakkında Karar",
+  "url": "https://ticaret.gov.tr/data/5ba234df13b87610d0a0331d/AB Karar.docx",
+  "filename": "AB Karar.docx",
+  "origin": "Avrupa Birliği",
+  "items": [
+   {
+    "gtip": "0102.29.29.00.00",
+    "description": "Diğerleri",
+    "quantity": "2.260 ton",
+    "period": "01.01-31.12",
+    "duty_rate": "0"
+   },
+   {
+    "gtip": "0102.39.10.00.00",
+    "description": "Evcil türler (Yalnızca ağırlığı 80 kg.ı geçen fakat 160 kg.ı geçmeyen ve kesimlik olmayanlar)"
+   },
+   {
+    "gtip": "0102.90.91.00.00",
+    "description": "Evcil türler (Yalnızca ağırlığı 80 kg.ı geçen fakat 160 kg.ı geçmeyen ve kesimlik olmayanlar)"
+   },
+   {
+    "gtip": "02.10",
+    "description": "Et ve yenilen sakatat (tuzlanmış, salamura edilmiş, kurutulmuş veya tütsülenmiş); et veya sakatatın yenilen un ve kaba unları",
+    "quantity": "250 ton",
+    "period": "01.01-31.12",
+    "duty_rate": "52"
+   },
+   {
+    "gtip": "04.04",
+    "description": "Peyniraltı suyu (konsantre edilmiş olsun olmasın veya ilave şeker veya diğer tatlandırıcı maddeleri içersin içermesin); tarifenin başka yerinde belirtilmeyen veya yer almayan, tabii süt bileşenlerinden ibaret olan ürünler (ilave şeker veya diğer tatlandırıcı maddeleri içersin içermesin)",
+    "quantity": "700 ton",
+    "period": "01.01-31.12",
+    "duty_rate": "30"
+   },
+   {
+    "gtip": "0405.10",
+    "description": "Tereyağı",
+    "quantity": "3.700 ton",
+    "period": "01.01-31.12",
+    "duty_rate": "0"
+   },
+   {
+    "gtip": "0405.20.90.00.00",
+    "description": "İçerdiği katı yağ oranı ağırlık itibariyle %75'den fazla fakat %80'den az olanlar"
+   },
+   {
+    "gtip": "0405.90",
+    "description": "Diğerleri"
+   },
+   {
+    "gtip": "0406.30",
+    "description": "Eritme peynirler (rendelenmemiş veya toz haline getirilmemiş)",
+    "quantity": "300 ton",
+    "period": "01.01-31.12",
+    "duty_rate": "0"
+   },
+   {
+    "gtip": "0406.90",
+    "description": "Diğer peynirler",
+    "quantity": "2.000 ton",
+    "period": "01.01-31.12",
+    "duty_rate": "0"
+   },
+   {
+    "gtip": "0408.11.80.00.00",
+    "description": "Diğerleri",
+    "quantity": "75 ton",
+    "period": "01.01-31.12",
+    "duty_rate": "24"
+   },
+   {
+    "gtip": "06.01",
+    "description": "Çiçek soğanları, yumrular, yumrulu kökler, küçük soğanlar, sürgün başları ve rizomlar (dinlenme halinde sürgün vermiş veya çiçeklenmiş); hindiba bitkisi ve kökleri (12.12 pozisyonundaki kökler hariç)",
+    "quantity": "200 ton",
+    "period": "01.01-31.12",
+    "duty_rate": "0"
+   },
+   {
+    "gtip": "0603.11.00.00.00",
+    "description": "Güller",
+    "quantity": "100 ton",
+    "period": "01.01-31.12",
+    "duty_rate": "0"
+   },
+   {
+    "gtip": "0603.12.00.00.00",
+    "description": "Karanfiller"
+   },
+   {
+    "gtip": "0603.13.00.00.00",
+    "description": "Orkideler"
+   },
+   {
+    "gtip": "0603.14.00.00.00",
+    "description": "Krizantemler"
+   },
+   {
+    "gtip": "0603.15.00.00.00",
+    "description": "Zambaklar ( Lilium spp .)"
+   },
+   {
+    "gtip": "0603.19",
+    "description": "Diğerleri"
+   },
+   {
+    "gtip": "06.04",
+    "description": "Buket yapmaya elverişli veya süs amacına uygun cinsten bitki yaprakları, bitki dalları ve bitkilerin diğer kısımları (çiçeksiz veya tomurcuksuz ) ve otlar, yosunlar ve likenler (taze, kurutulmuş, boyanmış, ağartılmış, emprenye edilmiş veya başka şekilde hazırlanmış)",
+    "quantity": "100 ton",
+    "period": "01.01-31.12",
+    "duty_rate": "0"
+   },
+   {
+    "gtip": "0701.10.00.00.00",
+    "description": "Tohumluk",
+    "quantity": "6.000 ton",
+    "period": "01.01-31.12",
+    "duty_rate": "0"
+   },
+   {
+    "gtip": "0709.51.00.00.00",
+    "description": "Agaricus cinsi mantarlar",
+    "quantity": "100 ton",
+    "period": "01.01-31.12",
+    "duty_rate": "7"
+   },
+   {
+    "gtip": "0710.22.00.00.00",
+    "description": "Fasulye ( Phaseolus spp ., Vigna spp .)",
+    "quantity": "100 ton",
+    "period": "01.01-31.12",
+    "duty_rate": "11,5"
+   },
+   {
+    "gtip": "0808.30",
+    "description": "Armut",
+    "quantity": "500 ton",
+    "period": "01.01-31.12",
+    "duty_rate": "30"
+   },
+   {
+    "gtip": "0808.40.00.00.00",
+    "description": "Ayva"
+   },
+   {
+    "gtip": "0809.30",
+    "description": "Şeftali ( nektarin dahil)",
+    "quantity": "1.000 ton",
+    "period": "15.07-31.12",
+    "duty_rate": "0"
+   },
+   {
+    "gtip": "0810.90.20.00.11",
+    "description": "Demirhindi, mahun elması, “ lychees ”, ekmek ağacı meyvesi, sapodillo meyvesi",
+    "quantity": "1.000 ton",
+    "period": "01.01-31.12",
+    "duty_rate": "0"
+   },
+   {
+    "gtip": "0810.90.20.00.12",
+    "description": "Çarkıfelek meyvesi, karambola ve pitahaya",
+    "quantity": "500 ton",
+    "period": "01.01-31.12",
+    "duty_rate": "0"
+   },
+   {
+    "gtip": "0810.70.00.00.00",
+    "description": "Persimmon (Trabzon hurması)",
+    "quantity": "500 ton",
+    "period": "01.01-31.12",
+    "duty_rate": "0"
+   },
+   {
+    "gtip": "0810.90.75.00.11",
+    "description": "Nar"
+   },
+   {
+    "gtip": "0810.90.75.00.12",
+    "description": "Muşmula"
+   },
+   {
+    "gtip": "0810.90.75.00.13",
+    "description": "Kuşburnu"
+   },
+   {
+    "gtip": "0810.90.75.00.17",
+    "description": "Diğerleri"
+   },
+   {
+    "gtip": "0811.10",
+    "description": "Çilek",
+    "quantity": "100 ton",
+    "period": "01.01-31.12",
+    "duty_rate": "20"
+   },
+   {
+    "gtip": "09.02",
+    "description": "Çay ( aromalandırılmış olsun olmasın)",
+    "quantity": "200 ton",
+    "period": "01.01-31.12",
+    "duty_rate": "45"
+   },
+   {
+    "gtip": "10.01",
+    "description": "Buğday ve mahlut",
+    "quantity": "30.000 ton",
+    "period": "01.09-31.05",
+    "duty_rate": "0"
+   },
+   {
+    "gtip": "1001.11.00.00.00",
+    "description": "Tohumluk",
+    "quantity": "100.000 ton",
+    "period": "01.09-31.05",
+    "duty_rate": "0"
+   },
+   {
+    "gtip": "1001.19.00.00.00",
+    "description": "Diğerleri"
+   },
+   {
+    "gtip": "1001.91",
+    "description": "Tohumluk",
+    "quantity": "200.000 ton",
+    "period": "01.09-31.05",
+    "duty_rate": "0"
+   },
+   {
+    "gtip": "1001.99.00.00.11",
+    "description": "Adi buğday"
+   },
+   {
+    "gtip": "1001.99.00.00.12",
+    "description": "Mahlut"
+   },
+   {
+    "gtip": "1001.99.00.00.13",
+    "description": "Kaplıca (kızıl) buğday"
+   },
+   {
+    "gtip": "10.02",
+    "description": "Çavdar",
+    "quantity": "22.500 ton",
+    "period": "01.09-31.05",
+    "duty_rate": "0"
+   },
+   {
+    "gtip": "1003.90.00.00.12",
+    "description": "Maltlık arpa",
+    "quantity": "49.500 ton",
+    "period": "01.09-31.05",
+    "duty_rate": "0"
+   },
+   {
+    "gtip": "1004.00",
+    "description": "Yulaf",
+    "quantity": "5.000 ton",
+    "period": "01.09-31.05",
+    "duty_rate": "i"
+   },
+   {
+    "gtip": "1005.90",
+    "description": "Diğerleri",
+    "quantity": "53.640 ton",
+    "period": "01.09-31.05",
+    "duty_rate": "0"
+   },
+   {
+    "gtip": "1005.90",
+    "description": "Diğerleri",
+    "quantity": "52.000 ton",
+    "period": "01.12-31.05",
+    "duty_rate": "0"
+   },
+   {
+    "gtip": "1006.30",
+    "description": "Yarı veya tam olarak değirmenden geçirilmiş pirinç (parlatılmış veya perdahlanmış olsun olmasın)",
+    "quantity": "28.000 ton",
+    "period": "01.01-31.12",
+    "duty_rate": "0"
+   },
+   {
+    "gtip": "1104.12.90.00.00",
+    "description": "Flokon halindeki taneler",
+    "quantity": "100 ton",
+    "period": "01.01-31.12",
+    "duty_rate": "i"
+   },
+   {
+    "gtip": "11.07",
+    "description": "Malt (kavrulmuş olsun olmasın)",
+    "quantity": "500 ton",
+    "period": "01.01-31.12",
+    "duty_rate": "0"
+   },
+   {
+    "gtip": "1207.29.00.00.00",
+    "description": "Diğerleri",
+    "quantity": "1.500 ton",
+    "period": "01.01-31.12",
+    "duty_rate": "0"
+   },
+   {
+    "gtip": "1207.70.00.00.00",
+    "description": "Kavun, Karpuz tohumu",
+    "quantity": "1.050 ton",
+    "period": "01.01-31.12",
+    "duty_rate": "0"
+   },
+   {
+    "gtip": "1209.10.00.00.00",
+    "description": "Şeker pancarı tohumları",
+    "quantity": "300 ton",
+    "period": "01.01-31.12",
+    "duty_rate": "0"
+   },
+   {
+    "gtip": "15.02",
+    "description": "Sığır, koyun veya keçi yağları (15.03 pozisyonundakiler hariç)",
+    "quantity": "3.000 ton",
+    "period": "01.01-31.12",
+    "duty_rate": "0"
+   },
+   {
+    "gtip": "1507.10",
+    "description": "Ham yağ (sakızı ayrılmış olsun olmasın)",
+    "quantity": "60.000 ton",
+    "period": "01.01-31.08",
+    "duty_rate": "0"
+   },
+   {
+    "gtip": "1507.90",
+    "description": "Diğerleri",
+    "quantity": "2.000 ton",
+    "period": "01.01-31.08",
+    "duty_rate": "i"
+   },
+   {
+    "gtip": "1512.11",
+    "description": "Ham yağlar",
+    "quantity": "18.400 ton",
+    "period": "01.01-31.08",
+    "duty_rate": "0"
+   },
+   {
+    "gtip": "1514.11",
+    "description": "Ham yağlar",
+    "quantity": "10.600 ton",
+    "period": "01.01-31.08",
+    "duty_rate": "0"
+   },
+   {
+    "gtip": "1514.91",
+    "description": "Ham yağlar"
+   },
+   {
+    "gtip": "1602.10.00.00.00",
+    "description": "Homojenize müstahzarlar",
+    "quantity": "400 ton",
+    "period": "01.01-31.12",
+    "duty_rate": "30"
+   },
+   {
+    "gtip": "1701.99",
+    "description": "Diğerleri",
+    "quantity": "80.000 ton",
+    "period": "01.01-31.12",
+    "duty_rate": "iv"
+   },
+   {
+    "gtip": "2001.90.50.00.00",
+    "description": "Mantarlar",
+    "quantity": "325 ton",
+    "period": "01.01-31.12",
+    "duty_rate": "i"
+   },
+   {
+    "gtip": "2001.90.97.00.11",
+    "description": "Salata pancarı (Beta vulgaris var.candiva )"
+   },
+   {
+    "gtip": "2001.90.97.00.12",
+    "description": "Kırmızı lahana"
+   },
+   {
+    "gtip": "2001.90.97.00.13",
+    "description": "Diğer meyvalar ve sert kabuklu meyvalar"
+   },
+   {
+    "gtip": "2001.90.97.00.18",
+    "description": "Diğer sebzeler ve yenilen diğer bitki parçaları"
+   },
+   {
+    "gtip": "2002.90",
+    "description": "Diğerleri",
+    "quantity": "1.500 ton",
+    "period": "01.01-31.12",
+    "duty_rate": "0"
+   },
+   {
+    "gtip": "20.03",
+    "description": "Mantarlar ve domalan (sirke veya asetik asitten başka usullerle hazırlanmış veya konserve edilmiş)",
+    "quantity": "50 ton",
+    "period": "01.01-31.12",
+    "duty_rate": "13"
+   },
+   {
+    "gtip": "2005.10.00.00.00",
+    "description": "Homojenize sebzeler",
+    "quantity": "300 ton",
+    "period": "01.01-31.12",
+    "duty_rate": "15"
+   },
+   {
+    "gtip": "2005.40",
+    "description": "Bezelye ( Pisum sativum )",
+    "quantity": "300 ton",
+    "period": "01.01-31.12",
+    "duty_rate": "0"
+   },
+   {
+    "gtip": "2007.10",
+    "description": "Homojenize müstahzarlar",
+    "quantity": "450 ton",
+    "period": "01.01-31.12",
+    "duty_rate": "25"
+   },
+   {
+    "gtip": "2007.99.10.00.00",
+    "description": "Sınai işlemler için net muhtevası 100 kg.ı geçen hazır ambalajlarda erik püresi ve pastları",
+    "quantity": "1.000 ton",
+    "period": "01.01-31.12",
+    "duty_rate": "20"
+   },
+   {
+    "gtip": "2007.99.33.00.00",
+    "description": "Çilekden olanlar"
+   },
+   {
+    "gtip": "2007.99.39.00.11",
+    "description": "Pekmezler"
+   },
+   {
+    "gtip": "2007.99.39.00.19",
+    "description": "Diğerleri [Fındık püresi hariç]"
+   },
+   {
+    "gtip": "2007.99.50.00.19",
+    "description": "Diğerleri (fındık püresi hariç)"
+   },
+   {
+    "gtip": "2007.99.97.00.13",
+    "description": "Diabetik olanlar [Fındık püresi hariç]"
+   },
+   {
+    "gtip": "2007.99.97.00.16",
+    "description": "Kayısı püresi"
+   },
+   {
+    "gtip": "2007.99.97.00.17",
+    "description": "Erik püresi"
+   },
+   {
+    "gtip": "2007.99.97.00.18",
+    "description": "Diğerleri [Fındık püresi hariç]"
+   },
+   {
+    "gtip": "2009.11",
+    "description": "Dondurulmuş",
+    "quantity": "1.000 ton",
+    "period": "01.01-31.12",
+    "duty_rate": "15"
+   },
+   {
+    "gtip": "2009.12.00.00.00",
+    "description": "Dondurulmamış, Brix değeri 20'yi geçmeyenler"
+   },
+   {
+    "gtip": "2009.19",
+    "description": "Diğerleri"
+   },
+   {
+    "gtip": "2009.61",
+    "description": "Brix değeri 30'u geçmeyenler"
+   },
+   {
+    "gtip": "2009.71",
+    "description": "Brix değeri 20'yi geçmeyenler"
+   },
+   {
+    "gtip": "2009.79",
+    "description": "Diğerleri"
+   },
+   {
+    "gtip": "2009.89.89.00.00",
+    "description": "Diğerleri"
+   },
+   {
+    "gtip": "2009.81.59.00.00",
+    "description": "Ağırlık itibariyle ilave şeker oranı % 30' u geçmeyenler"
+   },
+   {
+    "gtip": "2009.89.96.00.00",
+    "description": "Kiraz suyu"
+   },
+   {
+    "gtip": "2009.90.11.00.00",
+    "description": "Net 100 kg ağırlık başına kıymeti 22 Euro'yu geçmeyenler"
+   },
+   {
+    "gtip": "2009.90.19.00.00",
+    "description": "Diğerleri"
+   },
+   {
+    "gtip": "2009.90.21.00.00",
+    "description": "Net 100 kg ağırlık başına kıymeti 30 Euro'yu geçmeyenler"
+   },
+   {
+    "gtip": "2009.90.29.00.00",
+    "description": "Diğerleri"
+   },
+   {
+    "gtip": "2009.90.31.00.00",
+    "description": "Net 100 kg ağırlık başına kıymeti 18 Euro'yu geçmeyen ve ağırlık itibariyle ilave şeker oranı % 30' u geçenler"
+   },
+   {
+    "gtip": "2009.90.39.00.00",
+    "description": "Diğerleri"
+   },
+   {
+    "gtip": "2204.10",
+    "description": "Köpüklü şaraplar",
+    "quantity": "750 hl",
+    "period": "01.01-31.12",
+    "duty_rate": "35"
+   },
+   {
+    "gtip": "2209.00",
+    "description": "Sirkeler ve asetik asitten elde edilen sirke yerine geçen maddeler",
+    "quantity": "2.500 ton",
+    "period": "01.01-31.12",
+    "duty_rate": "0"
+   },
+   {
+    "gtip": "2309.10",
+    "description": "Kedi veya köpek maması (perakende satılacak hale getirilmiş)",
+    "quantity": "1.400 ton",
+    "period": "01.01-31.12",
+    "duty_rate": "0"
+   },
+   {
+    "gtip": "2309.90",
+    "description": "Diğerleri",
+    "quantity": "6.700 ton",
+    "period": "01.01-31.12",
+    "duty_rate": "0"
+   }
+  ],
+  "item_count": 98,
+  "parser_version": 3,
+  "mevzuat_no": "quota:https://ticaret.gov.tr/data/5ba234df13b87610d0a0331d/AB Karar.docx"
+ },
+ {
+  "title": "Azerbaycan Cumhuriyeti Menşeli Bazı Ürünlerin İthalatında Tarife Kontenjanı Uygulanması Hakkında Karar",
+  "url": "https://ticaret.gov.tr/data/5ba234df13b87610d0a0331d/Azerbaycan Karar.docx",
+  "filename": "Azerbaycan Karar.docx",
+  "origin": "Azerbaycan Cumhuriyeti",
+  "items": [
+   {
+    "gtip": "0406.90.99.00.11",
+    "description": "",
+    "quantity": "100 ton"
+   },
+   {
+    "gtip": "0406.90.99.00.12",
+    "description": ""
+   },
+   {
+    "gtip": "0406.90.99.00.19",
+    "description": ""
+   },
+   {
+    "gtip": "0806.10.10",
+    "description": "",
+    "quantity": "3.500 ton"
+   },
+   {
+    "gtip": "0808.10.80",
+    "description": "",
+    "quantity": "3.000 ton"
+   },
+   {
+    "gtip": "0809.40",
+    "description": "",
+    "quantity": "3.000 ton"
+   },
+   {
+    "gtip": "0810.70",
+    "description": "",
+    "quantity": "30.000 ton"
+   },
+   {
+    "gtip": "0902.30",
+    "description": "",
+    "quantity": "300 ton"
+   },
+   {
+    "gtip": "1512.19.90",
+    "description": "",
+    "quantity": "5.000 ton"
+   },
+   {
+    "gtip": "1516.20.98",
+    "description": "",
+    "quantity": "2.500 ton"
+   },
+   {
+    "gtip": "1701.99.10",
+    "description": "",
+    "quantity": "5.000 ton"
+   },
+   {
+    "gtip": "1806.90.19",
+    "description": "",
+    "quantity": "1.250 ton"
+   },
+   {
+    "gtip": "2001.10",
+    "description": "",
+    "quantity": "500 ton"
+   },
+   {
+    "gtip": "2002.90.80.00.00",
+    "description": ""
+   },
+   {
+    "gtip": "2007.99.97.00.13",
+    "description": "",
+    "quantity": "3.000 ton"
+   },
+   {
+    "gtip": "2007.99.97.00.14",
+    "description": ""
+   },
+   {
+    "gtip": "2007.99.97.00.15",
+    "description": ""
+   },
+   {
+    "gtip": "2007.99.97.00.16",
+    "description": ""
+   },
+   {
+    "gtip": "2007.99.97.00.17",
+    "description": ""
+   },
+   {
+    "gtip": "2007.99.97.00.18",
+    "description": ""
+   },
+   {
+    "gtip": "2009.79.19",
+    "description": "",
+    "quantity": "2.000 ton"
+   },
+   {
+    "gtip": "2204.21.96",
+    "description": "",
+    "quantity": "9.000 hl"
+   },
+   {
+    "gtip": "2204.21.93.00.00",
+    "description": ""
+   },
+   {
+    "gtip": "2204.21.94.00.00",
+    "description": ""
+   },
+   {
+    "gtip": "2204.21.95.00.00",
+    "description": ""
+   },
+   {
+    "gtip": "2204.21.97.00.00",
+    "description": "",
+    "quantity": "15.000 hl"
+   },
+   {
+    "gtip": "2204.21.98.00.00",
+    "description": ""
+   },
+   {
+    "gtip": "2206.00.59.00.00",
+    "description": ""
+   }
+  ],
+  "item_count": 28,
+  "parser_version": 3,
+  "mevzuat_no": "quota:https://ticaret.gov.tr/data/5ba234df13b87610d0a0331d/Azerbaycan Karar.docx"
+ },
+ {
+  "title": "Birleşik Arap Emirlikleri Menşeli Bazı Tarım Ürünleri İthalatında Tarife Kontenjanı Uygulanmasına İlişkin Tebliğ",
+  "url": "https://ticaret.gov.tr/data/5ba234df13b87610d0a0331d/24-Birleşik Arap Emirlikleri.doc",
+  "filename": "24-Birleşik Arap Emirlikleri.doc",
+  "origin": "Birleşik Arap Emirlikleri",
+  "items": [
+   {
+    "gtip": "0407.21",
+    "description": "Tavuk yumurtaları (Gallus domesticus türü)",
+    "quota_code": "BAET001",
+    "period": "01.01-31.12"
+   },
+   {
+    "gtip": "07.13",
+    "description": "Kuru baklagiller (kabuksuz) (taneleri ikiye ayrılmış, tane kabukları çıkarılmış olsun olmasın)",
+    "quota_code": "BAET005",
+    "period": "01.01-31.12"
+   },
+   {
+    "gtip": "0804.10",
+    "description": "Hurma",
+    "quota_code": "BAET006",
+    "period": "01.01-31.12"
+   },
+   {
+    "gtip": "11.04",
+    "description": "Diğer şekilde işlenmiş hububat taneleri; hububat embriyonları",
+    "quota_code": "BAET008",
+    "period": "01.01-31.12"
+   },
+   {
+    "gtip": "11.05",
+    "description": "Patates unu, ezmesi, tozları, flokonları, granülleri ve pelletleri",
+    "quota_code": "BAET009",
+    "period": "01.01-31.12"
+   },
+   {
+    "gtip": "11.07",
+    "description": "Malt (kavrulmuş olsun olmasın)",
+    "quota_code": "BAET010",
+    "period": "01.01-31.12"
+   },
+   {
+    "gtip": "12.02",
+    "description": "Yer fıstığı (kavrulmamış veya başka şekilde pişirilmemiş, kabuklu veya kırılmış olsun olmasın)",
+    "quota_code": "BAET011",
+    "period": "01.01-31.12",
+    "quantity": "20 ton"
+   },
+   {
+    "gtip": "12.09",
+    "description": "Ekim amacıyla kullanılan tohum, meyve ve sporlar",
+    "quota_code": "BAET012",
+    "period": "01.01-31.12"
+   },
+   {
+    "gtip": "12.11",
+    "description": "Bitki ve bitki kısımları (tohum ve meyveler dahil)",
+    "quota_code": "BAET013",
+    "period": "01.01-31.12"
+   },
+   {
+    "gtip": "15.07",
+    "description": "Soya yağı ve fraksiyonları (rafine edilmiş olsun olmasın, fakat kimyasal olarak değiştirilmemiş)",
+    "quota_code": "BAET014",
+    "period": "01.01-31.12"
+   },
+   {
+    "gtip": "18.06",
+    "description": "Çikolata ve kakao içeren diğer gıda müstahzarları",
+    "quota_code": "BAET016",
+    "period": "01.01-31.12"
+   },
+   {
+    "gtip": "19.02",
+    "description": "Makarnalar (pişirilmiş veya et ile veya diğer maddelerle doldu- rulmuş veya başka şekilde hazırlanmış olsun olmasın)",
+    "quota_code": "BAET017",
+    "period": "01.01-31.12"
+   },
+   {
+    "gtip": "1905.10",
+    "description": "Gevrek ekmek",
+    "quota_code": "BAET018",
+    "period": "01.01-31.12"
+   },
+   {
+    "gtip": "20.07",
+    "description": "Reçeller, jöleler, marmelatlar, meyva veya sert kabuklu meyva püresi, meyva veya sert kabuklu meyva pastları",
+    "quota_code": "BAET020",
+    "period": "01.01-31.12"
+   },
+   {
+    "gtip": "21.05",
+    "description": "Dondurma ve yenilen diğer buzlar (kakao içersin içermesin)",
+    "quota_code": "BAET021",
+    "period": "01.01-31.12"
+   }
+  ],
+  "item_count": 15,
+  "parser_version": 3,
+  "mevzuat_no": "quota:https://ticaret.gov.tr/data/5ba234df13b87610d0a0331d/24-Birleşik Arap Emirlikleri.doc"
+ },
+ {
+  "title": "Bolivarcı Venezuela Cumhuriyeti Menşeli Bazı Tarım Ürünleri İthalatında Tarife Kontenjanı Uygulanmasına İlişkin Tebliğ",
+  "url": "https://ticaret.gov.tr/data/5ba234df13b87610d0a0331d/18-Venezuela-.doc",
+  "filename": "18-Venezuela-.doc",
+  "origin": "Bolivarcı Venezuela Cumhuriyeti",
+  "items": [
+   {
+    "gtip": "0403.90",
+    "description": "Diğerleri",
+    "quota_code": "BV001",
+    "period": "01.01-31.12"
+   },
+   {
+    "gtip": "0406.10",
+    "description": "Taze peynir (olgunlaştırılmamış veya preslenmemiş) (peyniraltı suyundan yapılmış peynirler dahil) ve pıhtılaştırılmış ürünler",
+    "quota_code": "BV002",
+    "period": "01.01-31.12"
+   },
+   {
+    "gtip": "0406.30",
+    "description": "Eritme peynirler (rendelenmemiş veya toz haline getirilmemiş)",
+    "quota_code": "BV003",
+    "period": "01.01-31.12"
+   },
+   {
+    "gtip": "0406.90",
+    "description": "Diğer peynirler",
+    "quota_code": "BV004",
+    "period": "01.01-31.12"
+   },
+   {
+    "gtip": "10.06",
+    "description": "Pirinç",
+    "quota_code": "BV005",
+    "period": "01.01-31.12"
+   },
+   {
+    "gtip": "1104.12",
+    "description": "Yulaf",
+    "quota_code": "BV006",
+    "period": "01.01-31.12"
+   },
+   {
+    "gtip": "12.02",
+    "description": "Yer fıstığı (kavrulmamış veya başka şekilde pişirilmemiş, kabuklu veya kırılmış olsun olmasın)",
+    "quota_code": "BV007",
+    "period": "01.01-31.12"
+   },
+   {
+    "gtip": "12.05",
+    "description": "Rep veya kolza tohumları (kırılmış olsun olmasın)",
+    "quota_code": "BV008",
+    "period": "01.01-31.12"
+   },
+   {
+    "gtip": "1206.00",
+    "description": "Ayçiçeği tohumu (kırılmış olsun olmasın)",
+    "quota_code": "BV009",
+    "period": "01.01-31.12"
+   },
+   {
+    "gtip": "1207.29",
+    "description": "Diğerleri",
+    "quota_code": "BV010",
+    "period": "01.01-31.12"
+   },
+   {
+    "gtip": "12.08",
+    "description": "Yağlı tohum ve meyvelerin un ve kaba unları (hardal unu hariç)",
+    "quota_code": "BV011",
+    "period": "01.01-31.12"
+   },
+   {
+    "gtip": "1704.90",
+    "description": "Diğerleri",
+    "quota_code": "BV012",
+    "period": "01.01-31.12"
+   },
+   {
+    "gtip": "18.06",
+    "description": "Çikolata ve kakao içeren diğer gıda müstahzarları",
+    "quota_code": "BV013",
+    "period": "01.01-31.12"
+   }
+  ],
+  "item_count": 13,
+  "parser_version": 3,
+  "mevzuat_no": "quota:https://ticaret.gov.tr/data/5ba234df13b87610d0a0331d/18-Venezuela-.doc"
+ },
+ {
+  "title": "Bosna ve Hersek Menşeli Bazı Tarım ve İşlenmiş Tarım Ürünleri İthalatında Tarife Kontenjanı Uygulanması Hakkında Karar",
+  "url": "https://ticaret.gov.tr/data/5ba234df13b87610d0a0331d/Bosna-Hersek Karar..docx",
+  "filename": "Bosna-Hersek Karar..docx",
+  "origin": "Bosna ve Hersek",
+  "items": [
+   {
+    "gtip": "01.02",
+    "description": "",
+    "quantity": "8.000 ton"
+   },
+   {
+    "gtip": "02.01",
+    "description": ""
+   },
+   {
+    "gtip": "02.02",
+    "description": ""
+   },
+   {
+    "gtip": "01.04",
+    "description": "",
+    "quantity": "2.000 ton"
+   },
+   {
+    "gtip": "02.04",
+    "description": ""
+   },
+   {
+    "gtip": "02.06",
+    "description": "",
+    "quantity": "2.000 ton"
+   },
+   {
+    "gtip": "0105.11",
+    "description": "",
+    "quantity": "1.000 ton"
+   },
+   {
+    "gtip": "0105.94",
+    "description": ""
+   },
+   {
+    "gtip": "0207.11",
+    "description": ""
+   },
+   {
+    "gtip": "0207.12",
+    "description": ""
+   },
+   {
+    "gtip": "0207.13",
+    "description": ""
+   },
+   {
+    "gtip": "0207.14",
+    "description": ""
+   },
+   {
+    "gtip": "0303.14",
+    "description": "",
+    "quantity": "100 ton"
+   },
+   {
+    "gtip": "0303.25.00.00.00",
+    "description": "",
+    "quantity": "100 ton"
+   },
+   {
+    "gtip": "0711.90.30.00.00",
+    "description": "",
+    "quantity": "300 ton"
+   },
+   {
+    "gtip": "1101.00",
+    "description": "",
+    "quantity": "85.000 ton"
+   },
+   {
+    "gtip": "15.12",
+    "description": "",
+    "quantity": "75.000 ton"
+   },
+   {
+    "gtip": "17.02",
+    "description": "",
+    "quantity": "20.000 ton"
+   },
+   {
+    "gtip": "18.06",
+    "description": "",
+    "quantity": "500 ton"
+   },
+   {
+    "gtip": "19.04",
+    "description": "",
+    "quantity": "500 ton"
+   },
+   {
+    "gtip": "19.05",
+    "description": "",
+    "quantity": "2.500 ton"
+   },
+   {
+    "gtip": "2202.99.91.00.00",
+    "description": "",
+    "quantity": "5.000 hl"
+   },
+   {
+    "gtip": "2202.99.95.00.00",
+    "description": ""
+   },
+   {
+    "gtip": "2202.99.99.00.00",
+    "description": ""
+   }
+  ],
+  "item_count": 24,
+  "parser_version": 3,
+  "mevzuat_no": "quota:https://ticaret.gov.tr/data/5ba234df13b87610d0a0331d/Bosna-Hersek Karar..docx"
+ },
+ {
+  "title": "Büyük Britanya ve Kuzey İrlanda Birleşik Krallığı Menşeli Bazı Ürünlerin İthalatında Tarife Kontenjanı Uygulanması Hakkında Karar",
+  "url": "https://ticaret.gov.tr/data/5ba234df13b87610d0a0331d/Birleşik Krallık Karar.doc",
+  "filename": "Birleşik Krallık Karar.doc",
+  "origin": "Büyük Britanya ve Kuzey İrlanda Birleşik Krallığı",
+  "items": [
+   {
+    "gtip": "0102.39.90.00.00",
+    "description": ""
+   },
+   {
+    "gtip": "0102.90.99.00.00",
+    "description": ""
+   },
+   {
+    "gtip": "0102.29.29.00.00",
+    "description": "",
+    "quantity": "377 ton"
+   },
+   {
+    "gtip": "0102.39.10.00.00",
+    "description": ""
+   },
+   {
+    "gtip": "0102.90.91.00.00",
+    "description": ""
+   },
+   {
+    "gtip": "0201.20",
+    "description": "",
+    "quantity": "834 ton"
+   },
+   {
+    "gtip": "0202.20",
+    "description": ""
+   },
+   {
+    "gtip": "0201.20",
+    "description": "",
+    "quantity": "2.350 ton"
+   },
+   {
+    "gtip": "0202.20",
+    "description": ""
+   },
+   {
+    "gtip": "02.10",
+    "description": "",
+    "quantity": "42 ton"
+   },
+   {
+    "gtip": "04.04",
+    "description": "",
+    "quantity": "117 ton"
+   },
+   {
+    "gtip": "0405.10",
+    "description": "",
+    "quantity": "617 ton"
+   },
+   {
+    "gtip": "0405.20.90.00.00",
+    "description": ""
+   },
+   {
+    "gtip": "0405.90",
+    "description": ""
+   },
+   {
+    "gtip": "0406.30",
+    "description": "",
+    "quantity": "50 ton"
+   },
+   {
+    "gtip": "0406.90",
+    "description": "",
+    "quantity": "333 ton"
+   },
+   {
+    "gtip": "0408.11.80.00.00",
+    "description": "",
+    "quantity": "13 ton"
+   },
+   {
+    "gtip": "06.01",
+    "description": "",
+    "quantity": "33 ton"
+   },
+   {
+    "gtip": "06.04",
+    "description": "",
+    "quantity": "17 ton"
+   },
+   {
+    "gtip": "0701.10.00.00.00",
+    "description": "",
+    "quantity": "1.000 ton"
+   },
+   {
+    "gtip": "0709.51.00.00.00",
+    "description": "",
+    "quantity": "17 ton"
+   },
+   {
+    "gtip": "0710.22.00.00.00",
+    "description": "",
+    "quantity": "17 ton"
+   },
+   {
+    "gtip": "0808.10.10.00.00",
+    "description": "",
+    "quantity": "292 ton"
+   },
+   {
+    "gtip": "0808.10.80.00.19",
+    "description": ""
+   },
+   {
+    "gtip": "0808.30",
+    "description": "",
+    "quantity": "83 ton"
+   },
+   {
+    "gtip": "0808.40.00.00.00",
+    "description": ""
+   },
+   {
+    "gtip": "0809.30",
+    "description": "",
+    "quantity": "167 ton"
+   },
+   {
+    "gtip": "0810.90.20.00.11",
+    "description": "",
+    "quantity": "167 ton"
+   },
+   {
+    "gtip": "0810.90.20.00.12",
+    "description": "",
+    "quantity": "83 ton"
+   },
+   {
+    "gtip": "0810.70.00.00.00",
+    "description": "",
+    "quantity": "83 ton"
+   },
+   {
+    "gtip": "0810.90.75",
+    "description": ""
+   },
+   {
+    "gtip": "0811.10",
+    "description": "",
+    "quantity": "17 ton"
+   },
+   {
+    "gtip": "09.02",
+    "description": "",
+    "quantity": "33 ton"
+   },
+   {
+    "gtip": "10.01",
+    "description": "",
+    "quantity": "5.001 ton"
+   },
+   {
+    "gtip": "1001.11.00.00.00",
+    "description": "",
+    "quantity": "16.670 ton"
+   },
+   {
+    "gtip": "1001.19.00.00.00",
+    "description": ""
+   },
+   {
+    "gtip": "1001.91",
+    "description": "",
+    "quantity": "33.340 ton"
+   },
+   {
+    "gtip": "1001.99",
+    "description": ""
+   },
+   {
+    "gtip": "10.02",
+    "description": "",
+    "quantity": "3.751 ton"
+   },
+   {
+    "gtip": "1003.90.00.00.12",
+    "description": "",
+    "quantity": "8.252 ton"
+   },
+   {
+    "gtip": "1004.00",
+    "description": "",
+    "quantity": "834 ton"
+   },
+   {
+    "gtip": "1005.90",
+    "description": "",
+    "quantity": "8.942 ton"
+   },
+   {
+    "gtip": "1005.90",
+    "description": "",
+    "quantity": "8.668 ton"
+   },
+   {
+    "gtip": "1006.30",
+    "description": "",
+    "quantity": "4.668 ton"
+   },
+   {
+    "gtip": "1104.12.90.00.00",
+    "description": "",
+    "quantity": "17 ton"
+   },
+   {
+    "gtip": "11.07",
+    "description": "",
+    "quantity": "83 ton"
+   },
+   {
+    "gtip": "1207.29.00.00.00",
+    "description": "",
+    "quantity": "250 ton"
+   },
+   {
+    "gtip": "1207.70.00.00.00",
+    "description": "",
+    "quantity": "175 ton"
+   },
+   {
+    "gtip": "1209.10.00.00.00",
+    "description": "",
+    "quantity": "50 ton"
+   },
+   {
+    "gtip": "15.02",
+    "description": "",
+    "quantity": "500 ton"
+   },
+   {
+    "gtip": "1507.10",
+    "description": "",
+    "quantity": "10.002 ton"
+   },
+   {
+    "gtip": "1507.90",
+    "description": "",
+    "quantity": "333 ton"
+   },
+   {
+    "gtip": "1512.11",
+    "description": "",
+    "quantity": "3.067 ton"
+   },
+   {
+    "gtip": "1514.11",
+    "description": "",
+    "quantity": "1.767 ton"
+   },
+   {
+    "gtip": "1514.91",
+    "description": ""
+   },
+   {
+    "gtip": "1602.10.00.00.00",
+    "description": "",
+    "quantity": "67 ton"
+   },
+   {
+    "gtip": "1701.99",
+    "description": "",
+    "quantity": "13.336 ton"
+   },
+   {
+    "gtip": "1704.10",
+    "description": "",
+    "quantity": "167 ton"
+   },
+   {
+    "gtip": "1901.10",
+    "description": "",
+    "quantity": "83 ton"
+   },
+   {
+    "gtip": "1901.20",
+    "description": "",
+    "quantity": "50 ton"
+   },
+   {
+    "gtip": "1904.10",
+    "description": "",
+    "quantity": "834 ton"
+   },
+   {
+    "gtip": "1904.20",
+    "description": "",
+    "quantity": "83 ton"
+   },
+   {
+    "gtip": "1904.90",
+    "description": "",
+    "quantity": "50 ton"
+   },
+   {
+    "gtip": "1905.31",
+    "description": "",
+    "quantity": "167 ton"
+   },
+   {
+    "gtip": "1905.32",
+    "description": "",
+    "quantity": "100 ton"
+   },
+   {
+    "gtip": "1905.40",
+    "description": "",
+    "quantity": "33 ton"
+   },
+   {
+    "gtip": "1905.90",
+    "description": "",
+    "quantity": "250 ton"
+   },
+   {
+    "gtip": "2001.90.50.00.00",
+    "description": "",
+    "quantity": "54 ton"
+   },
+   {
+    "gtip": "2001.90.97.00.11",
+    "description": ""
+   },
+   {
+    "gtip": "2001.90.97.00.12",
+    "description": ""
+   },
+   {
+    "gtip": "2001.90.97.00.13",
+    "description": ""
+   },
+   {
+    "gtip": "2001.90.97.00.18",
+    "description": ""
+   },
+   {
+    "gtip": "2002.90",
+    "description": "",
+    "quantity": "250 ton"
+   },
+   {
+    "gtip": "20.03",
+    "description": "",
+    "quantity": "8 ton"
+   },
+   {
+    "gtip": "2005.10.00.00.00",
+    "description": "",
+    "quantity": "50 ton"
+   },
+   {
+    "gtip": "2005.40",
+    "description": "",
+    "quantity": "50 ton"
+   },
+   {
+    "gtip": "2007.10",
+    "description": "",
+    "quantity": "75 ton"
+   },
+   {
+    "gtip": "2007.99.10.00.00",
+    "description": "",
+    "quantity": "167 ton"
+   },
+   {
+    "gtip": "2007.99.33.00.00",
+    "description": ""
+   },
+   {
+    "gtip": "2007.99.35.00.00",
+    "description": ""
+   },
+   {
+    "gtip": "2007.99.39.00.11",
+    "description": ""
+   },
+   {
+    "gtip": "2007.99.97.00.16",
+    "description": ""
+   },
+   {
+    "gtip": "2007.99.97.00.17",
+    "description": ""
+   },
+   {
+    "gtip": "2009.11",
+    "description": "",
+    "quantity": "167 ton"
+   },
+   {
+    "gtip": "2009.12.00.00.00",
+    "description": ""
+   },
+   {
+    "gtip": "2009.19",
+    "description": ""
+   },
+   {
+    "gtip": "2009.61",
+    "description": ""
+   },
+   {
+    "gtip": "2009.71",
+    "description": ""
+   },
+   {
+    "gtip": "2009.79",
+    "description": ""
+   },
+   {
+    "gtip": "2009.89.89.00.00",
+    "description": ""
+   },
+   {
+    "gtip": "2009.81.59.00.00",
+    "description": ""
+   },
+   {
+    "gtip": "2009.89.96.00.00",
+    "description": ""
+   },
+   {
+    "gtip": "2009.90.11.00.00",
+    "description": ""
+   },
+   {
+    "gtip": "2009.90.19.00.00",
+    "description": ""
+   },
+   {
+    "gtip": "2009.90.21.00.00",
+    "description": ""
+   },
+   {
+    "gtip": "2009.90.29.00.00",
+    "description": ""
+   },
+   {
+    "gtip": "2009.90.31.00.00",
+    "description": ""
+   },
+   {
+    "gtip": "2009.90.39.00.00",
+    "description": ""
+   },
+   {
+    "gtip": "2105",
+    "description": "",
+    "quantity": "500 ton"
+   },
+   {
+    "gtip": "2106.10.80",
+    "description": "",
+    "quantity": "667 ton"
+   },
+   {
+    "gtip": "2106.90.98",
+    "description": ""
+   },
+   {
+    "gtip": "2204.10",
+    "description": "",
+    "quantity": "125 hl"
+   },
+   {
+    "gtip": "2209.00",
+    "description": "",
+    "quantity": "417 ton"
+   },
+   {
+    "gtip": "2309.10",
+    "description": "",
+    "quantity": "233 ton"
+   },
+   {
+    "gtip": "2309.90",
+    "description": "",
+    "quantity": "1.117 ton"
+   }
+  ],
+  "item_count": 105,
+  "parser_version": 3,
+  "mevzuat_no": "quota:https://ticaret.gov.tr/data/5ba234df13b87610d0a0331d/Birleşik Krallık Karar.doc"
+ },
+ {
+  "title": "Fas Krallığı Menşeli Bazı Tarım Ürünleri İthalatında Tarife Kontenjanı Uygulanması Hakkında Karar",
+  "url": "https://ticaret.gov.tr/data/5ba234df13b87610d0a0331d/Fas Karar.doc",
+  "filename": "Fas Karar.doc",
+  "origin": "Fas Krallığı",
+  "items": [
+   {
+    "gtip": "06.02",
+    "description": "Diğer canlı bitkiler (kökleri dahil), çelikler, daldırmalar; mantar miselleri",
+    "quantity": "50 ton"
+   },
+   {
+    "gtip": "0603.13.00.00.00",
+    "description": "Orkideler",
+    "quantity": "5 ton"
+   },
+   {
+    "gtip": "0704.90.10.00.11",
+    "description": "Beyaz lahana",
+    "quantity": "20 ton"
+   },
+   {
+    "gtip": "0704.90.10.00.12",
+    "description": "Kırmızı lahana"
+   },
+   {
+    "gtip": "0706.90",
+    "description": "Diğerleri",
+    "quantity": "20 ton"
+   },
+   {
+    "gtip": "0709.20.00.00.00",
+    "description": "Kuşkonmazlar",
+    "quantity": "10 ton"
+   },
+   {
+    "gtip": "0709.51.00.00.00",
+    "description": "Agaricus cinsi mantarlar",
+    "quantity": "50 ton"
+   },
+   {
+    "gtip": "0709.60",
+    "description": "Capsicum veya Pimenta cinsi meyveler",
+    "quantity": "10 ton"
+   },
+   {
+    "gtip": "0710.40.00.00.00",
+    "description": "Tatlı mısır",
+    "quantity": "10 ton"
+   },
+   {
+    "gtip": "0711.90.70.00.00",
+    "description": "Kebere",
+    "quantity": "85 ton"
+   },
+   {
+    "gtip": "0711.40.00.00.00",
+    "description": "Hıyarlar ve kornişonlar",
+    "quantity": "60 ton"
+   },
+   {
+    "gtip": "2001.10.00.00.00",
+    "description": "Hıyarlar ve kornişonlar"
+   },
+   {
+    "gtip": "0713.50",
+    "description": "Baklalar (Vicia faba var. Major) ve at baklası (Vicia faba var. equina, Vicia faba var. minor",
+    "quantity": "15 ton"
+   },
+   {
+    "gtip": "0804.40.00.00.00",
+    "description": "Avokado armudu",
+    "quantity": "50 ton"
+   },
+   {
+    "gtip": "0909.21.00.00.00",
+    "description": "Ezilmemiş ve öğütülmemiş",
+    "quantity": "10 ton"
+   },
+   {
+    "gtip": "0909.22.00.00.00",
+    "description": "Ezilmiş veya öğütülmüş"
+   },
+   {
+    "gtip": "1211.40.00.00.00",
+    "description": "Haşhaş kellesi",
+    "quantity": "10 ton"
+   },
+   {
+    "gtip": "1211.50.00.00.00",
+    "description": "Efedra (Ephedra)"
+   },
+   {
+    "gtip": "1212.92.00.00.00",
+    "description": "Keçiboynuzu (harnup)",
+    "quantity": "10 ton"
+   },
+   {
+    "gtip": "1212.99.41.00.00",
+    "description": "Kabukları soyulmamış, ezilmemiş veya öğütülmemiş"
+   },
+   {
+    "gtip": "1212.99.49.00.00",
+    "description": "Diğerleri"
+   },
+   {
+    "gtip": "2008.50",
+    "description": "Kayısılar (zerdali dahil)",
+    "quantity": "10 ton"
+   },
+   {
+    "gtip": "2101.11",
+    "description": "Hülasa, esans ve konsantreler",
+    "quantity": "10 ton"
+   },
+   {
+    "gtip": "22.04",
+    "description": "Taze üzüm şarabı (kuvvetlendirilmiş şaraplar dahil); üzüm şırası (20.09 pozisyonunda yer alanlar hariç)",
+    "quantity": "500 hl"
+   },
+   {
+    "gtip": "23.02",
+    "description": "Hububat veya baklagillerin elenmesi, öğütülmesi veya başka işlemlere tabi tutulması sonucu elde edilen kepek, kavuz ve diğer kalıntılar (pellet halinde olsun olmasın)",
+    "quantity": "2.000 ton"
+   }
+  ],
+  "item_count": 25,
+  "parser_version": 3,
+  "mevzuat_no": "quota:https://ticaret.gov.tr/data/5ba234df13b87610d0a0331d/Fas Karar.doc"
+ },
+ {
+  "title": "Filistin Devleti Menşeli Bazı Tarım Ürünleri İthalatında Tarife Kontenjanı Uygulanması Hakkında Karar",
+  "url": "https://ticaret.gov.tr/data/5ba234df13b87610d0a0331d/Filistin Karar.doc",
+  "filename": "Filistin Karar.doc",
+  "origin": "Filistin Devleti",
+  "items": [
+   {
+    "gtip": "0804.10.00.00.00",
+    "description": "Hurma",
+    "quantity": "5.000 Ton"
+   }
+  ],
+  "item_count": 1,
+  "parser_version": 3,
+  "mevzuat_no": "quota:https://ticaret.gov.tr/data/5ba234df13b87610d0a0331d/Filistin Karar.doc"
+ },
+ {
+  "title": "Gürcistan Menşeli Bazı Tarım ve İşlenmiş Tarım Ürünleri İthalatında Tarife Kontenjanı Uygulanması Hakkında Karar",
+  "url": "https://ticaret.gov.tr/data/5ba234df13b87610d0a0331d/Gurcistan Karar-.doc",
+  "filename": "Gurcistan Karar-.doc",
+  "origin": "Gürcistan",
+  "items": [
+   {
+    "gtip": "0302.42.00.00.00",
+    "description": "Hamsi balıkları (Engraulis spp.)",
+    "quantity": "8.000 ton"
+   },
+   {
+    "gtip": "0303.59.10.00.00",
+    "description": "Hamsi balıkları (Engraulis spp.)"
+   },
+   {
+    "gtip": "04.05",
+    "description": "Sütten elde edilen tereyağı ve diğer katı ve sıvı yağlar; sürülerek yenilen süt ürünleri",
+    "quantity": "500 ton"
+   },
+   {
+    "gtip": "0407.00",
+    "description": "Kuş ve kümes hayvanlarının yumurtaları (kabuklu, taze, dayanıklı hale getirilmiş veya pişirilmiş) [Yalnız bıldırcın yumurtaları]",
+    "quantity": "50 ton"
+   },
+   {
+    "gtip": "0409.00",
+    "description": "Tabii bal",
+    "quantity": "200 ton"
+   },
+   {
+    "gtip": "06.03",
+    "description": "Buket yapmaya elverişli veya süs amacına uygun cinsten kesme çiçekler ve çiçek tomurcukları (taze, kurutulmuş, boyanmış, ağartılmış, emprenye edilmiş veya başka şekilde hazırlanmış)",
+    "quantity": "15 ton"
+   },
+   {
+    "gtip": "0702.00.00.00.00",
+    "description": "Domates (taze veya soğutulmuş)",
+    "quantity": "600 ton"
+   },
+   {
+    "gtip": "08.07",
+    "description": "Kavunlar (karpuzlar dahil) ve papaya (taze)",
+    "quantity": "3.500 ton"
+   },
+   {
+    "gtip": "0808.10",
+    "description": "Elma",
+    "quantity": "2.000 ton"
+   },
+   {
+    "gtip": "0808.30",
+    "description": "Armut",
+    "quantity": "250 ton"
+   },
+   {
+    "gtip": "0808.40.00.00.00",
+    "description": "Ayva"
+   },
+   {
+    "gtip": "08.09",
+    "description": "Kayısı, kiraz, şeftali (nektarin dahil), erik ve çakal eriği (taze)",
+    "quantity": "600 ton"
+   },
+   {
+    "gtip": "12.02",
+    "description": "Yer fıstığı (kavrulmamış veya başka şekilde pişirilmemiş, kabuklu veya kırılmış olsun olmasın)",
+    "quantity": "250 ton"
+   },
+   {
+    "gtip": "17.04",
+    "description": "Kakao içermeyen şeker mamulleri (beyaz çikolata dahil)",
+    "quantity": "500 ton"
+   },
+   {
+    "gtip": "18.06",
+    "description": "Çikolata ve kakao içeren diğer gıda müstahzarları",
+    "quantity": "500 ton"
+   },
+   {
+    "gtip": "20.01",
+    "description": "Sebzeler, meyvalar, sert kabuklu meyvalar ve yenilen diğer bitki parçaları (sirke veya asetik asitle hazırlanmış veya konserve edilmiş)",
+    "quantity": "1.200 ton"
+   },
+   {
+    "gtip": "20.05",
+    "description": "Diğer sebzeler (sirke veya asetik asitten başka usullerle hazırlanmış veya konserve edilmiş, dondurulmamış) (20.06 pozisyonundaki ürünler hariç )",
+    "quantity": "1.000 ton"
+   },
+   {
+    "gtip": "20.09",
+    "description": "Meyva suları (üzüm şırası dahil) ve sebze suları (fermente edilmemiş ve alkol katılmamış), ilave şeker veya diğer tatlandırıcı maddeler katılmış olsun olmasın",
+    "quantity": "4.000 ton"
+   },
+   {
+    "gtip": "21.02",
+    "description": "Mayalar (canlı veya cansız); cansız diğer tek hücreli mikro organizmalar (30.02 pozisyonunda yer alan aşılar hariç); hazırlanmış kabartma tozları",
+    "quantity": "250 ton"
+   },
+   {
+    "gtip": "22.04",
+    "description": "Taze üzüm şarabı (kuvvetlendirilmiş şaraplar dahil); üzüm şırası (20.09 pozisyonunda yer alanlar hariç)",
+    "quantity": "1.000.000 lt"
+   },
+   {
+    "gtip": "2301.20.00.00.11",
+    "description": "Balık unu [Yalnız hamsi unu]",
+    "quantity": "3.000 ton"
+   }
+  ],
+  "item_count": 21,
+  "parser_version": 3,
+  "mevzuat_no": "quota:https://ticaret.gov.tr/data/5ba234df13b87610d0a0331d/Gurcistan Karar-.doc"
+ },
+ {
+  "title": "Karadağ Menşeli Bazı Tarım ve İşlenmiş Tarım Ürünleri İthalatında Tarife Kontenjanı Uygulanması Hakkında Karar",
+  "url": "https://ticaret.gov.tr/data/5ba234df13b87610d0a0331d/Karadag Karar..doc",
+  "filename": "Karadag Karar..doc",
+  "origin": "Karadağ",
+  "items": [
+   {
+    "gtip": "02.01",
+    "description": "Büyükbaş hayvanların eti(taze veya soğutulmuş)",
+    "quantity": "1.700 Ton"
+   },
+   {
+    "gtip": "02.02",
+    "description": "Büyükbaş hayvanların eti(dondurulmuş)"
+   },
+   {
+    "gtip": "02.04",
+    "description": "Koyun ve keçi etleri (taze, soğutulmuş veya dondurulmuş)",
+    "quantity": "1.000 Ton"
+   },
+   {
+    "gtip": "02.10",
+    "description": "Et ve yenilen sakatat (tuzlanmış, salamura edilmiş, kurutulmuş veya tütsülenmiş); et veya sakatatın yenilen un ve kaba unları",
+    "quantity": "150 Ton"
+   },
+   {
+    "gtip": "0709.51.00.00.00",
+    "description": "Agaricus cinsi mantarlar",
+    "quantity": "150 Ton"
+   },
+   {
+    "gtip": "0709.59.00.00.00",
+    "description": "Diğerleri"
+   },
+   {
+    "gtip": "0711.59.00.00.00",
+    "description": "Diğerleri"
+   },
+   {
+    "gtip": "0712.39.00.00.00",
+    "description": "Diğerleri"
+   },
+   {
+    "gtip": "0809.30",
+    "description": "Şeftali (nektarin dahil)",
+    "quantity": "300 Ton"
+   },
+   {
+    "gtip": "0810.40",
+    "description": "Yaban mersini ve yaban mersinin diğer kültür cinsleri",
+    "quantity": "350 Ton"
+   },
+   {
+    "gtip": "0810.20.10.00.00",
+    "description": "Ahududu",
+    "quantity": "200 Ton"
+   },
+   {
+    "gtip": "0811.20.31.00.00",
+    "description": "Ahududu"
+   },
+   {
+    "gtip": "1101.00",
+    "description": "Buğday unu veya mahlut unu",
+    "quantity": "5.000 Ton"
+   },
+   {
+    "gtip": "12.11",
+    "description": "Bitki ve bitki kısımları (tohum ve meyveler dahil) (esas olarak parfümeride, eczacılıkta, böcek yada mantar öldürücü veya benzeri amaçlarla kullanılan cinsten olanlar) (taze, soğutulmuş, dondurulmuş veya kurutulmuş, kesilmiş, ezilmiş veya toz haline getirilmiş olsun olmasın)",
+    "quantity": "150 Ton"
+   },
+   {
+    "gtip": "19.02",
+    "description": "Makarnalar (pişirilmiş veya et ile veya diğer maddelerle doldurulmuş veya başka şekilde hazırlanmış olsun olmasın) (spagetti, makaroni, şehriye, lazanya, gnocchi, ravioli, canelloni gibi); kuskus (hazırlanmış olsun olmasın)",
+    "quantity": "500 Ton"
+   },
+   {
+    "gtip": "20.07",
+    "description": "Reçeller, jöleler, marmelatlar, meyva veya sert kabuklu meyva püresi, meyva veya sert kabuklu meyva pastları (pişirilerek hazırlanmış) (ilave şeker veya diğer tatlandırıcı maddeleri içersin içermesin)",
+    "quantity": "300 Ton"
+   },
+   {
+    "gtip": "22.04",
+    "description": "Taze üzüm şarabı (kuvvetlendirilmiş şaraplar dahil); üzüm şırası (20.09 pozisyonunda yer alanlar hariç)",
+    "quantity": "2.500 hl"
+   }
+  ],
+  "item_count": 17,
+  "parser_version": 3,
+  "mevzuat_no": "quota:https://ticaret.gov.tr/data/5ba234df13b87610d0a0331d/Karadag Karar..doc"
+ },
+ {
+  "title": "Makedonya Cumhuriyeti Menşeli Bazı Tarım Ürünleri İthalatında Tarife Kontenjanı Uygulanması Hakkında Karar",
+  "url": "https://ticaret.gov.tr/data/5ba234df13b87610d0a0331d/Makedonya Karar.doc",
+  "filename": "Makedonya Karar.doc",
+  "origin": "Makedonya Cumhuriyeti",
+  "items": [
+   {
+    "gtip": "0702.00.00.00.00",
+    "description": "Domates (taze veya soğutulmuş)",
+    "quantity": "1.500 Ton"
+   },
+   {
+    "gtip": "0703.10",
+    "description": "Soğanlar ve şalotlar"
+   },
+   {
+    "gtip": "0704.90",
+    "description": "Diğerleri"
+   },
+   {
+    "gtip": "0707.00",
+    "description": "Hıyarlar ve kornişonlar (taze veya soğutulmuş)"
+   },
+   {
+    "gtip": "0709.60",
+    "description": "Capsicum veya Pimenta cinsi meyveler"
+   },
+   {
+    "gtip": "0709.51.00.00.00",
+    "description": "Agaricus cinsi mantarlar",
+    "quantity": "100Ton"
+   },
+   {
+    "gtip": "0709.59",
+    "description": "Diğerleri"
+   },
+   {
+    "gtip": "0710.80.51.00.00",
+    "description": "Tatlı biberler",
+    "quantity": "100 Ton"
+   },
+   {
+    "gtip": "0710.90.00.00.00",
+    "description": "Sebze karışımları"
+   },
+   {
+    "gtip": "0712.20.00.00.00",
+    "description": "Soğanlar",
+    "quantity": "300 Ton"
+   },
+   {
+    "gtip": "0712.90",
+    "description": "Diğer sebzeler; sebze karışımları"
+   },
+   {
+    "gtip": "0713.33.90.00.19",
+    "description": "Diğerleri",
+    "quantity": "500 Ton"
+   },
+   {
+    "gtip": "0807.11.00.00.00",
+    "description": "Karpuzlar",
+    "quantity": "1.000 Ton"
+   },
+   {
+    "gtip": "0807.19.00.00.00",
+    "description": "Diğerleri"
+   },
+   {
+    "gtip": "0904.21",
+    "description": "Kurutulmuş, ezilmemiş öğütülmemiş",
+    "quantity": "100 Ton"
+   },
+   {
+    "gtip": "0904.22",
+    "description": "Ezilmiş veya öğütülmüş"
+   },
+   {
+    "gtip": "1006.30",
+    "description": "Yarı veya tam olarak değirmenden geçirilmiş pirinç (parlatılmış veya perdahlanmış olsun olmasın)",
+    "quantity": "8.000 Ton"
+   },
+   {
+    "gtip": "1211.50.00.00.00",
+    "description": "Efedra (Ephedra)"
+   },
+   {
+    "gtip": "2001.10.00.00.00",
+    "description": "Hıyarlar ve kornişonlar",
+    "quantity": "200Ton"
+   },
+   {
+    "gtip": "2001.90.70.00.00",
+    "description": "Tatlı biberler"
+   },
+   {
+    "gtip": "2001.90.50.00.00",
+    "description": "Mantarlar",
+    "quantity": "100 Ton"
+   },
+   {
+    "gtip": "2003.10",
+    "description": "Agaricus cinsi mantarlar"
+   },
+   {
+    "gtip": "2003.90.90.00.00",
+    "description": "Diğerleri"
+   },
+   {
+    "gtip": "2001.90.97.00.13",
+    "description": "Diğer meyvalar ve sert kabuklu meyvalar",
+    "quantity": "100 Ton"
+   },
+   {
+    "gtip": "2001.90.97.00.18",
+    "description": "Diğer sebzeler ve yenilen diğer bitki parçaları"
+   },
+   {
+    "gtip": "2005.99.10.00.00",
+    "description": "\"Capsicum\" cinsi meyvalar (tatlı biberler ve dolmalık biber hariç)"
+   },
+   {
+    "gtip": "2005.99.50.00.11",
+    "description": "Havuç ve fasulye"
+   },
+   {
+    "gtip": "2005.99.50.00.19",
+    "description": "Diğerleri"
+   },
+   {
+    "gtip": "2005.99.80.00.00",
+    "description": "Diğerleri [Yalnızca Ajvar]",
+    "quantity": "200 Ton"
+   }
+  ],
+  "item_count": 29,
+  "parser_version": 3,
+  "mevzuat_no": "quota:https://ticaret.gov.tr/data/5ba234df13b87610d0a0331d/Makedonya Karar.doc"
+ },
+ {
+  "title": "Moldova Cumhuriyeti Menşeli Bazı Tarım Ürünleri İthalatında Tarife Kontenjanı Uygulanması Hakkında Karar",
+  "url": "https://ticaret.gov.tr/data/5ba234df13b87610d0a0331d/Moldova Karar.docx",
+  "filename": "Moldova Karar.docx",
+  "origin": "Moldova Cumhuriyeti",
+  "items": [
+   {
+    "gtip": "02.03",
+    "description": "Domuz eti (taze, soğutulmuş veya dondurulmuş)",
+    "period": "01.01-31.12",
+    "quantity": "500 Ton",
+    "duty_rate": "0"
+   },
+   {
+    "gtip": "04.03",
+    "description": "YayıkaItı , pıhtılaştırılmış süt ve krema, yoğurt, kefir ve diğer fermente ediImiş veya asitIiği artırıImış süt ve krema (konsantre edilmiş veya iIave şeker veya diğer tatlandırıcı maddeIer katılmış oIsun olmasın veya aroma veya ilave meyva , sert kabukIu meyva veya kakao içersin içermesin)",
+    "period": "01.01-31.12",
+    "quantity": "100 Ton",
+    "duty_rate": "0"
+   },
+   {
+    "gtip": "04.05",
+    "description": "Sütten elde ediIen tereyağı ve diğer katı ve sıvı yağIar ; sürülerek yenilen süt ürünleri",
+    "period": "01.01-31.12",
+    "quantity": "500 Ton",
+    "duty_rate": "0"
+   },
+   {
+    "gtip": "04.06",
+    "description": "Peynir ve pıhtılaştırılmış ürünler",
+    "period": "01.01-31.12",
+    "quantity": "300 Ton",
+    "duty_rate": "0"
+   },
+   {
+    "gtip": "0802.31.00.00.00",
+    "description": "Kabuklu",
+    "period": "01.01-31.12",
+    "quantity": "800 Ton",
+    "duty_rate": "0"
+   },
+   {
+    "gtip": "0802.32.00.00.00",
+    "description": "Kabuksuz"
+   },
+   {
+    "gtip": "0809.40",
+    "description": "Erik ve Çakal Eriği",
+    "period": "01.01-31.12",
+    "quantity": "250 Ton",
+    "duty_rate": "i"
+   },
+   {
+    "gtip": "0813.20",
+    "description": "Erik",
+    "period": "01.01-31.12",
+    "quantity": "200 Ton",
+    "duty_rate": "0"
+   },
+   {
+    "gtip": "10.03",
+    "description": "Arpa",
+    "period": "01.01-31.05",
+    "quantity": "10.000 Ton",
+    "duty_rate": "0"
+   },
+   {
+    "gtip": "1005.90",
+    "description": "Diğerleri",
+    "period": "01.01-31.05",
+    "quantity": "8.000 Ton",
+    "duty_rate": "0"
+   },
+   {
+    "gtip": "12.01",
+    "description": "Soya fasulyesi (kırılmış olsun olmasın)",
+    "period": "01.01-31.12",
+    "quantity": "10.000 Ton",
+    "duty_rate": "0"
+   },
+   {
+    "gtip": "1205.10",
+    "description": "Düşük erusik asitli rep veya kolza tohumları",
+    "period": "01.01-31.12",
+    "quantity": "2.000 Ton",
+    "duty_rate": "i"
+   },
+   {
+    "gtip": "12.06",
+    "description": "Ayçiçeği tohumu (kırılmış olsun olmasın)",
+    "period": "01.01-31.05",
+    "quantity": "5.000 Ton",
+    "duty_rate": "i"
+   },
+   {
+    "gtip": "1507.10",
+    "description": "Ham yağ (sakızı ayrılmış olsun olmasın)",
+    "period": "01.01-31.05",
+    "quantity": "2.500 Ton",
+    "duty_rate": "ii"
+   },
+   {
+    "gtip": "15.12",
+    "description": "Ayçiçeği tohumu, aspir veya pamuk tohumu yağları ve bunların fraksiyonları (rafine edilmiş olsun olmasın, fakat kimyasal olarak değiştirilmemiş)",
+    "period": "01.01-31.05",
+    "quantity": "1.500 Ton",
+    "duty_rate": "0"
+   },
+   {
+    "gtip": "17.04",
+    "description": "Kakao içermeyen şeker mamulleri (beyaz çikolata dahil)",
+    "period": "01.01-31.12",
+    "quantity": "250 Ton",
+    "duty_rate": "0"
+   },
+   {
+    "gtip": "18.06",
+    "description": "Çikolata ve kakao içeren diğer gıda müstahzarları",
+    "period": "01.01-31.12",
+    "quantity": "250 Ton",
+    "duty_rate": "0"
+   },
+   {
+    "gtip": "19.05",
+    "description": "Ekmek, pasta, kek, bisküvi ve diğer ekmekçilik mamulleri (kakao içersin içermesin); hosti , eczacılıkta kullanılan boş ilaç kapsülleri, mühür güllacı, pirinç kağıdı ve benzeri ürünler",
+    "period": "01.01-31.12",
+    "quantity": "250 Ton",
+    "duty_rate": "0"
+   },
+   {
+    "gtip": "20.07",
+    "description": "Reçeller, jöleler, marmelatlar, meyva veya sert kabuklu meyva püresi, meyva veya sert kabuklu meyva pastları (pişirilerek hazırlanmış) (ilave şeker veya diğer tatlandırıcı maddeleri içersin içermesin)",
+    "period": "01.01-31.12",
+    "quantity": "250 Ton",
+    "duty_rate": "0"
+   },
+   {
+    "gtip": "20.09",
+    "description": "Meyva suları (üzüm şırası dahil) ve sebze suları (fermente edilmemiş ve alkol katılmamış), ilave şeker veya diğer tatlandırıcı maddeler katılmış olsun olmasın",
+    "period": "01.01-31.12",
+    "quantity": "500 Ton",
+    "duty_rate": "0"
+   },
+   {
+    "gtip": "21.03",
+    "description": "Soslar ve müstahzarları; çeşni ve lezzet verici karışımlar; hardal unu ve kaba unu ve hazır hardal",
+    "period": "01.01-31.12",
+    "quantity": "500 Ton",
+    "duty_rate": "0"
+   },
+   {
+    "gtip": "2105.00",
+    "description": "Dondurma ve yenilen diğer buzlar (kakao içersin içermesin)",
+    "period": "01.01-31.12",
+    "quantity": "500 Ton",
+    "duty_rate": "0"
+   },
+   {
+    "gtip": "22.02",
+    "description": "Sular (mineral sular ve gazlı sular dahil) (ilave şeker veya diğer tatlandırıcı maddeler katılmış veya aromalandırılmış ) ve alkolsüz diğer içecekler (20.09 pozisyonundaki meyve ve sebze suları hariç)",
+    "period": "01.01-31.12",
+    "quantity": "100.000 litre",
+    "duty_rate": "0"
+   },
+   {
+    "gtip": "2204.10",
+    "description": "Köpüklü şaraplar",
+    "period": "01.01-31.12",
+    "quantity": "8.000 hl",
+    "duty_rate": "0"
+   },
+   {
+    "gtip": "2204.21",
+    "description": "Muhtevası 2 litre veya daha az kaplarda olanlar"
+   },
+   {
+    "gtip": "2204.22",
+    "description": "Muhtevası 2 litreden fazla fakat 10 litreden fazla olmayan kaplarda olanlar"
+   },
+   {
+    "gtip": "2204.29",
+    "description": "Diğerleri"
+   },
+   {
+    "gtip": "23.06",
+    "description": "Bitkisel katı veya sıvı yağların ekstraksiyonundan ( özütleme ) (23.04 ve 23.05 pozisyonundakiler hariç) arta kalan küspe ve diğer katı artıklar (öğütülmüş veya \" pellet \" halinde olsun olmasın)",
+    "period": "01.01-31.12",
+    "quantity": "5.000 Ton",
+    "duty_rate": "0"
+   }
+  ],
+  "item_count": 28,
+  "parser_version": 3,
+  "mevzuat_no": "quota:https://ticaret.gov.tr/data/5ba234df13b87610d0a0331d/Moldova Karar.docx"
+ },
+ {
+  "title": "Morityus Cumhuriyeti Menşeli Bazı Tarım ve İşlenmiş Tarım Ürünleri İthalatında Tarife Kontenjanı Uygulanması Hakkında Karar",
+  "url": "https://ticaret.gov.tr/data/5ba234df13b87610d0a0331d/Morityus Karar(Düzenlenen).doc",
+  "filename": "Morityus Karar(Düzenlenen).doc",
+  "origin": "Morityus Cumhuriyeti",
+  "items": [
+   {
+    "gtip": "0302.42.00.00.00",
+    "description": "Hamsi balıkları (Engraulis spp.)",
+    "quantity": "60 ton"
+   },
+   {
+    "gtip": "0302.45",
+    "description": "İstavrit ve derinsu istavriti (Trachurus spp.)"
+   },
+   {
+    "gtip": "0302.46.00.00.00",
+    "description": "Cobia (Rachycentron canadum)"
+   },
+   {
+    "gtip": "0302.54",
+    "description": "Berlam balıkları (Merliccius spp., Urophycis spp.)"
+   },
+   {
+    "gtip": "0302.55.00.00.00",
+    "description": "Alaska mezgit (Theragra chalcogramma)"
+   },
+   {
+    "gtip": "0302.56.00.00.00",
+    "description": "Mezgit balıkları (Micromesistius poutassou, Micromesistius australis)"
+   },
+   {
+    "gtip": "0302.59",
+    "description": "Diğerleri"
+   },
+   {
+    "gtip": "0302.71.00.00.00",
+    "description": "Tilapya (Oreochromis spp.)"
+   },
+   {
+    "gtip": "0302.72.00.00.00",
+    "description": "Yayın (Pangasius spp., Silurus spp., Clarias spp., Ictalurus spp.)"
+   },
+   {
+    "gtip": "0302.73.00.00.00",
+    "description": "Sazan balığı (Cyprinus spp., Carassius spp., Ctenopharyngodon idellus, Hypophthalmichthys spp., Cirrhinus spp., Mylopharyngodon piceus, Çatla çatla, Labeo spp., Osteochilus hasselti, Leptobarbus hoeveni, Megalobrama spp.)"
+   },
+   {
+    "gtip": "0302.79.00.00.00",
+    "description": "Diğerleri"
+   },
+   {
+    "gtip": "0302.82.00.00.00",
+    "description": "Keler balığı [Rays and skates (Rajidae)]"
+   },
+   {
+    "gtip": "0302.84",
+    "description": "Deniz levreği (Dicentrarchus spp.)"
+   },
+   {
+    "gtip": "0302.85",
+    "description": "İzmaritgiller (Sparidae)"
+   },
+   {
+    "gtip": "0302.89",
+    "description": "Diğerleri"
+   },
+   {
+    "gtip": "0303.42",
+    "description": "Sarı yüzgeçli orkinos (Thunnus albacares)",
+    "quantity": "200 ton"
+   },
+   {
+    "gtip": "0303.44",
+    "description": "Bigeye orkinosu (Thunnus obesus)"
+   },
+   {
+    "gtip": "0304.45.00.00.00",
+    "description": "Kılıç balığı (Xiphias gladius)",
+    "quantity": "100 ton"
+   },
+   {
+    "gtip": "0304.54.00.00.00",
+    "description": "Kılıç balığı (Xiphias gladius)"
+   },
+   {
+    "gtip": "0304.31.00.00.00",
+    "description": "Tilapya balığı (Oreochromis spp.)"
+   },
+   {
+    "gtip": "0304.32.00.00.00",
+    "description": "Yayın balığı (Pangasius spp.,Silurus spp., Clarias spp., Ictalurus spp.)"
+   },
+   {
+    "gtip": "0304.33.00.00.00",
+    "description": "Nil Levreği (Lates niloticus)"
+   },
+   {
+    "gtip": "0304.39.00.00.00",
+    "description": "Diğerleri"
+   },
+   {
+    "gtip": "0304.41.00.00.00",
+    "description": "Pasifik somonları (Oncorhynchus nerka, Oncorhynchus gorbuscha, Oncorhynchus keta, Oncorhynchus tschawytscha, Oncorhynchus kisutch, Oncorhynchus masou ve Oncorhynchus rhodurus) Atlantik somonları (Salmo salar) ve Tuna somonları (Hucho hucho)"
+   },
+   {
+    "gtip": "0304.42",
+    "description": "Alabalık (Salmo trutta, Oncorhynchus mykiss, Oncorhynchus clarki, Oncorhynchus aguabonita, Oncorhynchus gilae, Oncorhynchus apache ve Oncorhynchus chrysogaster)"
+   },
+   {
+    "gtip": "0304.43.00.00.00",
+    "description": "Yassı balıklar (Pleuronectidae, Bothidae, Cynoglossidae, Soleidae, Scophthalmidae ve Citharidae)"
+   },
+   {
+    "gtip": "0304.44",
+    "description": "Bregmacerotidae, Euclichthyidae, Gadidae, Macrouridae, Melanonidae, Merlucciidae, Moridae and Muraenolepididae familyasına ait balıklar"
+   },
+   {
+    "gtip": "0304.47",
+    "description": "Köpek balıkları"
+   },
+   {
+    "gtip": "0304.48.00.00.00",
+    "description": "Keler balığı [Rays and skates (Rajidae)]"
+   },
+   {
+    "gtip": "0304.49",
+    "description": "Diğerleri"
+   },
+   {
+    "gtip": "0304.51.00.00.00",
+    "description": "Tilapya (Oreochromis spp.), Yayın balığı Pangasius spp., Silurus spp., Clarias spp., Ictalurus spp.), Sazan balığı (Cyprinus spp., Carassius spp., Ctenopharyngodon idellus, Hypophthalmichthys spp., Cirrhinus spp., Mylopharyngodon piceus, Çatla çatla, Labeo spp., Osteochilus hasselti, Leptobarbus hoeveni, Megalobrama spp.),"
+   },
+   {
+    "gtip": "0304.52.00.00.00",
+    "description": "Alabalıkgiller"
+   },
+   {
+    "gtip": "0304.53.00.00.00",
+    "description": "Bregmacerotidae, Euclichthyidae, Gadidae, Macrouridae, Melanonidae, Merlucciidae, Moridae and Muraenolepididae familyasına ait balıklar"
+   },
+   {
+    "gtip": "0304.59.10.00.00",
+    "description": "Tatlı su balıkları"
+   },
+   {
+    "gtip": "0304.59.50.00.00",
+    "description": "Ringa balığı flapları"
+   },
+   {
+    "gtip": "0304.56",
+    "description": "Köpek balıkları"
+   },
+   {
+    "gtip": "0304.57.00.00.00",
+    "description": "Keler balığı [Rays and skates (Rajidae) ]"
+   },
+   {
+    "gtip": "0304.59.90.00.00",
+    "description": "Diğerleri"
+   },
+   {
+    "gtip": "0304.61.00.00.00",
+    "description": "Tilapya balığı (Oreochromis spp.)"
+   },
+   {
+    "gtip": "0304.62.00.00.00",
+    "description": "Yayın balığı (Pangasius spp.,Silurus spp., Clarias spp., Ictalurus spp.)"
+   },
+   {
+    "gtip": "0304.63.00.00.00",
+    "description": "Nil Levreği (Lates niloticus)"
+   },
+   {
+    "gtip": "0304.69.00.00.00",
+    "description": "Diğerleri"
+   },
+   {
+    "gtip": "0304.71",
+    "description": "Morina balıkları (Soğuksu morinası -Gadus morhua, Atlantik morinası -Gadus ogac, Pasifik morinası -Gadus macrocephalus)"
+   },
+   {
+    "gtip": "0304.72.00.00.00",
+    "description": "Haddock (Melanogrammus aeglefinus)"
+   },
+   {
+    "gtip": "0304.73.00.00.00",
+    "description": "Kömür balığı (Pollachius virens)"
+   },
+   {
+    "gtip": "0304.74",
+    "description": "Berlam balıkları (Merluccius spp.,Urophycis spp.)"
+   },
+   {
+    "gtip": "0304.75.00.00.00",
+    "description": "Alaska mezgit balıkları (Theragra chalcogramma)"
+   },
+   {
+    "gtip": "0304.79",
+    "description": "Diğerleri"
+   },
+   {
+    "gtip": "0304.81.00.00.00",
+    "description": "Pasifik somonları (Oncorhynchus nerka, Oncorhynchus gorbuscha, Oncorhynchus keta, Oncorhynchus tschawytscha, Oncorhynchus kisutch, Oncorhynchus masou ve Oncorhynchus rhodurus) Atlantik somonları (Salmo salar) ve Tuna somonları (Hucho hucho)"
+   },
+   {
+    "gtip": "0304.82",
+    "description": "Alabalık (Salmo trutta, Oncorhynchus mykiss, Oncorhynchus clarki, Oncorhynchus aguabonita, Oncorhynchus gilae, Oncorhynchus apache ve Oncorhynchus chrysogaster)"
+   },
+   {
+    "gtip": "0304.83",
+    "description": "Yassı balıklar (Pleuronectidae, Bothidae, Cynoglossidae, Soleidae, Scophthalmidae ve Citharidae)"
+   },
+   {
+    "gtip": "0304.86.00.00.00",
+    "description": "Ringa balığı (Clupea harengus, Clupea pallasii)"
+   },
+   {
+    "gtip": "0304.87.00.00.00",
+    "description": "Ton balıkları (Thunnus cinsi), orkinoslar veya yazılı orkinoslar (Euthynnus (Katsuwonus) pelamis), karaciğerleri, yumurtaları ve nefisleri hariç"
+   },
+   {
+    "gtip": "0304.88",
+    "description": "Köpek balıkları, Keler balıkları [Rays and skates (Rajidae)]"
+   },
+   {
+    "gtip": "0304.89",
+    "description": "Diğerleri"
+   },
+   {
+    "gtip": "0304.93",
+    "description": "Tilapya (Oreochromis spp.), Yayın balığı (Pangasius spp., Silurus spp., Clarias spp., Ictalurus spp.), Sazan balığı (Cyprinus spp., Carassius spp., Ctenopharyngodon idellus, Hypophthalmichthys spp. Cirrhinus spp., Mylopharyngodon piceus, Çatla çatla, Labeo spp., Osteochilus hasselti, Leptobarbus hoeveni, Megalobrama spp.)"
+   },
+   {
+    "gtip": "0304.94",
+    "description": "Alaska mezgit balıkları (Theragra chalcogramma)"
+   },
+   {
+    "gtip": "0304.95",
+    "description": "Bregmacerotidae, Euclichthyidae, Gadidae, Macrouridae, Melanonidae, Merlucciidae, Moridae and Muraenolepididae familyasına ait balıklar, Alaska mezgit balıkları (Theragra chalcogramma) hariç"
+   },
+   {
+    "gtip": "0304.96",
+    "description": "Köpek balıkları"
+   },
+   {
+    "gtip": "0304.97.00.00.00",
+    "description": "Keler balığı [Rays and skates (Rajidae)]"
+   },
+   {
+    "gtip": "0304.99",
+    "description": "Diğerleri"
+   },
+   {
+    "gtip": "0305.44",
+    "description": "Tilapya (Oreochromis spp.), Yayın balığı (Pangasius spp. Silurus spp., Clarias spp., lctalurus spp.), Sazan balığı (Cyprinus spp., Carassius spp., Ctenopharyngodon idellus, Hypophthalmichthys spp., Cirrhinus spp., Mylopharyngodon piceus, Çatla çatla, Labeo spp., Osteochilus hasselti, Leptobarbus hoeveni, Megalobrama spp.),"
+   },
+   {
+    "gtip": "0305.49",
+    "description": "Diğerleri"
+   },
+   {
+    "gtip": "0305.64.00.00.00",
+    "description": "Tilapya (Oreochromis spp.), Yayın balığı (Pangasius spp. Silurus spp., Clarias spp., Ictalurus spp.), Sazan balığı (Cyprinus spp., Carassius spp., Ctenopharyngodon idellus, Hypophthalmichthys spp., Cirrhinus spp., Mylopharyngodon piceus, Çatla çatla, Labeo spp., Osteochilus hasselti, Leptobarbus hoeveni, Megalobrama spp.),",
+    "quantity": "15 ton"
+   },
+   {
+    "gtip": "0305.69",
+    "description": "Diğerleri"
+   },
+   {
+    "gtip": "0305.71.00.00.00",
+    "description": "Köpek balığı yüzgeçleri"
+   },
+   {
+    "gtip": "0601.20",
+    "description": "Çiçek soğanları, yumrular, yumrulu kökler küçük soğanlar, sürgün başları ve rizomlar (sürgün vermiş veya çiçeklenmiş); hindiba bitkisi ve kökleri",
+    "quantity": "15 ton"
+   },
+   {
+    "gtip": "0602.90",
+    "description": "Diğerleri",
+    "quantity": "15 ton"
+   },
+   {
+    "gtip": "0603.15.00.00.00",
+    "description": "Zambaklar (Lilium spp.)",
+    "quantity": "25 ton"
+   },
+   {
+    "gtip": "0603.19",
+    "description": "Diğerleri"
+   },
+   {
+    "gtip": "0603.90.00.00.00",
+    "description": "Diğerleri",
+    "quantity": "25 ton"
+   },
+   {
+    "gtip": "0604.20.20.00.00",
+    "description": "Noel ağaçları",
+    "quantity": "25 ton"
+   },
+   {
+    "gtip": "0604.20.40.00.00",
+    "description": "İğne yapraklı ağaçların dalları"
+   },
+   {
+    "gtip": "0604.20.90.00.11",
+    "description": "Şimşir dalı"
+   },
+   {
+    "gtip": "0604.20.90.00.19",
+    "description": "Diğerleri"
+   },
+   {
+    "gtip": "0604.90.91.00.00",
+    "description": "Sadece kurutulmuş",
+    "quantity": "25 ton"
+   },
+   {
+    "gtip": "0604.90.99.00.00",
+    "description": "Diğerleri"
+   },
+   {
+    "gtip": "0709.60",
+    "description": "Capsicum veya Pimenta cinsi meyveler",
+    "quantity": "10 ton"
+   },
+   {
+    "gtip": "0709.99.90.00.18",
+    "description": "Diğerleri [Yalnızca palm meyvesi içi]",
+    "quantity": "20 ton"
+   },
+   {
+    "gtip": "0804.30.00.00.00",
+    "description": "Ananas",
+    "quantity": "100 ton"
+   },
+   {
+    "gtip": "0804.50",
+    "description": "Guava armudu, mango ve mangost",
+    "quantity": "7,5 ton"
+   },
+   {
+    "gtip": "0810.90.20.00.11",
+    "description": "Demirhindi, mahun elması, \"lychees\", ekmek ağacı meyvesi, sapodillo meyvesi [Yalnızca “lychees”]",
+    "quantity": "20 ton"
+   },
+   {
+    "gtip": "0910.91.05.00.00",
+    "description": "Köri [Yalnızca ezilmemiş ve öğütülmemiş]",
+    "quantity": "2 ton"
+   },
+   {
+    "gtip": "1604.20.10.00.00",
+    "description": "Som balıkları",
+    "quantity": "100 ton"
+   },
+   {
+    "gtip": "1604.20.90.00.11",
+    "description": "Ringa"
+   },
+   {
+    "gtip": "1604.20.50.00.19",
+    "description": "Diğerleri [Yalnızca palamut]"
+   },
+   {
+    "gtip": "1604.20.90.00.19",
+    "description": "Diğerleri"
+   },
+   {
+    "gtip": "1902.11",
+    "description": "Yumurta içerenler",
+    "quantity": "50 ton"
+   },
+   {
+    "gtip": "1902.19",
+    "description": "Diğerleri"
+   },
+   {
+    "gtip": "1902.30",
+    "description": "Diğer makarnalar"
+   },
+   {
+    "gtip": "1905.31",
+    "description": "Tatlı bisküviler",
+    "quantity": "20 ton"
+   },
+   {
+    "gtip": "1905.32",
+    "description": "Waffle ve gofretler",
+    "quantity": "20 ton"
+   },
+   {
+    "gtip": "1905.90",
+    "description": "Diğerleri",
+    "quantity": "10 ton"
+   },
+   {
+    "gtip": "2001.90.10.00.00",
+    "description": "Mango çetnisi",
+    "quantity": "20 ton"
+   },
+   {
+    "gtip": "2001.90.97.00.18",
+    "description": "Diğer sebzeler ve yenilen diğer bitki parçaları",
+    "quantity": "10 ton"
+   },
+   {
+    "gtip": "2005.99",
+    "description": "Diğerleri",
+    "quantity": "15 ton"
+   },
+   {
+    "gtip": "2007.10",
+    "description": "Homojenize müstahzarlar",
+    "quantity": "50 ton"
+   },
+   {
+    "gtip": "2007.91",
+    "description": "Turunçgiller"
+   },
+   {
+    "gtip": "2007.99",
+    "description": "Diğerleri"
+   },
+   {
+    "gtip": "2008.99",
+    "description": "Diğerleri [Yalnızca muz cipsi]",
+    "quantity": "15 ton"
+   },
+   {
+    "gtip": "2103.90.90.00.11",
+    "description": "Acı biber sosu",
+    "quantity": "50 ton"
+   },
+   {
+    "gtip": "2201.10",
+    "description": "Mineral sular ve gazlı sular",
+    "quantity": "1.000 lt"
+   },
+   {
+    "gtip": "2202.10",
+    "description": "Sular (mineral sular ve gazlı sular dahil) (ilave şeker veya diğer tatlandırıcı maddeler katılmış ve aromalandırılmış)",
+    "quantity": "500 hl"
+   },
+   {
+    "gtip": "2202.91.00.00.00",
+    "description": "Alkolsüz biralar"
+   },
+   {
+    "gtip": "2202.99",
+    "description": "Diğerleri"
+   },
+   {
+    "gtip": "2203.00",
+    "description": "Malttan üretilen biralar",
+    "quantity": "1.000 hl"
+   },
+   {
+    "gtip": "2309.10",
+    "description": "Kedi veya köpek maması (perakende satılacak hale getirilmiş)",
+    "quantity": "15 ton"
+   },
+   {
+    "gtip": "2309.90.96.90.11",
+    "description": "Diğer balık yemleri",
+    "quantity": "20 ton"
+   },
+   {
+    "gtip": "2309.90.96.90.12",
+    "description": "İz mineral maddeler"
+   },
+   {
+    "gtip": "2309.90.96.90.13",
+    "description": "Yem için hazırlanmış taşıyıcılı aktif madde karışımları"
+   },
+   {
+    "gtip": "2309.90.96.90.19",
+    "description": "Diğerleri"
+   }
+  ],
+  "item_count": 111,
+  "parser_version": 3,
+  "mevzuat_no": "quota:https://ticaret.gov.tr/data/5ba234df13b87610d0a0331d/Morityus Karar(Düzenlenen).doc"
+ },
+ {
+  "title": "Mısır Arap Cumhuriyeti Menşeli Bazı Tarım Ürünleri İthalatında Tarife Kontenjanı Uygulanması Hakkında Karar",
+  "url": "https://ticaret.gov.tr/data/5ba234df13b87610d0a0331d/Misir Karar.doc",
+  "filename": "Misir Karar.doc",
+  "origin": "Mısır Arap Cumhuriyeti",
+  "items": [
+   {
+    "gtip": "06.03",
+    "description": "Buket yapmaya elverişli veya süs amacına uygun cinsten kesme çiçekler ve çiçek tomurcukları (taze, kurutulmuş, boyanmış, ağartılmış, emprenye edilmiş veya başka şekilde hazırlanmış)",
+    "quantity": "15 Ton"
+   },
+   {
+    "gtip": "0701.90",
+    "description": "Diğerleri",
+    "quantity": "400 Ton"
+   },
+   {
+    "gtip": "0703.20",
+    "description": "Sarımsaklar",
+    "quantity": "100 Ton"
+   },
+   {
+    "gtip": "07.05",
+    "description": "Marul (Lactuca sativa) ve hindiba (Cichorium spp.), (taze veya soğutulmuş)",
+    "quantity": "600 Ton"
+   },
+   {
+    "gtip": "07.06",
+    "description": "Havuçlar, şalgamlar, kırmızı pancar, teke sakalı (salsifis), kök kerevizi, turplar ve benzeri yenilen kökler (taze veya soğutulmuş)"
+   },
+   {
+    "gtip": "07.12",
+    "description": "Kurutulmuş sebzeler (bütün halde, kesilmiş, dilimlenmiş, kırılmış veya toz halinde, fakat başka şekilde hazırlanmamış)"
+   },
+   {
+    "gtip": "0804.10.00.00.00",
+    "description": "Hurma",
+    "quantity": "5.000 Ton"
+   },
+   {
+    "gtip": "0804.50",
+    "description": "Guava armudu, mango ve mangost",
+    "quantity": "1.000 Ton"
+   },
+   {
+    "gtip": "0810.10.00.00.00",
+    "description": "Çilek",
+    "quantity": "200 Ton"
+   },
+   {
+    "gtip": "09.09",
+    "description": "Anason, Çin anasonu, rezene, kişniş, kimyon, veya Karaman kimyonu tohumları; ardıç meyveleri",
+    "quantity": "100 Ton"
+   },
+   {
+    "gtip": "1006.20",
+    "description": "Kavuzu çıkarılmış (kahverengi) pirinç",
+    "quantity": "30.000 Ton"
+   },
+   {
+    "gtip": "1006.30",
+    "description": "Yarı veya tam olarak değirmenden geçirilmiş pirinç (parlatılmış veya perdahlanmış olsun olmasın)",
+    "quantity": "10.000 Ton"
+   },
+   {
+    "gtip": "12.02",
+    "description": "Yer fıstığı (kavrulmamış veya başka şekilde pişirilmemiş, kabuklu veya kırılmış olsun olmasın)",
+    "quantity": "500 Ton"
+   },
+   {
+    "gtip": "17.04",
+    "description": "Kakao içermeyen şeker mamulleri (beyaz çikolata dahil)",
+    "quantity": "2.000 Ton"
+   },
+   {
+    "gtip": "18.06",
+    "description": "Çikolata ve kakao içeren diğer gıda müstahzarları",
+    "quantity": "1.000 Ton"
+   },
+   {
+    "gtip": "19.02",
+    "description": "Makarnalar (pişirilmiş veya et ile veya diğer maddelerle doldurulmuş veya başka şekilde hazırlanmış olsun olmasın) (spagetti, makaroni, şehriye, lazanya, gnocchi, ravioli, cannelloni gibi); kuskus (hazırlanmış olsun olmasın)",
+    "quantity": "1.000 Ton"
+   },
+   {
+    "gtip": "19.05",
+    "description": "Ekmek, pasta, kek, bisküvi ve diğer ekmekçi mamulleri (kakao içersin içermesin); hosti, eczacılıkta kullanılan boş ilaç kapsülleri, mühür güllacı, pirinç kağıdı ve benzeri ürünler",
+    "quantity": "1.000 Ton"
+   },
+   {
+    "gtip": "2001.10.00.00.00",
+    "description": "Hıyarlar ve kornişonlar",
+    "quantity": "1.000 Ton"
+   },
+   {
+    "gtip": "20.08",
+    "description": "Tarifenin başka yerinde belirtilmeyen veya yer almayan meyvalar, sert kabuklu meyvalar ve yenilen diğer bitki parçaları (başka surette hazırlanmış veya konserve edilmiş) (ilave şeker veya diğer tatlandırıcı maddeler veya alkol katılmış olsun olmasın)",
+    "quantity": "500 Ton"
+   },
+   {
+    "gtip": "20.09",
+    "description": "Meyva suları (üzüm şırası dahil) ve sebze suları (fermente edilmemiş ve alkol katılmamış), ilave şeker veya diğer tatlandırıcı maddeler katılmış olsun olmasın",
+    "quantity": "500 Ton"
+   },
+   {
+    "gtip": "2102.10",
+    "description": "Canlı mayalar",
+    "quantity": "3.000 Ton"
+   }
+  ],
+  "item_count": 21,
+  "parser_version": 3,
+  "mevzuat_no": "quota:https://ticaret.gov.tr/data/5ba234df13b87610d0a0331d/Misir Karar.doc"
+ },
+ {
+  "title": "Sırbistan Cumhuriyeti Menşeli Bazı Tarım ve İşlenmiş Tarım Ürünleri İthalatında Tarife Kontenjanı Uygulanması Hakkında Karar",
+  "url": "https://ticaret.gov.tr/data/5ba234df13b87610d0a0331d/Sırbistan Karar.doc",
+  "filename": "Sırbistan Karar.doc",
+  "origin": "Sırbistan Cumhuriyeti",
+  "items": [
+   {
+    "gtip": "02.01",
+    "description": "Büyükbaş hayvanların eti (taze veya soğutulmuş)",
+    "quantity": "5.000 Ton"
+   },
+   {
+    "gtip": "02.02",
+    "description": "Büyükbaş hayvanların eti (dondurulmuş)"
+   },
+   {
+    "gtip": "0602.40.00.00.00",
+    "description": "Güller (aşılı veya aşısız)",
+    "quantity": "100 Ton"
+   },
+   {
+    "gtip": "0602.90.41.00.11",
+    "description": "Çelikler",
+    "quantity": "200 Ton"
+   },
+   {
+    "gtip": "0602.90.41.00.12",
+    "description": "Fidanlar"
+   },
+   {
+    "gtip": "0602.90.41.00.29",
+    "description": "Diğerleri"
+   },
+   {
+    "gtip": "0602.90.46.00.00",
+    "description": "Çıplak kökleriyle birlikte olan",
+    "quantity": "200 Ton"
+   },
+   {
+    "gtip": "0602.90.47.00.00",
+    "description": "Kozalaklı ve yaprak dökmeyen ağaçlar"
+   },
+   {
+    "gtip": "0602.90.48.00.00",
+    "description": "Diğerleri"
+   },
+   {
+    "gtip": "0701.10.00.00.00",
+    "description": "Tohumluk",
+    "quantity": "500 Ton"
+   },
+   {
+    "gtip": "0702.00.00.00.00",
+    "description": "Domates (taze veya soğutulmuş)",
+    "quantity": "1.500 Ton"
+   },
+   {
+    "gtip": "0703.90",
+    "description": "Pırasa ve diğer soğanımsı sebzeler",
+    "quantity": "500 Ton"
+   },
+   {
+    "gtip": "0704.90.10.00.11",
+    "description": "Beyaz lahana",
+    "quantity": "500 Ton"
+   },
+   {
+    "gtip": "0704.90.10.00.12",
+    "description": "Kırmızı lahana"
+   },
+   {
+    "gtip": "0706.10",
+    "description": "Havuçlar ve şalgamlar",
+    "quantity": "1.000 Ton"
+   },
+   {
+    "gtip": "0708.10",
+    "description": "Bezelye (Pisum sativum)",
+    "quantity": "50 Ton"
+   },
+   {
+    "gtip": "0708.90",
+    "description": "Diğer baklagiller",
+    "quantity": "100 Ton"
+   },
+   {
+    "gtip": "0709.60",
+    "description": "Capsicum veya Pimenta cinsi meyveler",
+    "quantity": "200 Ton"
+   },
+   {
+    "gtip": "0710.21.00.00.00",
+    "description": "Bezelye (Pisum sativum)",
+    "quantity": "700 Ton"
+   },
+   {
+    "gtip": "0710.22.00.00.00",
+    "description": "Fasulye (Phaseolus spp., Vigna spp.)",
+    "quantity": "600 Ton"
+   },
+   {
+    "gtip": "0710.40.00.00.00",
+    "description": "Tatlı mısır",
+    "quantity": "2.000 Ton"
+   },
+   {
+    "gtip": "0713.90",
+    "description": "Diğerleri",
+    "quantity": "250 Ton"
+   },
+   {
+    "gtip": "0811.10",
+    "description": "Çilek",
+    "quantity": "300 Ton"
+   },
+   {
+    "gtip": "0811.20",
+    "description": "Ahududu, böğürtlen, dut, loganberrier(bir çeşit böğürtlen), siyah, beyaz ve kırmızı Frenk üzümü ve Bektaşi üzümü",
+    "quantity": "1.000 Ton"
+   },
+   {
+    "gtip": "0811.90.75.00.00",
+    "description": "Vişne (Prunus cerasus)",
+    "quantity": "300 Ton"
+   },
+   {
+    "gtip": "0813.20.00.00.00",
+    "description": "Erik",
+    "quantity": "400 Ton"
+   },
+   {
+    "gtip": "0909.61.00.00.00",
+    "description": "Ezilmemiş ve öğütülmemiş [yalnız rezene tohumları ve ardıç meyvaları]",
+    "quantity": "250 Ton"
+   },
+   {
+    "gtip": "0909.62.00.00.00",
+    "description": "Ezilmiş ve öğütülmüş [yalnız rezene tohumları ve ardıç meyvaları]"
+   },
+   {
+    "gtip": "0910.99",
+    "description": "Diğerleri",
+    "quantity": "200 Ton"
+   },
+   {
+    "gtip": "1001.99.00.00.11",
+    "description": "Adi buğday",
+    "quantity": "10.000 Ton"
+   },
+   {
+    "gtip": "1001.99.00.00.12",
+    "description": "Mahlut"
+   },
+   {
+    "gtip": "1001.99.00.00.13",
+    "description": "Kaplıca (kızıl) buğday"
+   },
+   {
+    "gtip": "1005.90",
+    "description": "Diğerleri",
+    "quantity": "5.000 Ton"
+   },
+   {
+    "gtip": "1008.30.00.00.00",
+    "description": "Kuş yemi",
+    "quantity": "200 Ton"
+   },
+   {
+    "gtip": "1201.90.00.00.00",
+    "description": "Diğerleri",
+    "quantity": "5.000 Ton"
+   },
+   {
+    "gtip": "1206.00",
+    "description": "Ayçiçeği tohumu (kırılmış olsun olmasın)",
+    "quantity": "15.000 Ton"
+   },
+   {
+    "gtip": "1208.10",
+    "description": "Soya fasulyesinin unu ve kaba unları",
+    "quantity": "1.000 Ton"
+   },
+   {
+    "gtip": "1209.10.00.00.00",
+    "description": "Şeker pancarı tohumları",
+    "quantity": "200 Ton"
+   },
+   {
+    "gtip": "1209.21.00.00.00",
+    "description": "Yonca tohumu",
+    "quantity": "200 Ton"
+   },
+   {
+    "gtip": "1209.29.45.00.11",
+    "description": "Vicia sativa L. türü fiğ",
+    "quantity": "200 Ton"
+   },
+   {
+    "gtip": "1209.29.45.00.12",
+    "description": "Diğer tür fiğ"
+   },
+   {
+    "gtip": "1209.29.45.00.13",
+    "description": "Poa palustris L., Poa trivialis L. cinsi tohumlar"
+   },
+   {
+    "gtip": "1209.29.45.00.14",
+    "description": "Domuz ayrığı tohumu (Dactylis glomerata L.)"
+   },
+   {
+    "gtip": "1209.29.45.00.15",
+    "description": "Tavus otları (Agrosties) tohumu"
+   },
+   {
+    "gtip": "1209.29.80.00.11",
+    "description": "Melez çim (Lolium X hybridum Hausskn.)",
+    "quantity": "200 Ton"
+   },
+   {
+    "gtip": "1209.29.80.00.12",
+    "description": "Orman salkım otu (Poa nemoralis L.) tohumları"
+   },
+   {
+    "gtip": "1209.29.80.00.13",
+    "description": "Yüksek çayır yulafı (Arrhenatherum elatius (L.)J veC presl.)tohumları"
+   },
+   {
+    "gtip": "1209.29.80.00.14",
+    "description": "Korunga (Onobrychis sativa L.)"
+   },
+   {
+    "gtip": "1209.29.80.00.15",
+    "description": "Burçak (Vicia ervilia Willd.)"
+   },
+   {
+    "gtip": "1209.29.80.00.16",
+    "description": "Sorgum tohumu"
+   },
+   {
+    "gtip": "1209.29.80.00.17",
+    "description": "Yem şalgamı tohumu"
+   },
+   {
+    "gtip": "1209.29.80.00.18",
+    "description": "Diğerleri"
+   },
+   {
+    "gtip": "1209.99.10.00.00",
+    "description": "Orman ağaçlarının tohumları",
+    "quantity": "200 Ton"
+   },
+   {
+    "gtip": "1211.90.86",
+    "description": "Diğerleri",
+    "quantity": "200 Ton"
+   },
+   {
+    "gtip": "1512.11.91.00.00",
+    "description": "Ayçiçeği tohumu yağı"
+   },
+   {
+    "gtip": "1512.19.90.00.11",
+    "description": "Ayçiçeği tohumu yağı"
+   },
+   {
+    "gtip": "15.17",
+    "description": "Margarin; bu fasılda yer alan hayvansal veya bitkisel katı ve sıvı yağların veya farklı katı veya sıvı yağ fraksiyonlarının yenilen karışımları veya müstahzarları (15.16 pozisyonundaki yenilen katı veya sıvı yağlar ve bunların fraksiyonları hariç)",
+    "quantity": "100 Ton"
+   },
+   {
+    "gtip": "1518.00.31.00.00",
+    "description": "Ham olanlar",
+    "quantity": "50 Ton"
+   },
+   {
+    "gtip": "16.04",
+    "description": "Hazırlanmış veya konserve edilmiş balıklar; havyar ve balık yumurtalarından elde edilen havyar yerine kullanılan ürünler",
+    "quantity": "100 Ton"
+   },
+   {
+    "gtip": "17.04",
+    "description": "Kakao içermeyen şeker mamulleri (beyaz çikolata dahil)",
+    "quantity": "1.000 Ton"
+   },
+   {
+    "gtip": "18.06",
+    "description": "Çikolata ve kakao içeren diğer gıda müstahzarları",
+    "quantity": "750 Ton"
+   },
+   {
+    "gtip": "1901.10",
+    "description": "Bebek ve küçük çocukların beslenmesinde kullanılan müstahzarlar (perakende satılacak hale getirilmiş)",
+    "quantity": "300 Ton"
+   },
+   {
+    "gtip": "19.02",
+    "description": "Makarnalar (pişirilmiş veya et ile veya diğer maddelerle doldurulmuş veya başka şekilde hazırlanmış olsun olmasın) (spagetti, makaroni, şehriye, lazanya, gnocchi, ravioli, canelloni gibi); kuskus (hazırlanmış olsun olmasın)",
+    "quantity": "750 Ton"
+   },
+   {
+    "gtip": "1902.20.30",
+    "description": "Ağırlık itibariyle %20'den fazla sosis ve benzerlerini, her cins et ve sakatatı içerenler (her türlü katı yağ dahil)[yalnızca Yenipazar Mantısı]",
+    "quantity": "500 Ton"
+   },
+   {
+    "gtip": "19.05",
+    "description": "Ekmek, pasta,kek bisküvi ve diğer ekmekçilik mamulleri (kakao içersin içermesin); hosti, eczacılıkta kullanılan boş ilaç kapsülleri, mühür güllacı,prinç kağıdı ve benzeri ürünler"
+   },
+   {
+    "gtip": "2001.10.00.00.00",
+    "description": "Hıyarlar ve kornişonlar",
+    "quantity": "200 Ton"
+   },
+   {
+    "gtip": "2001.90.30.00.00",
+    "description": "Tatlı mısır (Zea mays var. Saccharata)",
+    "quantity": "200 Ton"
+   },
+   {
+    "gtip": "2004.90.50.00.11",
+    "description": "Bezelye",
+    "quantity": "200 Ton"
+   },
+   {
+    "gtip": "2004.90.50.00.12",
+    "description": "Taze fasulyeler"
+   },
+   {
+    "gtip": "21.04",
+    "description": "Çorbalar, et suları ve müstahzarları; karışım halindeki homojenize gıda müstahzarları",
+    "quantity": "50 Ton"
+   },
+   {
+    "gtip": "2105.00",
+    "description": "Dondurma ve yenilen diğer buzlar (kakao içersin içermesin)",
+    "quantity": "150 Ton"
+   },
+   {
+    "gtip": "2106.10.20.00.11",
+    "description": "Diyet mamaları",
+    "quantity": "100 Ton"
+   },
+   {
+    "gtip": "2106.10.20.00.19",
+    "description": "Diğerleri"
+   },
+   {
+    "gtip": "2106.90",
+    "description": "Diğerleri",
+    "quantity": "100 Ton"
+   },
+   {
+    "gtip": "22.04",
+    "description": "Taze üzüm şarabı (kuvvetlendirilmiş şaraplar dahil); üzüm şırası (20.09 pozisyonunda yer alanlar hariç)",
+    "quantity": "500 hl"
+   },
+   {
+    "gtip": "2309.10",
+    "description": "Kedi veya köpek maması (perakende satılacak hale getirilmiş)",
+    "quantity": "500 Ton"
+   },
+   {
+    "gtip": "2309.90",
+    "description": "Diğerleri",
+    "quantity": "500 Ton"
+   }
+  ],
+  "item_count": 77,
+  "parser_version": 3,
+  "mevzuat_no": "quota:https://ticaret.gov.tr/data/5ba234df13b87610d0a0331d/Sırbistan Karar.doc"
+ },
+ {
+  "title": "Tunus Cumhuriyeti Menşeli Bazı Tarım Ürünleri İthalatında Tarife Kontenjanı Uygulanması Hakkında Karar",
+  "url": "https://ticaret.gov.tr/data/5ba234df13b87610d0a0331d/Tunus Karar.doc",
+  "filename": "Tunus Karar.doc",
+  "origin": "Tunus Cumhuriyeti",
+  "items": [
+   {
+    "gtip": "0302.43",
+    "description": "Sardalyalar (Avrupa sardalya balığı -Sardina pilchardus, Sardinops spp.), yuvarlak ve kısa boylu sardalyalar (Sardinella spp.), palatika veya çaça balığı (Sprattus sprattus)",
+    "quantity": "200 Ton"
+   },
+   {
+    "gtip": "0303.54",
+    "description": "Uskumru balıkları (uskumru -Scomber scombrus, Avustralya uskumrusu-Scomber Australasicus, Kolyoz-Scomber japonicus)"
+   },
+   {
+    "gtip": "0306.16",
+    "description": "Soğuk su karidesleri (Pandalus spp., Crangon crangon)",
+    "quantity": "50 Ton"
+   },
+   {
+    "gtip": "0306.17",
+    "description": "Diğer karidesler"
+   },
+   {
+    "gtip": "03.07",
+    "description": "Yumuşakçalar (kabuklu olsun olmasın) (canlı, taze, soğutulmuş, dondurulmuş, kurutulmuş, tuzlanmış veya salamura edilmiş); tütsülenmiş yumuşakçalar (kabuklu olsun olmasın) (tütsülenme sırasında veya öncesinde pişirilmiş olsun olmasın); yumuşakçaların insanların yemesine elverişli unları, kaba unları ve pelletleri",
+    "quantity": "100 Ton"
+   },
+   {
+    "gtip": "03.08",
+    "description": "Kabuklu hayvanlar ve yumuşakçaların dışında kalan suda yaşayan omurgasız hayvanlar (canlı, taze, soğutulmuş, dondurulmuş, kurutulmuş, tuzlanmış veya salamura edilmiş); Kabuklu hayvanlar ve yumuşakçaların dışında kalan suda yaşayan omurgasız hayvanların tütsülenmiş olanları (tütsülenme sırasında veya öncesinde pişirilmiş olsun olmasın); suda yaşayan omurgasız hayvanların (kabuklu hayvanlar ve yumuşakçalar hariç) insanların yemesine elverişli unları, kaba unları ve pelletleri"
+   },
+   {
+    "gtip": "0804.10.00.00.00",
+    "description": "Hurma",
+    "quantity": "5.000 Ton"
+   },
+   {
+    "gtip": "2103.90.90.00.13",
+    "description": "Harissa sosu",
+    "quantity": "100 Ton"
+   },
+   {
+    "gtip": "22.04",
+    "description": "Taze üzüm şarabı (kuvvetlendirilmiş şaraplar dahil); üzüm şırası (20.09 pozisyonunda yer alanlar hariç)",
+    "quantity": "1.000 hl"
+   }
+  ],
+  "item_count": 9,
+  "parser_version": 3,
+  "mevzuat_no": "quota:https://ticaret.gov.tr/data/5ba234df13b87610d0a0331d/Tunus Karar.doc"
+ },
+ {
+  "title": "İran İslam Cumhuriyeti Menşeli Bazı Tarım Ürünleri İthalatında Tarife Kontenjanı Uygulanması Hakkında Karar",
+  "url": "https://ticaret.gov.tr/data/5ba234df13b87610d0a0331d/İran Karar.doc",
+  "filename": "İran Karar.doc",
+  "origin": "İran İslam Cumhuriyeti",
+  "items": [
+   {
+    "gtip": "0603.11.00.00.00",
+    "description": "Güller"
+   },
+   {
+    "gtip": "0603.12.00.00.00",
+    "description": "Karanfiller"
+   },
+   {
+    "gtip": "0603.13.00.00.00",
+    "description": "Orkideler"
+   },
+   {
+    "gtip": "0603.14.00.00.00",
+    "description": "Krizantemler"
+   },
+   {
+    "gtip": "0603.19",
+    "description": "Diğerleri"
+   },
+   {
+    "gtip": "0603.90.00.00.00",
+    "description": "Diğerleri"
+   },
+   {
+    "gtip": "0701.90",
+    "description": "Diğerleri"
+   },
+   {
+    "gtip": "0702.00.00.00.00",
+    "description": "Domates (taze veya soğutulmuş)"
+   },
+   {
+    "gtip": "0703.10",
+    "description": "Soğanlar ve şalotlar"
+   },
+   {
+    "gtip": "0703.20",
+    "description": "Sarımsaklar"
+   },
+   {
+    "gtip": "0704.10",
+    "description": "Karnabaharlar ve başlı brokoli"
+   },
+   {
+    "gtip": "0704.90",
+    "description": "Diğerleri"
+   },
+   {
+    "gtip": "0705.11.00.00.00",
+    "description": "Baş marul"
+   },
+   {
+    "gtip": "0707.00",
+    "description": "Hıyarlar ve kornişonlar (taze veya soğutulmuş)"
+   },
+   {
+    "gtip": "0709.30.00.00.00",
+    "description": "Patlıcanlar"
+   },
+   {
+    "gtip": "0709.60",
+    "description": "Capsicum veya Pimenta cinsi meyveler"
+   },
+   {
+    "gtip": "0709.91.00.00.00",
+    "description": "Enginarlar"
+   },
+   {
+    "gtip": "0709.93",
+    "description": "Balkabağı, kabak, su kabağı (Cucurbita spp.)"
+   },
+   {
+    "gtip": "0709.99",
+    "description": "Diğerleri"
+   },
+   {
+    "gtip": "0711.40.00.00.00",
+    "description": "Hıyarlar ve kornişonlar"
+   },
+   {
+    "gtip": "0711.59.00.00.00",
+    "description": "Diğerleri"
+   },
+   {
+    "gtip": "0713.20",
+    "description": "Nohut (garbanzos)"
+   },
+   {
+    "gtip": "0802.11",
+    "description": "Kabuklu"
+   },
+   {
+    "gtip": "0802.12",
+    "description": "Kabuksuz"
+   },
+   {
+    "gtip": "0802.32.00.00.00",
+    "description": "Kabuksuz"
+   },
+   {
+    "gtip": "0804.10.00.00.00",
+    "description": "Hurma"
+   },
+   {
+    "gtip": "0804.20",
+    "description": "İncir"
+   },
+   {
+    "gtip": "0805.40.00.00.00",
+    "description": "Greyfurt (pomelolar dahil)"
+   },
+   {
+    "gtip": "0805.50",
+    "description": "Limon (Citrus limon, Citrus limonum) ve tatlı limonlar (Citrus aurantifolia, Citrus latifolia)"
+   },
+   {
+    "gtip": "0805.90",
+    "description": "Diğerleri"
+   },
+   {
+    "gtip": "0806.10",
+    "description": "Taze"
+   },
+   {
+    "gtip": "0807.11.00.00.00",
+    "description": "Karpuzlar"
+   },
+   {
+    "gtip": "0807.19.00.00.00",
+    "description": "Diğerleri"
+   },
+   {
+    "gtip": "0808.10",
+    "description": "Elma"
+   },
+   {
+    "gtip": "0808.30",
+    "description": "Armut"
+   },
+   {
+    "gtip": "0808.40.00.00.00",
+    "description": "Ayva"
+   },
+   {
+    "gtip": "0809.10.00.00.00",
+    "description": "Kayısı (zerdali dahil)"
+   },
+   {
+    "gtip": "0809.21.00.00.00",
+    "description": "Vişne (Prunus cerasus)"
+   },
+   {
+    "gtip": "0809.29.00.00.00",
+    "description": "Diğerleri"
+   },
+   {
+    "gtip": "0810.50.00.00.00",
+    "description": "Kivi"
+   },
+   {
+    "gtip": "0810.90",
+    "description": "Diğerleri"
+   },
+   {
+    "gtip": "0813.20.00.00.00",
+    "description": "Erik"
+   },
+   {
+    "gtip": "0813.30.00.00.00",
+    "description": "Elma"
+   },
+   {
+    "gtip": "0813.40",
+    "description": "Diğer meyveler"
+   },
+   {
+    "gtip": "0814.00.00.00.00",
+    "description": "Turunçgillerin veya kavunların (karpuzlar dahil) kabukları (taze, dondurulmuş, kurutulmuş veya salamurada, kükürtlü su içinde veya diğer koruyucu eriyikler içinde geçici olarak konserve edilmiş)"
+   },
+   {
+    "gtip": "0904.11.00.00.00",
+    "description": "Ezilmemiş, öğütülmemiş"
+   },
+   {
+    "gtip": "0908.31.00.00.00",
+    "description": "Ezilmemiş ve öğütülmemiş"
+   },
+   {
+    "gtip": "0908.32.00.00.00",
+    "description": "Ezilmiş veya öğütülmüş"
+   },
+   {
+    "gtip": "0909.21.00.00.00",
+    "description": "Ezilmemiş ve öğütülmemiş"
+   },
+   {
+    "gtip": "0909.22.00.00.00",
+    "description": "Ezilmiş veya öğütülmüş"
+   },
+   {
+    "gtip": "0909.31.00.00.00",
+    "description": "Ezilmemiş ve öğütülmemiş"
+   },
+   {
+    "gtip": "0909.32.00.00.00",
+    "description": "Ezilmiş veya öğütülmüş"
+   },
+   {
+    "gtip": "0910.20",
+    "description": "Safran"
+   },
+   {
+    "gtip": "1209.91",
+    "description": "Sebze tohumları"
+   },
+   {
+    "gtip": "1209.99",
+    "description": "Diğerleri"
+   },
+   {
+    "gtip": "1211.40.00.00.00",
+    "description": "Haşhaş kellesi"
+   },
+   {
+    "gtip": "1211.50.00.00.00",
+    "description": "Efedra (Ephedra)"
+   },
+   {
+    "gtip": "2001.10.00.00.00",
+    "description": "Hıyarlar ve kornişonlar"
+   },
+   {
+    "gtip": "2002.90",
+    "description": "Diğerleri"
+   },
+   {
+    "gtip": "2007.10",
+    "description": "Homojenize müstahzarlar"
+   },
+   {
+    "gtip": "2007.99",
+    "description": "Diğerleri"
+   },
+   {
+    "gtip": "2008.19",
+    "description": "Diğerleri (karışımlar dahil)"
+   },
+   {
+    "gtip": "2009.11",
+    "description": "Dondurulmuş"
+   },
+   {
+    "gtip": "2009.12.00.00.00",
+    "description": "Dondurulmamış, Brix değeri 20'yi geçmeyenler"
+   },
+   {
+    "gtip": "2009.19",
+    "description": "Diğerleri"
+   },
+   {
+    "gtip": "2009.49",
+    "description": "Diğerleri"
+   },
+   {
+    "gtip": "2009.69",
+    "description": "Diğerleri"
+   },
+   {
+    "gtip": "2009.71",
+    "description": "Brix değeri 20'yi geçmeyenler"
+   },
+   {
+    "gtip": "2009.79",
+    "description": "Diğerleri"
+   },
+   {
+    "gtip": "2009.81",
+    "description": "Yaban Mersini Suyu (Vaccinium macrocarpon, Vaccinium oxycoccos Vaccinium vitis-idaea)"
+   },
+   {
+    "gtip": "2209.00",
+    "description": "Sirkeler ve asetik asitten elde edilen sirke yerine geçen maddeler"
+   }
+  ],
+  "item_count": 71,
+  "parser_version": 3,
+  "mevzuat_no": "quota:https://ticaret.gov.tr/data/5ba234df13b87610d0a0331d/İran Karar.doc"
+ },
+ {
+  "title": "İsrail Devleti Menşeli Bazı Tarım ve İşlenmiş Tarım Ürünleri İthalatında Tarife Kontenjanı Uygulanması Hakkında Karar",
+  "url": "https://ticaret.gov.tr/data/5ba234df13b87610d0a0331d/İsrail Karar.doc",
+  "filename": "İsrail Karar.doc",
+  "origin": "İsrail Devleti",
+  "items": [
+   {
+    "gtip": "0407.19.11.10.11",
+    "description": "Hindi yumurtası",
+    "quantity": "175.000 Adet"
+   },
+   {
+    "gtip": "0407.19.11.10.19",
+    "description": "Diğerleri"
+   },
+   {
+    "gtip": "0407.19.19.00.11",
+    "description": "Damızlık olanlar"
+   },
+   {
+    "gtip": "0407.19.90.10.11",
+    "description": "Devekuşu yumurtaları"
+   },
+   {
+    "gtip": "0407.19.90.10.19",
+    "description": "Diğerleri"
+   },
+   {
+    "gtip": "06.01",
+    "description": "Çiçek soğanları, yumrular, yumrulu kökler, küçük soğanlar, sürgün başları ve rizomlar (dinlenme halinde sürgün vermiş veya çiçeklenmiş);hindiba bitkisi ve kökleri (12.12 pozisyonundaki kökler hariç)",
+    "quantity": "75 Ton"
+   },
+   {
+    "gtip": "0602.10",
+    "description": "Köklendirilmemiş çelik ve daldırmalar",
+    "quantity": "50 Ton"
+   },
+   {
+    "gtip": "0602.20",
+    "description": "Meyvaları veya sert kabuklu meyvaları yenilen ağaçlar çalılar (aşılı veya aşısız)"
+   },
+   {
+    "gtip": "0712.90.30.00.00",
+    "description": "Domates",
+    "quantity": "100 Ton"
+   },
+   {
+    "gtip": "0804.40.00.00.00",
+    "description": "Avokado armudu",
+    "quantity": "100 Ton"
+   },
+   {
+    "gtip": "0804.50.00.00.11",
+    "description": "Mango",
+    "quantity": "100 Ton"
+   },
+   {
+    "gtip": "0810.70.00.00.00",
+    "description": "Persimmon (Trabzon Hurması)",
+    "quantity": "100 Ton"
+   },
+   {
+    "gtip": "12.09",
+    "description": "Ekim amacıyla kullanılan tohum, meyva ve sporlar",
+    "quantity": "10 Ton"
+   },
+   {
+    "gtip": "1207.70.00.00.00",
+    "description": "Kavun, Karpuz tohumu"
+   },
+   {
+    "gtip": "1905.40.90.00.00",
+    "description": "Diğerleri [Yalnız pişirilmiş krakerler]",
+    "quantity": "15 Ton"
+   },
+   {
+    "gtip": "1905.90.10.00.00",
+    "description": "Mayasız ekmek (matzos) İsrail Devleti Menşeli Mayasız Ekmek İthalatında Tarife Kontenjanı Uygulanması Hakkında Karar-2008/13427 (08.04.2008 t. 26841 s. R.G.) ile ilave tarife kontenjanı açılmıştır.",
+    "quantity": "15 Ton"
+   },
+   {
+    "gtip": "2005.40.00.90.00",
+    "description": "Diğerleri",
+    "quantity": "500 Ton"
+   },
+   {
+    "gtip": "2005.59",
+    "description": "Diğerleri"
+   },
+   {
+    "gtip": "2005.99.80.00.00",
+    "description": "Diğerleri [Yalnızca havuçlar]"
+   },
+   {
+    "gtip": "2005.99.50.00.11",
+    "description": "Havuç ve fasulye karışımları"
+   },
+   {
+    "gtip": "2005.80.00.00.00",
+    "description": "Tatlı mısır (Zea mays var. Saccharata)",
+    "quantity": "50 Ton"
+   },
+   {
+    "gtip": "2008.30",
+    "description": "Turunçgiller",
+    "quantity": "300 Ton"
+   },
+   {
+    "gtip": "2009.11",
+    "description": "Dondurulmuş"
+   },
+   {
+    "gtip": "2009.12.00.00.00",
+    "description": "Dondurulmamış, Brix değeri 20'yi geçmeyenler"
+   },
+   {
+    "gtip": "2009.19",
+    "description": "Diğerleri"
+   },
+   {
+    "gtip": "2009.29.11.00.00",
+    "description": "Net 100 kg. ağırlık başına kıymeti 30 Euro' yu geçmeyenler"
+   },
+   {
+    "gtip": "2009.29.19.00.00",
+    "description": "Diğerleri"
+   },
+   {
+    "gtip": "2009.69.59.00.00",
+    "description": "Diğerleri",
+    "quantity": "50 Ton"
+   },
+   {
+    "gtip": "2009.69.90.00.00",
+    "description": "Diğerleri"
+   },
+   {
+    "gtip": "2106.90.98",
+    "description": "Diğerleri",
+    "quantity": "3.000 Ton"
+   },
+   {
+    "gtip": "2203.00",
+    "description": "Malttan üretilen biralar",
+    "quantity": "100.000 lt"
+   },
+   {
+    "gtip": "2208.60",
+    "description": "Votka",
+    "quantity": "2.500 lt"
+   },
+   {
+    "gtip": "23.09",
+    "description": "Hayvan gıdası olarak kullanılan müstahzarlar",
+    "quantity": "100 Ton"
+   }
+  ],
+  "item_count": 33,
+  "parser_version": 3,
+  "mevzuat_no": "quota:https://ticaret.gov.tr/data/5ba234df13b87610d0a0331d/İsrail Karar.doc"
+ },
+ {
+  "title": "İsviçre Konfederasyonu veya Lihtenştayn Prensliği Menşeli Bazı Ürünlerin İthalatında Tarife Kontenjanı Uygulanması Hakkında Karar",
+  "url": "https://ticaret.gov.tr/data/5ba234df13b87610d0a0331d/İsviçre Karar.docx",
+  "filename": "İsviçre Karar.docx",
+  "origin": "İsviçre Konfederasyonu veya Lihtenştayn Prensliği",
+  "items": [
+   {
+    "gtip": "0404",
+    "description": "Peyniraltı suyu ( konsantre edilmiş olsun olmasın veya ilave şeker veya diğer tatlandırıcı maddeleri içersin içermesin); tarifenin başka yerinde belirtilmeyen veya yer almayan tabii süt bileşenlerinden ibaret olan ürünler (ilave şeker veya diğer tatlandırıcı maddeleri içersin içermesin)",
+    "quantity": "100 ton",
+    "duty_rate": "i"
+   },
+   {
+    "gtip": "0405",
+    "description": "Sütten elde edilen tereyağı ve diğer katı ve sıvı yağIar ; sürülerek yenilen süt ürünleri",
+    "quantity": "250 ton",
+    "duty_rate": "0"
+   },
+   {
+    "gtip": "0704.10",
+    "description": "Karnabaharlar ve başlı brokoli",
+    "quantity": "50 ton",
+    "duty_rate": "i"
+   },
+   {
+    "gtip": "0705",
+    "description": "Marul ( Lactuca sativa ) ve hindiba ( Cichorium spp .) (taze veya soğutulmuş)",
+    "quantity": "50 ton",
+    "duty_rate": "i"
+   },
+   {
+    "gtip": "0706",
+    "description": "Havuçlar, şalgamlar, kırmızı pancar, teke sakalı ( salsifis ), kök kerevizi, turplar ve benzeri yenilen kökler (taze veya soğutulmuş)",
+    "quantity": "50 ton",
+    "duty_rate": "i"
+   },
+   {
+    "gtip": "0710",
+    "description": "Sebzeler (pişirilmemiş veya buharda veya suda kaynatılarak pişirilmiş) (dondurulmuş)",
+    "quantity": "50 ton",
+    "duty_rate": "i"
+   },
+   {
+    "gtip": "0712",
+    "description": "Kurutulmuş sebzeler (bütün halde, kesilmiş, dilimlenmiş, kırılmış veya toz halinde, fakat başka şekilde hazırlanmamış)",
+    "quantity": "50 ton",
+    "duty_rate": "i"
+   },
+   {
+    "gtip": "0712.39",
+    "description": "Diğerleri",
+    "quantity": "50 ton",
+    "duty_rate": "i"
+   },
+   {
+    "gtip": "0811.90",
+    "description": "Diğerleri",
+    "quantity": "100 ton",
+    "duty_rate": "i"
+   },
+   {
+    "gtip": "1601",
+    "description": "Etten yapılmış sosisler",
+    "quantity": "200 ton",
+    "duty_rate": "i"
+   },
+   {
+    "gtip": "1602",
+    "description": "Hazırlanmış veya konserve edilmiş etler [Domuz etinden olanlar hariç]",
+    "quantity": "200 ton",
+    "duty_rate": "i"
+   },
+   {
+    "gtip": "2204.21",
+    "description": "Muhtevası 2 litre veya daha az kaplarda olanlar",
+    "quantity": "30.000 lt",
+    "duty_rate": "i"
+   },
+   {
+    "gtip": "2204.29",
+    "description": "Diğerleri",
+    "quantity": "30.000 lt",
+    "duty_rate": "i"
+   },
+   {
+    "gtip": "2206",
+    "description": "Fermente edilmiş diğer içecekler (elma şarabı, armut şarabı, bal şarabı, sake gibi), tarifenin başka yerinde belirtilmeyen veya yer almayan fermente edilmiş içeceklerin karışımları ve fermente edilmiş içeceklerle alkolsüz içeceklerin karışımları",
+    "quantity": "30.000 lt",
+    "duty_rate": "i"
+   },
+   {
+    "gtip": "2207.10",
+    "description": "Alkol derecesi hacim itibariyle % 80 veya daha fazla olan tağyir ( denatüre ) edilmemiş etil alkol",
+    "quantity": "30.000 lt",
+    "duty_rate": "i"
+   },
+   {
+    "gtip": "2309",
+    "description": "Hayvan gıdası olarak kullanılan müstahzarlar",
+    "quantity": "200 ton",
+    "duty_rate": "0"
+   }
+  ],
+  "item_count": 16,
+  "parser_version": 3,
+  "mevzuat_no": "quota:https://ticaret.gov.tr/data/5ba234df13b87610d0a0331d/İsviçre Karar.docx"
+ },
+ {
+  "title": "Şili Cumhuriyeti Menşeli Bazı Tarım ve İşlenmiş Tarım Ürünleri İthalatında Tarife Kontenjanı Uygulanması Hakkında Karar",
+  "url": "https://ticaret.gov.tr/data/5ba234df13b87610d0a0331d/Şili Karar-.doc",
+  "filename": "Şili Karar-.doc",
+  "origin": "Şili Cumhuriyeti",
+  "items": [
+   {
+    "gtip": "0305.41.00.00.00",
+    "description": "Pasifik somonları (Oncorhynchus nerka, Oncorhynchus gorbuscha, Oncorhynchus keta, Oncorhynchus tschawytscha, Oncorhynchus kisutch, Oncorhynchus masou ve Oncorhynchus rhodurus),Atlantik somonları (Salmo salar) ve Tuna somonları (Hucho hucho)",
+    "quantity": "650 Ton"
+   },
+   {
+    "gtip": "0305.44.10.00.00",
+    "description": "Yılan Balığı (Anguilla spp.)"
+   },
+   {
+    "gtip": "0305.44.90.00.00",
+    "description": "Diğerleri"
+   },
+   {
+    "gtip": "0305.49",
+    "description": "Diğerleri"
+   },
+   {
+    "gtip": "0305.72.00.00.00",
+    "description": "Balık başları, kuyrukları, mideleri [Yalnızca 0305.44.10.00.00 ve 0305.44.90.00.00 pozisyonunda bulunanlar için]"
+   },
+   {
+    "gtip": "0305.79.00.00.00",
+    "description": "Diğerleri [Yalnızca 0305.44.10.00.00 ve 0305.44.90.00.00 pozisyonunda bulunanlar için]"
+   },
+   {
+    "gtip": "0306.16",
+    "description": "Soğuk su karidesleri (Pandalus spp., Crangon crangon)",
+    "quantity": "100 Ton"
+   },
+   {
+    "gtip": "0306.17",
+    "description": "Diğer karidesler"
+   },
+   {
+    "gtip": "0306.14",
+    "description": "Yengeçler",
+    "quantity": "100 Ton"
+   },
+   {
+    "gtip": "0306.31.00.00.00",
+    "description": "Kaya ıstakozu ve diğer deniz istakozları (Palinurus spp., Panulirus spp., Jasus spp.)",
+    "quantity": "100 Ton"
+   },
+   {
+    "gtip": "0306.91.00.00.00",
+    "description": "Kaya ıstakozu ve diğer deniz İstakozları (Palinurus spp., Panulirus spp., Jasus spp.)"
+   },
+   {
+    "gtip": "03.08",
+    "description": "Kabuklu hayvanlar ve yumuşakçaların dışında kalan suda yaşayan omurgasız hayvanlar (canlı, taze, soğutulmuş, dondurulmuş, kurutulmuş, tuzlanmış veya salamura edilmiş); Kabuklu hayvanlar ve yumuşakçaların dışında kalan suda yaşayan omurgasız hayvanların tütsülenmiş olanları (tütsülenme sırasında veya öncesinde pişirilmiş olsun olmasın); suda yaşayan omurgasız hayvanların (kabuklu hayvanlar ve yumuşakçalar hariç) insanların yemesine elverişli unları, kaba unları ve pelletleri"
+   },
+   {
+    "gtip": "06.01",
+    "description": "Çiçek soğanları, yumrular, yumrulu kökler, küçük soğanlar, sürgün başları ve rizomlar (dinlenme halinde sürgün vermiş veya çiçeklenmiş); hindiba bitkisi ve kökleri (12.12 pozisyonundaki kökler hariç)",
+    "quantity": "100 Ton"
+   },
+   {
+    "gtip": "0703.10",
+    "description": "Soğanlar ve şalotlar",
+    "quantity": "200 Ton"
+   },
+   {
+    "gtip": "0703.20",
+    "description": "Sarımsaklar",
+    "quantity": "100 Ton"
+   },
+   {
+    "gtip": "0705.29.00.00.00",
+    "description": "Diğerleri",
+    "quantity": "50 Ton"
+   },
+   {
+    "gtip": "0709.20.00.00.00",
+    "description": "Kuşkonmazlar",
+    "quantity": "50 Ton"
+   },
+   {
+    "gtip": "0709.91.00.00.00",
+    "description": "Enginarlar",
+    "quantity": "300 Ton"
+   },
+   {
+    "gtip": "0709.92",
+    "description": "Zeytin"
+   },
+   {
+    "gtip": "0709.93",
+    "description": "Balkabağı, kabak, su kabağı (Cucurbita spp.)"
+   },
+   {
+    "gtip": "0709.99",
+    "description": "Diğerleri"
+   },
+   {
+    "gtip": "0710.21.00.00.00",
+    "description": "Bezelye (Pisum sativum)",
+    "quantity": "500 Ton"
+   },
+   {
+    "gtip": "0710.29.00.00.00",
+    "description": "Diğerleri"
+   },
+   {
+    "gtip": "0711.51.00.00.00",
+    "description": "Agaricus cinsi mantarlar",
+    "quantity": "50 Ton"
+   },
+   {
+    "gtip": "0711.59.00.00.00",
+    "description": "Diğerleri",
+    "quantity": "150 Ton"
+   },
+   {
+    "gtip": "0712.20.00.00.00",
+    "description": "Soğanlar",
+    "quantity": "50 Ton"
+   },
+   {
+    "gtip": "0712.31.00.00.00",
+    "description": "Agaricus cinsi mantarlar",
+    "quantity": "50 Ton"
+   },
+   {
+    "gtip": "0712.39.00.00.00",
+    "description": "Diğerleri",
+    "quantity": "50 Ton"
+   },
+   {
+    "gtip": "0712.90",
+    "description": "Diğer sebzeler; sebze karışımları",
+    "quantity": "300 Ton"
+   },
+   {
+    "gtip": "0713.33.90.00.19",
+    "description": "Diğerleri",
+    "quantity": "100 Ton"
+   },
+   {
+    "gtip": "0802.11",
+    "description": "Kabuklu",
+    "quantity": "1.400 Ton"
+   },
+   {
+    "gtip": "0802.12",
+    "description": "Kabuksuz"
+   },
+   {
+    "gtip": "0802.31.00.00.00",
+    "description": "Kabuklu"
+   },
+   {
+    "gtip": "0802.32.00.00.00",
+    "description": "Kabuksuz"
+   },
+   {
+    "gtip": "0802.41.00.00.00",
+    "description": "Kabuklu",
+    "quantity": "50 Ton"
+   },
+   {
+    "gtip": "0802.42.00.00.00",
+    "description": "Kabuksuz"
+   },
+   {
+    "gtip": "0806.10",
+    "description": "Taze",
+    "quantity": "500 Ton"
+   },
+   {
+    "gtip": "0807.19.00.00.00",
+    "description": "Diğerleri",
+    "quantity": "50 Ton"
+   },
+   {
+    "gtip": "0808.30",
+    "description": "Armut",
+    "quantity": "200 Ton"
+   },
+   {
+    "gtip": "0808.40.00.00.00",
+    "description": "Ayva"
+   },
+   {
+    "gtip": "08.09",
+    "description": "Kayısı, kiraz, şeftali (nektarin dahil), erik ve çakal eriği (taze)",
+    "quantity": "500 Ton"
+   },
+   {
+    "gtip": "0810.10.00.00.00",
+    "description": "Çilek",
+    "quantity": "100 Ton"
+   },
+   {
+    "gtip": "0810.50.00.00.00",
+    "description": "Kivi",
+    "quantity": "600 Ton"
+   },
+   {
+    "gtip": "0810.90",
+    "description": "Diğerleri",
+    "quantity": "500 Ton"
+   },
+   {
+    "gtip": "0811.10",
+    "description": "Çilek",
+    "quantity": "1.500 Ton"
+   },
+   {
+    "gtip": "0811.20",
+    "description": "Ahududu, böğürtlen, dut, loganberrier(bir çeşit böğürtlen), siyah, beyaz ve kırmızı Frenk üzümü ve Bektaşi üzümü"
+   },
+   {
+    "gtip": "0811.90",
+    "description": "Diğerleri"
+   },
+   {
+    "gtip": "0812.10.00.00.00",
+    "description": "Kiraz (vişne dahil)",
+    "quantity": "100 Ton"
+   },
+   {
+    "gtip": "0813.20.00.00.00",
+    "description": "Erik",
+    "quantity": "200 Ton"
+   },
+   {
+    "gtip": "0813.30.00.00.00",
+    "description": "Elma",
+    "quantity": "200 Ton"
+   },
+   {
+    "gtip": "0813.40",
+    "description": "Diğer meyveler",
+    "quantity": "200 Ton"
+   },
+   {
+    "gtip": "1005.90",
+    "description": "Diğerleri",
+    "quantity": "1.000 Ton"
+   },
+   {
+    "gtip": "1102.90",
+    "description": "Diğerleri",
+    "quantity": "400 Ton"
+   },
+   {
+    "gtip": "1103.13",
+    "description": "Mısırdan",
+    "quantity": "400 Ton"
+   },
+   {
+    "gtip": "1104.12",
+    "description": "Yulaf",
+    "quantity": "50 Ton"
+   },
+   {
+    "gtip": "1104.22",
+    "description": "Yulaf taneleri",
+    "quantity": "50 Ton"
+   },
+   {
+    "gtip": "1105.20.00.00.00",
+    "description": "Patates flokonları, granülleri ve pelletleri",
+    "quantity": "50 Ton"
+   },
+   {
+    "gtip": "11.07",
+    "description": "Malt (kavrulmuş olsun olmasın)",
+    "quantity": "250 Ton"
+   },
+   {
+    "gtip": "1108.20.00.00.00",
+    "description": "İnülin",
+    "quantity": "200 Ton"
+   },
+   {
+    "gtip": "1201.90.00.00.00",
+    "description": "Diğerleri",
+    "quantity": "500 Ton"
+   },
+   {
+    "gtip": "1206.00",
+    "description": "Ayçiçeği tohumu (kırılmış olsun olmasın)",
+    "quantity": "500 Ton"
+   },
+   {
+    "gtip": "1214.10.00.00.00",
+    "description": "Yonca kaba unu ve pelletleri",
+    "quantity": "100 Ton"
+   },
+   {
+    "gtip": "1214.90",
+    "description": "Diğerleri",
+    "quantity": "400 Ton"
+   },
+   {
+    "gtip": "1509.20.00.00.00",
+    "description": "Ekstra saf zeytinyağı",
+    "quantity": "150 Ton"
+   },
+   {
+    "gtip": "1509.30",
+    "description": "Saf zeytinyağı"
+   },
+   {
+    "gtip": "1509.40.00.00.00",
+    "description": "Diğer saf zeytinyağı"
+   },
+   {
+    "gtip": "1514.19",
+    "description": "Diğerleri",
+    "quantity": "100 Ton"
+   },
+   {
+    "gtip": "1604.11.00.00.00",
+    "description": "Som balıkları",
+    "quantity": "400 Ton"
+   },
+   {
+    "gtip": "1604.15",
+    "description": "Uskumru balıkları",
+    "quantity": "300 Ton"
+   },
+   {
+    "gtip": "1604.16.00.00.00",
+    "description": "Hamsiler",
+    "quantity": "200 Ton"
+   },
+   {
+    "gtip": "1604.18.00.00.00",
+    "description": "Köpekbalığı yüzgeçleri",
+    "quantity": "100 Ton"
+   },
+   {
+    "gtip": "1604.19",
+    "description": "Diğerleri"
+   },
+   {
+    "gtip": "1605.10.00.00.00",
+    "description": "Yengeçler",
+    "quantity": "200 Ton"
+   },
+   {
+    "gtip": "1605.21",
+    "description": "Hava almayan kaplarda olmayanlar",
+    "quantity": "200 Ton"
+   },
+   {
+    "gtip": "1605.29.00.00.00",
+    "description": "Diğerleri"
+   },
+   {
+    "gtip": "2003.10",
+    "description": "Agaricus cinsi mantarlar",
+    "quantity": "200 Ton"
+   },
+   {
+    "gtip": "2005.99",
+    "description": "Diğerleri",
+    "quantity": "150 Ton"
+   },
+   {
+    "gtip": "2006.00",
+    "description": "Sebzeler, meyvalar, sert kabuklu meyvalar, meyva kabukları ve diğer bitki parçaları (şekerle konserve edilmiş) (suyu alınmış, üstü şekerle kaplanmış veya kristalleşmiş)",
+    "quantity": "100 Ton"
+   },
+   {
+    "gtip": "2007.10",
+    "description": "Homojenize müstahzarlar",
+    "quantity": "100 Ton"
+   },
+   {
+    "gtip": "2007.99",
+    "description": "Diğerleri",
+    "quantity": "300 Ton"
+   },
+   {
+    "gtip": "2008.60",
+    "description": "Kirazlar (vişne dahil)",
+    "quantity": "100 Ton"
+   },
+   {
+    "gtip": "2008.70",
+    "description": "Şeftaliler (nektarinler dahil)",
+    "quantity": "250 Ton"
+   },
+   {
+    "gtip": "2008.97",
+    "description": "Karışımlar",
+    "quantity": "250 Ton"
+   },
+   {
+    "gtip": "2008.99",
+    "description": "Diğerleri",
+    "quantity": "250 Ton"
+   },
+   {
+    "gtip": "2009.61",
+    "description": "Brix değeri 30'u geçmeyenler",
+    "quantity": "250 Ton"
+   },
+   {
+    "gtip": "2009.69",
+    "description": "Diğerleri",
+    "quantity": "250 Ton"
+   },
+   {
+    "gtip": "2009.79",
+    "description": "Diğerleri",
+    "quantity": "250 Ton"
+   },
+   {
+    "gtip": "2009.81",
+    "description": "Yaban Mersini Suyu (Vaccinium macrocarpon, Vaccinium oxycoccos, Vaccinium vitis-idaea)",
+    "quantity": "250 Ton"
+   },
+   {
+    "gtip": "2009.89",
+    "description": "Diğerleri"
+   },
+   {
+    "gtip": "2101.20",
+    "description": "Çay ve Paraguay çayı hülasası, esans ve konsantreleri ve esası bu hülasa, esans veya konsantreler veya çay veya Paraguay çayı olan müstahzarlar",
+    "quantity": "200 Ton"
+   },
+   {
+    "gtip": "2101.30",
+    "description": "Kavrulmuş hindiba ve kavrulmuş kahve yerine kullanılan diğer maddeler ve bunların hülasa, esans ve konsantreleri",
+    "quantity": "200 Ton"
+   },
+   {
+    "gtip": "2303.20",
+    "description": "Şeker pancarının etli kısımları, şeker kamışı bagası ve şeker sanayiinin diğer artıkları",
+    "quantity": "1.000 Ton"
+   },
+   {
+    "gtip": "2309.10",
+    "description": "Kedi veya köpek maması (perakende satılacak hale getirilmiş)",
+    "quantity": "350 Ton"
+   },
+   {
+    "gtip": "2309.90",
+    "description": "Diğerleri",
+    "quantity": "1.500 Ton"
+   }
+  ],
+  "item_count": 94,
+  "parser_version": 3,
+  "mevzuat_no": "quota:https://ticaret.gov.tr/data/5ba234df13b87610d0a0331d/Şili Karar-.doc"
+ }
+]

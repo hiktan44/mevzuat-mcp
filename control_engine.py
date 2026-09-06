@@ -70,6 +70,16 @@ class ControlScopeRow(BaseModel):
     source_line: str
     source_offset: int
     excluded: bool = False
+    # "scope": product is subject to the control; "prohibited": the annex lists
+    # goods whose import is banned outright (e.g. waste and chemical communiques).
+    list_kind: Literal["scope", "prohibited"] = "scope"
+
+
+class RequiredDocument(BaseModel):
+    order: int
+    text: str
+    # "conditional": the communique itself makes the document depend on a case ("varsa", "…halinde").
+    kind: Literal["required", "conditional"] = "required"
 
 
 class ImportControlRule(BaseModel):
@@ -82,6 +92,10 @@ class ImportControlRule(BaseModel):
     physical_inspection_possible: bool
     laboratory_test_possible: bool
     required_documents_excerpt: str | None = None
+    required_documents: list[RequiredDocument] = Field(default_factory=list)
+    # Sentences of the communique that carve products or importers out of the control
+    # (muafiyet, istisna, numune, sanayici, AB'de serbest dolaşım...).  Evidence, not a decision.
+    exemptions: list[str] = Field(default_factory=list)
     scope_count: int
     mevzuat_id: str
     source_url: str
@@ -189,34 +203,67 @@ def _scope_rows_from_segment(segment: str) -> list[ControlScopeRow]:
     return rows
 
 
-def extract_annex_scope(text: str, annex_number: int = 1) -> list[ControlScopeRow]:
-    """Return GTIP rows from the most code-dense requested annex section.
+def communique_code_matches(code: str, title: str) -> bool:
+    """True only when the full communique number appears in the title.
 
-    Earlier references such as "Ek-1'de" occur in the body. Scoring every
-    candidate and cutting at the next annex avoids treating those references,
-    dates or article numbers as scope rows. Some annual communiques put the
-    actual GTIP table in Ek-2, so the annex number is source-configurable.
+    Substring checks make "2026/1" match "2026/12" and would let a later
+    communique overwrite the TSE list; the number must be delimited on both
+    sides.
+    """
+    pattern = rf"(?<![\d/.]){re.escape(code.strip())}(?![\d/.])"
+    return re.search(pattern, re.sub(r"\s+", "", title)) is not None
+
+
+def _annex_heading_re(annex_number: int) -> re.Pattern[str]:
+    # "Ek-1", "EK 1", "Ek-\n1", "Ek-1/A" but not "Ek-12" and not the body
+    # reference "Ek-1'de" ("Ek-1 de" style references are rare in official texts).
+    return re.compile(rf"(?m)^\s*[Ee][Kk]\s*[-–]?\s*{annex_number}(?:\s*/\s*[A-ZÇĞİÖŞÜa-zçğıöşü])?{_HEADING_TAIL}")
+
+
+# A heading ends the line or continues with a title in capitals ("Ek-1 DENETİME
+# TABİ ÜRÜNLER"); running text such as "Ek-1 sayılı listede" is not a heading.
+_HEADING_TAIL = r"(?![\d’'`´\w])(?=[ \t]*(?:$|[:\-–(]|[A-ZÇĞİÖŞÜ]))"
+_ANY_ANNEX_HEADING_RE = re.compile(rf"(?m)^\s*[Ee][Kk]\s*[-–]?\s*[1-9](?:\s*/\s*[A-ZÇĞİÖŞÜa-zçğıöşü])?{_HEADING_TAIL}")
+
+
+def extract_annex_scope(text: str, annex_number: int = 1) -> list[ControlScopeRow]:
+    """Return GTIP rows from every table of the requested annex.
+
+    Each heading ("Ek-1", "Ek-1/A", "Ek-1/B") opens a segment that ends at the
+    next annex heading of any number, so multi-part annexes are merged instead
+    of keeping only the densest part.  Body references such as "Ek-1'de" are
+    not headings.  Segments without a single code are ignored, which drops the
+    remaining false starts.
     """
     if annex_number < 1 or annex_number > 9:
         raise ValueError("Ek numarası 1 ile 9 arasında olmalıdır.")
-    annex_re = re.compile(rf"(?im)^\s*Ek\s*[-–]?\s*{annex_number}\b")
-    other_numbers = "|".join(str(value) for value in range(1, 10) if value != annex_number)
-    next_annex_re = re.compile(rf"(?im)^\s*Ek\s*[-–]?\s*(?:{other_numbers})\b")
-    candidates: list[tuple[int, str]] = []
+    annex_re = _annex_heading_re(annex_number)
+    rows: list[ControlScopeRow] = []
     for match in annex_re.finditer(text):
-        tail = text[match.start() :]
-        end = next_annex_re.search(tail[match.end() - match.start() :])
-        segment_end = (match.end() - match.start()) + end.start() if end else len(tail)
-        segment = tail[:segment_end]
-        score = len(_CODE_RE.findall(segment))
-        candidates.append((score, segment))
-    if not candidates:
-        return []
-    _, segment = max(candidates, key=lambda item: item[0])
-    if len(_CODE_RE.findall(segment)) < 1:
-        return []
+        tail = text[match.end():]
+        end = _ANY_ANNEX_HEADING_RE.search(tail)
+        segment = text[match.start(): match.end() + (end.start() if end else len(tail))]
+        if not _CODE_RE.search(segment):
+            continue
+        for row in _scope_rows_from_segment(segment):
+            row.source_offset += match.start()
+            rows.append(row)
+    return _dedupe_scope(rows)
 
-    return _scope_rows_from_segment(segment)
+
+def annex_plan(config: dict[str, Any]) -> list[dict[str, Any]]:
+    """Normalise ``scope_annex`` / ``scope_annexes`` into [{annex, kind}, ...]."""
+    raw = config.get("scope_annexes")
+    if not raw:
+        return [{"annex": int(config.get("scope_annex", 1)), "kind": "scope"}]
+    plan: list[dict[str, Any]] = []
+    for item in raw:
+        if isinstance(item, dict):
+            kind = str(item.get("kind", "scope"))
+            plan.append({"annex": int(item.get("annex", 1)), "kind": kind if kind in {"scope", "prohibited"} else "scope"})
+        else:
+            plan.append({"annex": int(item), "kind": "scope"})
+    return plan
 
 
 def extract_scope_table(text: str, start_pattern: str, end_pattern: str) -> list[ControlScopeRow]:
@@ -310,6 +357,66 @@ def extract_required_documents(text: str) -> str | None:
     if next_annex:
         tail = tail[: (matches[-1].end() - start) + next_annex.start()]
     return re.sub(r"\s+", " ", tail).strip()[:3000] or None
+
+
+_DOCUMENT_ITEM_RE = re.compile(r"(?:(?<=\s)|^)(\d{1,2})\s*[.)-]\s+(?=\S)")
+_CONDITIONAL_HINTS = ("varsa", " ise ", "halinde", "gerektiginde", "talep edilmesi", "istenmesi", "olmasi durumunda", "gerekmesi")
+_EXEMPTION_HINTS = (
+    "muaf", "istisna", "kapsam disi", "kapsami disinda", "kapsamina girmez", "uygulanmaz", "numune", "sanayici",
+    "serbest dolasim", "a.tr", "dahilde isleme", "geri gelen esya", "bedelsiz",
+)
+
+
+def structure_document_list(excerpt: str | None) -> list[RequiredDocument]:
+    """Turn the raw 'yüklenmesi gereken belgeler' excerpt into numbered rows."""
+    if not excerpt:
+        return []
+    text = re.sub(r"\s+", " ", excerpt).strip()
+    matches = list(_DOCUMENT_ITEM_RE.finditer(text))
+    rows: list[RequiredDocument] = []
+    for index, match in enumerate(matches):
+        end = matches[index + 1].start() if index + 1 < len(matches) else len(text)
+        body = text[match.end():end].strip(" ;,-–")
+        if len(body) < 4:
+            continue
+        # Stop a trailing item at the next annex/form heading that may be glued to it.
+        body = re.split(r"\s(?=(?:EK|Ek)\s*[-–]?\s*\d)", body)[0].strip()
+        order = int(match.group(1))
+        if rows and order <= rows[-1].order and order != 1:
+            # Numbering restarted or a stray number: keep sequential order.
+            order = rows[-1].order + 1
+        kind = "conditional" if any(hint in _key(f" {body} ") for hint in _CONDITIONAL_HINTS) else "required"
+        rows.append(RequiredDocument(order=order, text=body[:400], kind=kind))
+        if len(rows) >= 25:
+            break
+    return rows
+
+
+def extract_exemptions(text: str) -> list[str]:
+    """Sentences that limit the control's scope; returned verbatim for the reader to judge."""
+    if not text:
+        return []
+    flat = re.sub(r"\s+", " ", text)
+    sentences = re.split(r"(?<=[.;])\s+(?=[A-ZÇĞİÖŞÜ(])", flat)
+    found: list[str] = []
+    seen: set[str] = set()
+    for sentence in sentences:
+        key = _key(sentence)
+        if not any(hint in key for hint in _EXEMPTION_HINTS):
+            continue
+        if len(sentence) < 25 or len(sentence) > 600:
+            continue
+        # Skip the list tables and annex headings; keep article prose.
+        if _CODE_RE.search(sentence) and len(_CODE_RE.findall(sentence)) > 2:
+            continue
+        cleaned = sentence.strip()
+        if cleaned in seen:
+            continue
+        seen.add(cleaned)
+        found.append(cleaned[:400])
+        if len(found) >= 12:
+            break
+    return found
 
 
 def infer_process(text: str, title: str) -> dict[str, Any]:
@@ -433,14 +540,43 @@ class ImportControlEngine:
                     source_line TEXT NOT NULL,
                     source_offset INTEGER NOT NULL,
                     excluded INTEGER NOT NULL DEFAULT 0,
-                    PRIMARY KEY (snapshot_id, gtip_prefix)
+                    list_kind TEXT NOT NULL DEFAULT 'scope',
+                    PRIMARY KEY (snapshot_id, gtip_prefix, list_kind)
                 );
                 CREATE INDEX IF NOT EXISTS idx_control_scope_gtip ON control_scope(gtip_prefix);
                 """
             )
+            snapshot_columns = {row[1] for row in db.execute("PRAGMA table_info(control_snapshots)").fetchall()}
+            for column in ("required_documents_json", "exemptions_json"):
+                if column not in snapshot_columns:
+                    db.execute(f"ALTER TABLE control_snapshots ADD COLUMN {column} TEXT")
             columns = {row[1] for row in db.execute("PRAGMA table_info(control_scope)").fetchall()}
             if "excluded" not in columns:
                 db.execute("ALTER TABLE control_scope ADD COLUMN excluded INTEGER NOT NULL DEFAULT 0")
+            if "list_kind" not in columns:
+                # The primary key gains list_kind; SQLite cannot alter keys in place,
+                # so the derived table is rebuilt and existing rows keep kind "scope".
+                db.executescript(
+                    """
+                    ALTER TABLE control_scope RENAME TO control_scope_legacy;
+                    CREATE TABLE control_scope (
+                        snapshot_id TEXT NOT NULL REFERENCES control_snapshots(id) ON DELETE CASCADE,
+                        gtip_prefix TEXT NOT NULL,
+                        description TEXT,
+                        source_line TEXT NOT NULL,
+                        source_offset INTEGER NOT NULL,
+                        excluded INTEGER NOT NULL DEFAULT 0,
+                        list_kind TEXT NOT NULL DEFAULT 'scope',
+                        PRIMARY KEY (snapshot_id, gtip_prefix, list_kind)
+                    );
+                    INSERT INTO control_scope
+                        (snapshot_id, gtip_prefix, description, source_line, source_offset, excluded, list_kind)
+                    SELECT snapshot_id, gtip_prefix, description, source_line, source_offset, excluded, 'scope'
+                    FROM control_scope_legacy;
+                    DROP TABLE control_scope_legacy;
+                    CREATE INDEX IF NOT EXISTS idx_control_scope_gtip ON control_scope(gtip_prefix);
+                    """
+                )
 
     async def close(self) -> None:
         await self._client.close()
@@ -480,7 +616,12 @@ class ImportControlEngine:
                 raise RuntimeError(result.error_message if result else "Resmî arama yanıt vermedi")
             for document in result.documents:
                 for config in self.rules_config:
-                    if _key(config["code"]) in _key(document.mevzuat_adi):
+                    if communique_code_matches(config["code"], document.mevzuat_adi):
+                        if config["code"] in documents and documents[config["code"]].mevzuat_id != document.mevzuat_id:
+                            self._errors.append(
+                                f"{config['code']}: birden fazla resmî belge eşleşti; ilk bulunan korundu"
+                            )
+                            continue
                         documents[config["code"]] = document
             if len(result.documents) < 20 or len(documents) >= len(self.rules_config):
                 break
@@ -602,7 +743,17 @@ class ImportControlEngine:
                         table = config["scope_table"]
                         scope = extract_scope_table(text, table["start_pattern"], table["end_pattern"])
                     else:
-                        scope = extract_annex_scope(text, int(config.get("scope_annex", 1)))
+                        scope = []
+                        for index, step in enumerate(annex_plan(config)):
+                            annex_rows = extract_annex_scope(text, step["annex"])
+                            for row in annex_rows:
+                                row.list_kind = step["kind"]
+                            if not annex_rows and index > 0:
+                                # Extra annexes are best effort; the primary one stays mandatory.
+                                self._errors.append(
+                                    f"{config['code']}: Ek-{step['annex']} ({step['kind']}) listesi ayrıştırılamadı"
+                                )
+                            scope.extend(annex_rows)
                     if config.get("scope_attachment"):
                         try:
                             attachment, _ = await self._download_attachment(raw_html, document.ekler)
@@ -618,7 +769,7 @@ class ImportControlEngine:
                     if not scope:
                         location = (
                             "resmî ek arşivi" if config.get("scope_attachment")
-                            else f"Ek-{config.get('scope_annex', 1)}"
+                            else f"Ek-{annex_plan(config)[0]['annex']}"
                         )
                         self._errors.append(f"{config['code']}: {location} GTİP kapsamı ayrıştırılamadı")
                         continue
@@ -627,6 +778,10 @@ class ImportControlEngine:
                     snapshot_id = hashlib.sha256(f"{config['code']}:{digest}".encode()).hexdigest()[:32]
                     process = infer_process(text, document.mevzuat_adi)
                     documents = extract_required_documents(text)
+                    documents_json = json.dumps(
+                        [item.model_dump(mode="json") for item in structure_document_list(documents)], ensure_ascii=False
+                    )
+                    exemptions_json = json.dumps(extract_exemptions(text), ensure_ascii=False)
                     retrieved_at = _now()
                     source_url = document.url or f"https://www.mevzuat.gov.tr/MevzuatMetin/9.5.{document.mevzuat_no}.pdf"
                     with self._connect() as db:
@@ -639,8 +794,8 @@ class ImportControlEngine:
                                 document_sha256, retrieved_at, valid_from, scope_count,
                                 authority, system, risk_based,
                                 physical_inspection_possible, laboratory_test_possible,
-                                required_documents_excerpt, active
-                            ) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,1)
+                                required_documents_excerpt, required_documents_json, exemptions_json, active
+                            ) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,1)
                             """,
                             (
                                 snapshot_id, config["code"], document.mevzuat_adi, config["category"],
@@ -648,18 +803,18 @@ class ImportControlEngine:
                                 document.resmi_gazete_sayisi, digest, retrieved_at, self.valid_from,
                                 sum(not row.excluded for row in scope), process["authority"], process["system"],
                                 int(process["risk_based"]), int(process["physical_inspection_possible"]),
-                                int(process["laboratory_test_possible"]), documents,
+                                int(process["laboratory_test_possible"]), documents, documents_json, exemptions_json,
                             ),
                         )
                         db.execute("DELETE FROM control_scope WHERE snapshot_id=?", (snapshot_id,))
                         db.executemany(
-                            """INSERT INTO control_scope
-                               (snapshot_id, gtip_prefix, description, source_line, source_offset, excluded)
-                               VALUES (?,?,?,?,?,?)""",
+                            """INSERT OR REPLACE INTO control_scope
+                               (snapshot_id, gtip_prefix, description, source_line, source_offset, excluded, list_kind)
+                               VALUES (?,?,?,?,?,?,?)""",
                             [
                                 (
                                     snapshot_id, row.gtip_prefix, row.description, row.source_line,
-                                    row.source_offset, int(row.excluded),
+                                    row.source_offset, int(row.excluded), row.list_kind,
                                 )
                                 for row in scope
                             ],
@@ -707,12 +862,24 @@ class ImportControlEngine:
 
     @staticmethod
     def _rule(row: sqlite3.Row) -> ImportControlRule:
+        def _load_json_list(source: sqlite3.Row, column: str) -> list[Any]:
+            if column not in source.keys() or not source[column]:
+                return []
+            try:
+                value = json.loads(source[column])
+            except (TypeError, ValueError):
+                return []
+            return value if isinstance(value, list) else []
+
         return ImportControlRule(
             code=row["code"], title=row["title"], category=row["category"], authority=row["authority"],
             system=row["system"], risk_based=bool(row["risk_based"]),
             physical_inspection_possible=bool(row["physical_inspection_possible"]),
             laboratory_test_possible=bool(row["laboratory_test_possible"]),
-            required_documents_excerpt=row["required_documents_excerpt"], scope_count=row["scope_count"],
+            required_documents_excerpt=row["required_documents_excerpt"],
+            required_documents=_load_json_list(row, "required_documents_json") or structure_document_list(row["required_documents_excerpt"]),
+            exemptions=[str(item) for item in _load_json_list(row, "exemptions_json")],
+            scope_count=row["scope_count"],
             mevzuat_id=row["mevzuat_id"], source_url=row["source_url"],
             official_gazette_date=row["official_gazette_date"],
             official_gazette_number=row["official_gazette_number"], document_sha256=row["document_sha256"],
@@ -751,7 +918,7 @@ class ImportControlEngine:
         with self._connect() as db:
             rows = db.execute(
                 """
-                SELECT d.*, s.gtip_prefix, s.description, s.source_line, s.source_offset, s.excluded
+                SELECT d.*, s.gtip_prefix, s.description, s.source_line, s.source_offset, s.excluded, s.list_kind
                 FROM control_scope s
                 JOIN control_snapshots d ON d.id=s.snapshot_id
                 WHERE d.active=1 AND substr(?,1,length(s.gtip_prefix))=s.gtip_prefix
@@ -768,14 +935,20 @@ class ImportControlEngine:
             if row["excluded"] or row["code"] in excluded_by_rule:
                 continue
             rule = self._rule(row)
-            risk_sentence = (
-                "GTİP tebliğ ekinde yer alıyor; fiilî denetime yönlendirme TAREKS risk analiziyle belirlenir."
-                if rule.risk_based
-                else "GTİP tebliğ ekinde yer alıyor; işlem sonucu yetkili kurumun incelemesine bağlıdır."
-            )
+            list_kind = row["list_kind"] if "list_kind" in row.keys() else "scope"
+            if list_kind == "prohibited":
+                risk_sentence = (
+                    "GTİP tebliğin ithali yasak eşya listesinde yer alıyor; kapsam istisnası yoksa ithalat izni verilmez."
+                )
+            elif rule.risk_based:
+                risk_sentence = "GTİP tebliğ ekinde yer alıyor; fiilî denetime yönlendirme TAREKS risk analiziyle belirlenir."
+            else:
+                risk_sentence = "GTİP tebliğ ekinde yer alıyor; işlem sonucu yetkili kurumun incelemesine bağlıdır."
             cautions = [
                 "Bu eşleşme tek başına ürünün teknik kapsamda olduğunu veya fiilî denetime seçildiğini kanıtlamaz; ürün niteliği ve istisnalar kontrol edilmelidir."
             ]
+            if list_kind == "prohibited":
+                cautions.insert(0, "Yasak listesi eşleşmesi: ürünün liste tanımına ve tebliğdeki istisnalara uyup uymadığı resmî metinden teyit edilmelidir.")
             if rule.laboratory_test_possible:
                 cautions.append(
                     "Laboratuvar testi mevzuatta mümkün bir fiilî denetim yöntemidir; belirli bir özel laboratuvar otomatik veya zorunlu kabul edilmemiştir."
@@ -786,7 +959,7 @@ class ImportControlEngine:
                     matched_scope=ControlScopeRow(
                         gtip_prefix=row["gtip_prefix"], description=row["description"],
                         source_line=row["source_line"], source_offset=row["source_offset"],
-                        excluded=False,
+                        excluded=False, list_kind=list_kind,
                     ),
                     match_type="exact" if len(row["gtip_prefix"]) == 12 else "prefix",
                     assessment=risk_sentence,

@@ -21,6 +21,7 @@ COPY ticaret_sources.json ./
 COPY customs_sources.json ./
 COPY tariff_sources.json ./
 COPY control_sources.json ./
+COPY data/ ./data/
 COPY semantic_search/ ./semantic_search/
 COPY benchmarks/ ./benchmarks/
 COPY web/ ./web/

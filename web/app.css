@@ -962,3 +962,46 @@ body:not(.marketplace-enabled) .consultant-send-result { display: none; }
   body.print-dossier .answer-sheet { position: absolute; inset: 0; width: 100%; box-shadow: none; border: 0; }
   body.print-dossier .answer-sheet button, body.print-dossier .result-actions, body.print-dossier .followup-box { display: none !important; }
 }
+
+/* Türkçe sayı girişi: ayrıştırılamayan veya aralık dışı değer */
+input.input-invalid { border-color: #c0392b !important; box-shadow: 0 0 0 2px rgba(192, 57, 43, 0.18); }
+
+/* Dışa aktarım çubuğu */
+.export-bar { display: flex; flex-wrap: wrap; gap: 8px; margin: 10px 0 4px; }
+.export-bar button { padding: 6px 10px; border: 1px solid var(--line); border-radius: var(--radius-sm, 8px); background: var(--canvas); color: var(--ink-2); font: inherit; font-size: .62rem; cursor: pointer; }
+.export-bar button:hover, .export-bar button:focus-visible { border-color: var(--teal); color: var(--teal-dark); }
+@media print { .export-bar { display: none; } }
+
+/* Toplu hesap */
+#bulkBox { margin-top: 14px; }
+#bulkBox summary { cursor: pointer; }
+.bulk-table td small { display: block; color: var(--ink-2); font-size: .56rem; }
+.bulk-table tr.bulk-error td { background: color-mix(in srgb, #c0392b 8%, transparent); }
+.bulk-table tr.bulk-partial td:nth-child(4) { color: #a15c00; }
+
+/* Kontrol tebliği belge satırları */
+.document-list { margin: 8px 0 0; padding-left: 20px; font-size: .68rem; line-height: 1.45; }
+.document-list li { margin: 4px 0; }
+.document-list li.document-conditional { color: var(--ink-2); }
+.document-list li small { color: #a15c00; font-size: .58rem; }
+
+/* İzleme listesi değişiklik rozeti */
+.watch-item.has-changes { border-color: #a15c00; }
+.watch-badge { display: inline-block; margin-left: 6px; padding: 1px 6px; border-radius: 999px; background: #fff3e0; color: #a15c00; font-size: .56rem; }
+.watch-changes { flex-basis: 100%; margin-top: 6px; }
+
+.fx-fetch { align-self: end; height: 40px; padding: 0 14px; border: 1px solid var(--teal); border-radius: 8px; background: var(--surface); color: var(--teal); font-size: .78rem; font-weight: 700; }
+.fx-fetch:disabled { opacity: .6; cursor: wait; }
+.fx-note { grid-column: 1 / -1; font-size: .74rem; color: var(--ink-2); line-height: 1.4; }
+
+.declaration-box { margin: 12px 0 0; }
+.declaration-box .field-help { margin: 0 0 10px; font-size: .62rem; color: var(--ink-2); line-height: 1.6; }
+.declaration-row { display: flex; gap: 8px; margin-bottom: 10px; }
+.declaration-row input { flex: 1; min-width: 0; height: 40px; padding: 0 12px; border: 1px solid var(--line); border-radius: 8px; background: var(--surface); color: var(--ink); font-family: inherit; text-transform: uppercase; }
+.declaration-row button { height: 40px; padding: 0 16px; border: 0; border-radius: 8px; background: var(--teal); color: #fff; font-weight: 700; }
+.declaration-row button:disabled { opacity: .6; cursor: wait; }
+.measure-status { display: inline-block; padding: 2px 8px; border-radius: 999px; font-size: .58rem; font-weight: 700; background: var(--surface-2, var(--surface)); border: 1px solid var(--line); }
+.measure-status.in_force { color: var(--teal); border-color: var(--teal); }
+.measure-status.expired { color: var(--danger); border-color: var(--danger); }
+.trade-measures summary small { color: var(--ink-2); }
+.raw-json { margin: 0; padding: 12px; max-height: 320px; overflow: auto; border: 1px solid var(--line); border-radius: 8px; background: var(--surface); font-size: .6rem; line-height: 1.5; white-space: pre-wrap; word-break: break-word; }

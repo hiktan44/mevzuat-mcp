@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import asyncio
 import base64
 import html
 import hmac
@@ -29,21 +30,32 @@ from auth_service import AuthError, GoogleAuthService
 from account_service import PLANS, AccountError, AccountService, QuotaExceeded
 from billing_service import BillingError, StripeBilling
 from customs_advisor import CustomsInquiry, CustomsPrecheckResult, ProductClassificationRequest, decode_image_data_url
-from email_service import MailError, ResendEmailSender, render_precheck_email
+from email_service import MailError, ResendEmailSender, render_consultation_email, render_precheck_email, render_watch_email
 from mevzuat_mcp_server import (
     _BED_VALID_TYPES,
     bedesten_client,
     classification_engine,
     control_engine,
     customs_advisor_service,
+    excise_tax_index,
+    exchange_rate_service,
+    eylemio_client,
     tariff_engine,
     ticaret_client,
+    trade_measure_engine,
 )
+from bulk_costing import MAX_FILE_BYTES as BULK_MAX_FILE_BYTES, calculate_rows as bulk_calculate_rows, rows_from_upload as bulk_rows_from_upload, template_csv as bulk_template_csv
+from countries import COUNTRIES, PENDING_AGREEMENTS
 from origin_documents import origin_document_requirements
 from mevzuat_mcp_server import (
+    BACKGROUND_LOOPS,
     app as mcp,
 )
 from security_firewall import AgentTokenVerifier, SecurityViolation, guard_data, redact_data
+from exchange_rates import ExchangeRateError, parse_registration_date
+from eylemio_client import EylemioError, summarise_declaration
+from trade_measures import KIND_LABELS as TRADE_MEASURE_LABELS, summary_lines as trade_measure_summary
+from tax_lists import summary_lines as excise_tax_summary
 from tariff_engine import LandedCostInput
 
 logger = logging.getLogger(__name__)
@@ -202,6 +214,15 @@ def _enforce_quota(request: Request, operation: str) -> dict[str, Any] | None:
 def _record_usage(user: dict[str, Any] | None, operation: str) -> None:
     if user:
         account_service.consume(user, operation)
+
+
+def _tri_state(value: Any) -> bool | None:
+    """'true'/'false'/boş üçlü seçim: belirtilmediyse None döner (varsayım yapılmaz)."""
+    if value is None or value == "":
+        return None
+    if isinstance(value, bool):
+        return value
+    return str(value).strip().lower() in {"true", "1", "evet", "var", "yes"}
 
 
 def _normalise_date(value: Any) -> str | None:
@@ -435,6 +456,7 @@ async def web_auth_me(request: Request):
             "billing_enabled": stripe_billing.configured,
             "billing_provider": "stripe",
             "billing_mode": stripe_billing.mode,
+            "email_enabled": email_sender.configured,
         }
     )
     response.headers["Cache-Control"] = "no-store"
@@ -835,6 +857,7 @@ async def web_create_consultation_request(request: Request):
             share_consent=body.get("share_consent") is True,
             dossier_id=str(body.get("dossier_id", "")) or None,
         )
+        asyncio.create_task(_notify_consultation(str(result.get("id", "")), "new_request", str(body.get("message", "")), recipient_role="consultant"))
         return JSONResponse(result, status_code=201, headers={"Cache-Control": "no-store"})
     except SecurityViolation as exc:
         return _security_response(exc)
@@ -852,9 +875,12 @@ async def web_update_consultation_request(request: Request):
         body = await request.json()
         if not isinstance(body, dict):
             raise AccountError("Danışmanlık talebi güncellemesi geçersiz.")
-        account_service.update_consultation_request(
-            user, request.path_params.get("request_id", ""), str(body.get("status", ""))
-        )
+        request_id = request.path_params.get("request_id", "")
+        account_service.update_consultation_request(user, request_id, str(body.get("status", "")))
+        participants = account_service.consultation_participants(request_id)
+        if participants:
+            role = "requester" if str(user.get("sub")) == str(participants["consultant_sub"]) else "consultant"
+            asyncio.create_task(_notify_consultation(request_id, "status", f"Yeni durum: {body.get('status', '')}", recipient_role=role))
         return JSONResponse({"updated": True})
     except SecurityViolation as exc:
         return _security_response(exc)
@@ -877,9 +903,12 @@ async def web_add_consultation_message(request: Request):
             raise AccountError("Danışman mesajı geçersiz.")
         guard_data(body, path="danışman mesajı")
         body = redact_data(body, contact_data=True)
-        result = account_service.add_consultation_message(
-            user, request.path_params.get("request_id", ""), str(body.get("body", ""))
-        )
+        request_id = request.path_params.get("request_id", "")
+        result = account_service.add_consultation_message(user, request_id, str(body.get("body", "")))
+        participants = account_service.consultation_participants(request_id)
+        if participants:
+            role = "requester" if str(user.get("sub")) == str(participants["consultant_sub"]) else "consultant"
+            asyncio.create_task(_notify_consultation(request_id, "message", str(body.get("body", "")), recipient_role=role))
         return JSONResponse(result, status_code=201)
     except SecurityViolation as exc:
         return _security_response(exc)
@@ -1519,6 +1548,34 @@ async def web_email_precheck(request: Request):
         return JSONResponse({"error": "E-posta şu anda gönderilemedi; kısa süre sonra yeniden deneyin."}, status_code=502)
 
 
+@mcp.custom_route("/api/tariff/countries", methods=["GET"])
+async def web_tariff_countries(request: Request):
+    """Canonical origin/dispatch country list shared by the tariff and origin-document modules."""
+    limited = _rate_limit_response(request, "tariff-countries", limit=60, window_seconds=60)
+    if limited:
+        return limited
+    regime_labels = {
+        "eu": "AB (Gümrük Birliği)", "efta": "EFTA", "fta": "STA", "pta": "Tercihli Ticaret Anlaşması",
+        "kktc": "KKTC", "mfn": "Tercihsiz",
+    }
+    items = [
+        {
+            "key": country.key,
+            "name": country.name,
+            "iso2": country.iso2,
+            "regime": country.regime,
+            "regime_label": regime_labels.get(country.regime, country.regime),
+            "aliases": list(country.aliases),
+            "agreement": country.agreement or None,
+            "pending_note": PENDING_AGREEMENTS.get(country.key),
+        }
+        for country in sorted(COUNTRIES, key=lambda item: item.name.casefold())
+    ]
+    response = JSONResponse({"items": items, "count": len(items)})
+    response.headers["Cache-Control"] = "public, max-age=3600"
+    return response
+
+
 @mcp.custom_route("/api/tariff/status", methods=["GET"])
 async def web_tariff_status(request: Request):
     """Return official tariff snapshot freshness without forcing a network refresh."""
@@ -1570,7 +1627,9 @@ async def web_tariff_lookup(request: Request):
             raise ValueError("Tarife isteği bir nesne olmalıdır.")
         result = await tariff_engine.lookup(
             str(body.get("gtip", "")),
-            origin_country=str(body.get("origin_country", "")).strip() or None,
+            origin_country=str(body.get("origin_country", "")).strip()[:100] or None,
+            dispatch_country=str(body.get("dispatch_country", "") or "").strip()[:100] or None,
+            atr_certificate=_tri_state(body.get("atr_certificate")),
         )
         return JSONResponse(result.model_dump(mode="json"))
     except (ValueError, ValidationError) as exc:
@@ -1613,11 +1672,13 @@ async def web_tariff_cost(request: Request):
         if not isinstance(body, dict):
             raise ValueError("Maliyet isteği bir nesne olmalıdır.")
         gtip = str(body.pop("gtip", ""))
-        origin = str(body.pop("origin_country", "")).strip()
+        origin = str(body.pop("origin_country", "")).strip()[:100]
+        dispatch = str(body.pop("dispatch_country", "") or "").strip()[:100] or None
+        atr_certificate = _tri_state(body.pop("atr_certificate", None))
         if not origin:
             raise ValueError("Menşe ülke gereklidir.")
         inputs = LandedCostInput.model_validate(body)
-        result = await tariff_engine.calculate(gtip, origin, inputs)
+        result = await tariff_engine.calculate(gtip, origin, inputs, dispatch_country=dispatch, atr_certificate=atr_certificate)
         return JSONResponse(result)
     except ValidationError as exc:
         message = exc.errors(include_url=False)[0].get("msg", "Alanları kontrol edin.")
@@ -1627,6 +1688,169 @@ async def web_tariff_cost(request: Request):
     except Exception:
         logger.exception("Tariff cost calculation failed")
         return JSONResponse({"error": "Kaynaklı maliyet hesabı şu anda tamamlanamadı."}, status_code=502)
+
+
+@mcp.custom_route("/api/tariff/exchange-rate", methods=["GET"])
+async def web_tariff_exchange_rate(request: Request):
+    """TCMB döviz satış kuru: tescil tarihinde yürürlükte olan bülten (GK md. 30)."""
+    limited = _rate_limit_response(request, "tariff-fx", limit=60, window_seconds=60)
+    if limited:
+        return limited
+    currency = str(request.query_params.get("currency", "USD"))[:5]
+    try:
+        registration = parse_registration_date(request.query_params.get("date"))
+    except ExchangeRateError as exc:
+        return JSONResponse({"error": str(exc)}, status_code=422)
+    try:
+        result = await exchange_rate_service.customs_quote(currency, registration)
+    except ExchangeRateError as exc:
+        message = str(exc)
+        status = 422 if message.startswith("Geçersiz") or "bültende yer almıyor" in message else 502
+        return JSONResponse({"error": message}, status_code=status)
+    except Exception:
+        logger.exception("Exchange rate lookup failed")
+        return JSONResponse({"error": "TCMB kuru şu anda alınamadı."}, status_code=502)
+    return JSONResponse(result, headers={"Cache-Control": "public, max-age=900"})
+
+
+@mcp.custom_route("/api/tariff/measures", methods=["POST"])
+async def web_trade_measures(request: Request):
+    """Damping/sübvansiyon, korunma ve gözetim kapsamı (resmî listeler, günlük eşitlenir)."""
+    limited = _rate_limit_response(request, "trade-measures", limit=60, window_seconds=60)
+    if limited:
+        return limited
+    try:
+        body = await request.json()
+        if not isinstance(body, dict):
+            raise ValueError("İstek bir nesne olmalıdır.")
+        report = trade_measure_engine.lookup(str(body.get("gtip", "")), (body.get("origin_country") or None))
+    except ValueError as exc:
+        return JSONResponse({"error": str(exc)}, status_code=422)
+    payload = report.as_dict()
+    payload["summary"] = trade_measure_summary(report)
+    return JSONResponse(payload)
+
+
+@mcp.custom_route("/api/tariff/measures/status", methods=["GET"])
+async def web_trade_measures_status(request: Request):
+    limited = _rate_limit_response(request, "trade-measures-status", limit=30, window_seconds=60)
+    if limited:
+        return limited
+    return JSONResponse(trade_measure_engine.status())
+
+
+@mcp.custom_route("/api/tariff/excise", methods=["POST"])
+async def web_excise_tax(request: Request):
+    """4760 sayılı ÖTV Kanunu ekli listelerinde GTİP kapsamı."""
+    limited = _rate_limit_response(request, "excise-tax", limit=60, window_seconds=60)
+    if limited:
+        return limited
+    try:
+        body = await request.json()
+        if not isinstance(body, dict):
+            raise ValueError("İstek bir nesne olmalıdır.")
+    except ValueError as exc:
+        return JSONResponse({"error": str(exc)}, status_code=422)
+    report = excise_tax_index.lookup(str(body.get("gtip", "")))
+    report["summary"] = excise_tax_summary(report)
+    return JSONResponse(report)
+
+
+@mcp.custom_route("/api/tariff/communiques", methods=["GET"])
+async def web_import_communiques(request: Request):
+    """Ticaret Bakanlığı İthalat Tebliğleri dizini (resmî bağlantılarla)."""
+    limited = _rate_limit_response(request, "communiques", limit=60, window_seconds=60)
+    if limited:
+        return limited
+    year_text = request.query_params.get("year", "")
+    year = int(year_text) if year_text.isdigit() else None
+    entries = trade_measure_engine.communiques(year)
+    query = (request.query_params.get("q") or "").strip().casefold()
+    if query:
+        entries = [entry for entry in entries if query in entry.get("title", "").casefold()]
+    return JSONResponse({"count": len(entries), "entries": entries[:300], "dataset": trade_measure_engine.store.metadata("communiques")})
+
+
+@mcp.custom_route("/api/customs/declaration", methods=["POST"])
+async def web_customs_declaration(request: Request):
+    """Eylemio gümrük konektörüyle beyanname durumu (salt okunur; oturum gerekir)."""
+    limited = _rate_limit_response(request, "customs-declaration", limit=20, window_seconds=60)
+    if limited:
+        return limited
+    try:
+        user = _required_user(request)
+    except AuthError as exc:
+        return _auth_error(exc)
+    try:
+        body = await request.json()
+        if not isinstance(body, dict):
+            raise ValueError("İstek bir nesne olmalıdır.")
+        result = await eylemio_client.declaration_status(str(body.get("declaration_no", "")))
+    except ValueError as exc:
+        return JSONResponse({"error": str(exc)}, status_code=422)
+    except EylemioError as exc:
+        status = 503 if "yapılandırılmamış" in str(exc) or "ulaşılamadı" in str(exc) else 422
+        return JSONResponse({"error": str(exc)}, status_code=status)
+    except Exception:
+        logger.exception("Eylemio declaration lookup failed")
+        return JSONResponse({"error": "Beyanname sorgusu şu anda tamamlanamadı."}, status_code=502)
+    # Beyanname sorgusu kullanıcının kendi BİLGE hesabından okunur; kota işlemi değildir,
+    # yalnız uç nokta bazlı hız sınırına tabidir.
+    result["summary"] = [{"label": label, "value": value} for label, value in summarise_declaration(result)]
+    return JSONResponse(result)
+
+
+@mcp.custom_route("/api/customs/declaration/status", methods=["GET"])
+async def web_customs_declaration_status(request: Request):
+    limited = _rate_limit_response(request, "customs-declaration-status", limit=30, window_seconds=60)
+    if limited:
+        return limited
+    return JSONResponse({"configured": eylemio_client.configured, "base_url": eylemio_client.base_url})
+
+
+@mcp.custom_route("/api/tariff/bulk/template", methods=["GET"])
+async def web_tariff_bulk_template(request: Request):
+    return Response(
+        bulk_template_csv(),
+        media_type="text/csv; charset=utf-8",
+        headers={"Content-Disposition": 'attachment; filename="toplu-hesap-sablonu.csv"', "Cache-Control": "public, max-age=3600"},
+    )
+
+
+@mcp.custom_route("/api/tariff/bulk", methods=["POST"])
+async def web_tariff_bulk(request: Request):
+    """Calculate many declaration lines from an uploaded CSV/XLSX or JSON rows."""
+    limited = _rate_limit_response(request, "tariff-bulk", limit=10, window_seconds=60)
+    if limited:
+        return limited
+    try:
+        _trusted_request_origin(request)
+    except SecurityViolation as exc:
+        return _security_response(exc)
+    try:
+        content_length = int(request.headers.get("content-length", "0") or 0)
+        if content_length > BULK_MAX_FILE_BYTES * 2:
+            raise ValueError("Dosya 2 MB sınırını aşıyor.")
+        body = await request.json()
+        if not isinstance(body, dict):
+            raise ValueError("Toplu hesap isteği bir nesne olmalıdır.")
+        if body.get("file_data_url"):
+            match = re.fullmatch(r"data:[\w./+-]*;base64,([A-Za-z0-9+/=\r\n]+)", str(body["file_data_url"]))
+            if not match:
+                raise ValueError("Dosya base64 veri adresi olarak gönderilmelidir.")
+            payload = base64.b64decode(match.group(1), validate=True)
+            rows = bulk_rows_from_upload(payload, str(body.get("file_name", "")))
+        else:
+            rows = body.get("rows")
+            if not isinstance(rows, list) or not rows or not all(isinstance(item, dict) for item in rows):
+                raise ValueError("En az bir satır gönderin (rows) veya bir CSV/XLSX dosyası yükleyin.")
+        result = await bulk_calculate_rows(tariff_engine, rows)
+        return JSONResponse(result)
+    except (ValueError, ValidationError) as exc:
+        return JSONResponse({"error": str(exc)}, status_code=422)
+    except Exception:
+        logger.exception("Bulk tariff calculation failed")
+        return JSONResponse({"error": "Toplu hesap şu anda tamamlanamadı."}, status_code=502)
 
 
 @mcp.custom_route("/api/tariff/scenarios", methods=["POST"])
@@ -1643,26 +1867,34 @@ async def web_tariff_scenarios(request: Request):
         origins_raw = body.get("origins", [])
         if not isinstance(origins_raw, list):
             raise ValueError("Menşe listesi geçersiz.")
-        origins = [str(item).strip() for item in origins_raw if str(item).strip()][:6]
+        origins = list(dict.fromkeys(str(item).strip()[:100] for item in origins_raw if str(item).strip()))[:6]
+        dispatch = str(body.get("dispatch_country", "") or "").strip()[:100] or None
+        atr_certificate = _tri_state(body.get("atr_certificate"))
         if not gtip or len(origins) < 2:
-            raise ValueError("Karşılaştırma için tarife kodu ve en az iki menşe ülke gereklidir.")
+            raise ValueError("Karşılaştırma için tarife kodu ve en az iki farklı menşe ülke gereklidir.")
         rows = []
         for origin in origins:
-            lookup = await tariff_engine.lookup(gtip, origin_country=origin)
-            documents = origin_document_requirements(origin)
+            lookup = await tariff_engine.lookup(gtip, origin_country=origin, dispatch_country=dispatch, atr_certificate=atr_certificate)
+            documents = origin_document_requirements(origin, gtip=lookup.gtip, dispatch_country=dispatch)
             rows.append(
                 {
                     "origin_country": origin,
+                    "dispatch_country": dispatch,
                     "status": lookup.status,
+                    "origin_recognised": lookup.origin_recognised,
                     "resolved_country_group": lookup.resolved_country_group,
                     "matched_gtip_count": lookup.matched_gtip_count,
                     "unambiguous_rates": lookup.unambiguous_rates or {},
                     "ambiguous_measure_types": lookup.ambiguous_measure_types,
+                    "atr_free_circulation": lookup.atr_free_circulation,
+                    "atr_available": lookup.atr_available,
+                    "origin_proof_required": lookup.origin_proof_required,
+                    "fallback_rates": lookup.fallback_rates,
                     "origin_documents": documents.model_dump(mode="json") if documents else None,
                     "warnings": lookup.warnings,
                 }
             )
-        return JSONResponse({"gtip": gtip, "rows": rows, "generated_at": time.time()})
+        return JSONResponse({"gtip": gtip, "dispatch_country": dispatch, "rows": rows, "generated_at": time.time()})
     except (ValueError, ValidationError) as exc:
         return JSONResponse({"error": str(exc)}, status_code=422)
     except Exception:
@@ -1697,6 +1929,226 @@ async def web_control_lookup(request: Request):
         return JSONResponse({"error": "Resmî ithalat kontrol tebliğleri şu anda sorgulanamadı."}, status_code=502)
 
 
+_MEASURE_LABELS_TR = {
+    "customs_duty": "Gümrük vergisi", "additional_duty": "İGV", "additional_financial_liability": "Ek mali yükümlülük",
+    "customs_duty_suspension": "Askıya alma", "customs_duty_end_use": "Nihai kullanım",
+}
+_CHANGE_SOURCE_TITLES = {"import_regime": "İthalat Rejimi Kararı", "additional_duty": "İlave Gümrük Vergisi Kararı"}
+
+
+def _trade_measure_changes_for(digits: str) -> list[dict[str, Any]]:
+    """Damping/korunma/gözetim listelerindeki farklar; izlenen kodla ön ek eşleşmesi."""
+    found: list[dict[str, Any]] = []
+    section_labels = {"added": "yeni satır", "removed": "kaldırıldı", "modified": "değişti"}
+    for change in trade_measure_engine.store.changes(limit=60):
+        detail = change.get("detail") or {}
+        for section, label in section_labels.items():
+            for entry in detail.get(section, []):
+                codes = entry.get("codes") or []
+                if not any(code.startswith(digits) or digits.startswith(code) for code in codes):
+                    continue
+                found.append(
+                    {
+                        "gtip": next((code for code in codes if code.startswith(digits) or digits.startswith(code)), digits),
+                        "measure_type": change.get("kind"),
+                        "measure_label": TRADE_MEASURE_LABELS.get(change.get("kind"), change.get("kind")),
+                        "country_group": label,
+                        "before": entry.get("before") if section == "modified" else (entry.get("summary") if section == "removed" else None),
+                        "after": entry.get("after") if section == "modified" else (entry.get("summary") if section == "added" else None),
+                        "source_id": f"trade_measures:{change.get('kind')}",
+                        "source_title": detail.get("label") or "Resmî önlem listesi",
+                        "new_snapshot": str(change.get("changed_at", ""))[:10],
+                        "old_snapshot": None,
+                    }
+                )
+    return found
+
+
+def _watch_changes_for(gtip: str, ledgers: dict[str, dict[str, Any]]) -> list[dict[str, Any]]:
+    """Official tariff line changes whose 12-digit code starts with the watched code."""
+    digits = re.sub(r"\D", "", gtip)
+    found: list[dict[str, Any]] = _trade_measure_changes_for(digits) if digits else []
+    for source_id, ledger in ledgers.items():
+        if ledger.get("status") != "compared":
+            continue
+        for change in ledger.get("changes", []):
+            if str(change.get("gtip", "")).startswith(digits):
+                found.append(
+                    {
+                        **change,
+                        "source_id": source_id,
+                        "source_title": _CHANGE_SOURCE_TITLES.get(source_id, source_id),
+                        "measure_label": _MEASURE_LABELS_TR.get(change.get("measure_type"), change.get("measure_type")),
+                        "new_snapshot": ledger.get("new_snapshot"),
+                        "old_snapshot": ledger.get("old_snapshot"),
+                    }
+                )
+    return found
+
+
+def _change_ledgers() -> dict[str, dict[str, Any]]:
+    return {
+        "import_regime": tariff_engine.changes("import_regime", limit=1000),
+        "additional_duty": tariff_engine.changes("additional_duty", limit=1000),
+    }
+
+
+@mcp.custom_route("/api/watchlist", methods=["GET"])
+async def web_watchlist(request: Request):
+    try:
+        user = _required_user(request)
+        ledgers = _change_ledgers()
+        items = []
+        for item in account_service.list_watchlist(user):
+            changes = _watch_changes_for(item["gtip"], ledgers)
+            items.append({**item, "changes": changes[:50], "change_count": len(changes)})
+        return JSONResponse(
+            {
+                "items": items,
+                "email_enabled": email_sender.configured,
+                "ledger": {key: {"status": value.get("status"), "new_snapshot": value.get("new_snapshot")} for key, value in ledgers.items()},
+            },
+            headers={"Cache-Control": "no-store"},
+        )
+    except AuthError as exc:
+        return _auth_error(exc)
+
+
+@mcp.custom_route("/api/watchlist", methods=["POST"])
+async def web_add_watch(request: Request):
+    try:
+        _trusted_request_origin(request)
+        user = _required_user(request)
+        body = await request.json()
+        if not isinstance(body, dict):
+            raise AccountError("İzleme isteği bir nesne olmalıdır.")
+        items_in = body.get("items")
+        if isinstance(items_in, list):
+            created = [
+                account_service.add_watch(
+                    user, gtip=str(item.get("gtip", "")), label=str(item.get("label", "")),
+                    origin_country=str(item.get("origin_country", "") or "") or None,
+                )
+                for item in items_in[:100] if isinstance(item, dict)
+            ]
+            return JSONResponse({"items": created}, status_code=201, headers={"Cache-Control": "no-store"})
+        created = account_service.add_watch(
+            user, gtip=str(body.get("gtip", "")), label=str(body.get("label", "")),
+            origin_country=str(body.get("origin_country", "") or "") or None,
+        )
+        return JSONResponse(created, status_code=201, headers={"Cache-Control": "no-store"})
+    except SecurityViolation as exc:
+        return _security_response(exc)
+    except AuthError as exc:
+        return _auth_error(exc)
+    except (AccountError, ValueError) as exc:
+        return JSONResponse({"error": str(exc)}, status_code=422)
+
+
+@mcp.custom_route("/api/watchlist/{watch_id}", methods=["DELETE"])
+async def web_remove_watch(request: Request):
+    try:
+        _trusted_request_origin(request)
+        user = _required_user(request)
+        removed = account_service.remove_watch(user, request.path_params.get("watch_id", ""))
+        return JSONResponse({"removed": removed}, status_code=200 if removed else 404)
+    except SecurityViolation as exc:
+        return _security_response(exc)
+    except AuthError as exc:
+        return _auth_error(exc)
+
+
+async def notify_watchlist_changes() -> dict[str, int]:
+    """E-mail each user once per new official snapshot that changes a watched code."""
+    stats = {"users": 0, "sent": 0, "skipped": 0}
+    ledgers = _change_ledgers()
+    if not any(ledger.get("status") == "compared" for ledger in ledgers.values()):
+        return stats
+    by_user: dict[str, dict[str, Any]] = {}
+    for watch in account_service.all_watches():
+        changes = _watch_changes_for(watch["gtip"], ledgers)
+        if not changes:
+            continue
+        pending = []
+        for change in changes:
+            key = f"{change['source_id']}:{change['new_snapshot']}:{watch['gtip']}"
+            if account_service.notification_sent(watch["google_sub"], "watch", key):
+                continue
+            pending.append((key, change))
+        if not pending:
+            continue
+        entry = by_user.setdefault(watch["google_sub"], {"email": watch["email"], "items": [], "keys": set()})
+        entry["items"].append(
+            {
+                "gtip": watch["gtip"], "label": watch["label"], "changes": [change for _, change in pending],
+                "source_title": ", ".join(sorted({change["source_title"] for _, change in pending})),
+                "new_snapshot": ", ".join(sorted({str(change["new_snapshot"]) for _, change in pending})),
+            }
+        )
+        entry["keys"].update(key for key, _ in pending)
+    stats["users"] = len(by_user)
+    for google_sub, entry in by_user.items():
+        if not email_sender.configured or not entry["email"]:
+            stats["skipped"] += 1
+            continue
+        try:
+            await email_sender.send(
+                to=entry["email"],
+                subject="İzlediğiniz GTİP satırlarında resmî tarife değişikliği",
+                html_body=render_watch_email(entry["items"], PUBLIC_BASE_URL),
+            )
+        except MailError as exc:
+            logger.warning("Watch-list notification failed for %s: %s", google_sub, exc)
+            stats["skipped"] += 1
+            continue
+        for key in entry["keys"]:
+            account_service.mark_notified(google_sub, "watch", key)
+        stats["sent"] += 1
+    return stats
+
+
+async def watchlist_notification_loop() -> None:
+    interval = max(300, int(os.environ.get("WATCHLIST_NOTIFY_INTERVAL_SECONDS", "1800")))
+    while True:
+        try:
+            await asyncio.sleep(interval)
+            stats = await notify_watchlist_changes()
+            if stats["users"]:
+                logger.info("Watch-list notifications: %s", stats)
+        except asyncio.CancelledError:
+            raise
+        except Exception:
+            logger.exception("Watch-list notification loop failed")
+
+
+BACKGROUND_LOOPS.append(("watchlist-notifications", watchlist_notification_loop))
+
+
+async def _notify_consultation(request_id: str, kind: str, snippet: str, *, recipient_role: str) -> None:
+    """Best-effort e-mail to the other party of a consultation thread."""
+    if not email_sender.configured:
+        return
+    try:
+        participants = account_service.consultation_participants(request_id)
+        if not participants:
+            return
+        recipient = participants["consultant_email"] if recipient_role == "consultant" else participants["requester_email"]
+        if not recipient:
+            return
+        subject_line = {
+            "new_request": "Yeni danışmanlık talebi",
+            "message": "Danışmanlık görüşmesinde yeni mesaj",
+            "status": "Danışmanlık talebinizin durumu değişti",
+        }.get(kind, "Danışmanlık bildirimi")
+        await email_sender.send(
+            to=recipient,
+            subject=f"{subject_line}: {participants['subject'][:80]}",
+            html_body=render_consultation_email(kind, participants["subject"], snippet[:300], PUBLIC_BASE_URL),
+        )
+    except Exception:
+        logger.exception("Consultation notification failed")
+
+
 @mcp.custom_route("/api/changes", methods=["GET"])
 async def web_changes(request: Request):
     """Expose the local official snapshot ledger for the in-app monitor."""
@@ -1710,6 +2162,8 @@ async def web_changes(request: Request):
                 "additional_duty": tariff_engine.changes("additional_duty", limit=100),
             },
             "controls": control_engine.changes(limit=100),
+            "trade_measures": trade_measure_engine.store.changes(limit=50),
+            "trade_measure_status": trade_measure_engine.status(),
             "generated_at": time.time(),
         }
     )

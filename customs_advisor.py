@@ -102,6 +102,7 @@ class CustomsInquiry(BaseModel):
     classification_models: list[str] = Field(default_factory=list, max_length=3)
     origin_country: str | None = Field(None, max_length=100)
     dispatch_country: str | None = Field(None, max_length=100)
+    atr_certificate: bool | None = Field(None, description="Sevk AB'den ise A.TR ibraz edilecek mi (teyit edilmeden serbest dolaşım sütunu uygulanmaz).")
     intended_use: str | None = Field(None, max_length=300)
     target_user: str | None = Field(None, max_length=300)
     declared_product_type: str | None = Field(None, max_length=300)
@@ -139,6 +140,12 @@ class CustomsInquiry(BaseModel):
     sct_amount: float | None = Field(None, ge=0, le=1_000_000_000)
     surveillance_unit_value: float | None = Field(None, ge=0, le=1_000_000_000)
     has_surveillance_certificate: bool | None = None
+    trt_bandrol_rate: float | None = Field(None, ge=0, le=100)
+    exchange_rate: float | None = Field(None, gt=0, le=1_000_000)
+    exchange_rate_date: str | None = Field(None, pattern=r"^\d{4}-\d{2}-\d{2}$")
+    stamp_duty_try: float | None = Field(None, ge=0, le=1_000_000_000)
+    port_storage_try: float | None = Field(None, ge=0, le=1_000_000_000)
+    gekap_try: float | None = Field(None, ge=0, le=1_000_000_000)
 
     @field_validator("candidate_gtip")
     @classmethod
@@ -934,6 +941,12 @@ def _deterministic_cost(
             sct_amount=inquiry.sct_amount,
             surveillance_unit_value=inquiry.surveillance_unit_value,
             has_surveillance_certificate=inquiry.has_surveillance_certificate,
+            trt_bandrol_rate=inquiry.trt_bandrol_rate,
+            exchange_rate=inquiry.exchange_rate,
+            exchange_rate_date=inquiry.exchange_rate_date,
+            stamp_duty_try=inquiry.stamp_duty_try,
+            port_storage_try=inquiry.port_storage_try,
+            gekap_try=inquiry.gekap_try,
         )
     )
     by_code = {line["code"]: line for line in result.lines}
@@ -954,6 +967,7 @@ def _deterministic_cost(
         "status": f"{rate_origin}_rates_complete" if rates_complete else "rates_missing",
         "lines": result.lines,
         "missing_rates": result.missing_rates,
+        "try_summary": result.try_summary,
         "warnings": result.warnings,
         "formula_version": result.formula_version,
         "note": (
@@ -1136,6 +1150,8 @@ class CustomsAdvisor:
             tariff_lookup = await self.tariff_engine.lookup(
                 inquiry.candidate_gtip,
                 origin_country=inquiry.origin_country,
+                dispatch_country=inquiry.dispatch_country,
+                atr_certificate=inquiry.atr_certificate,
             )
             official_rates.update(tariff_lookup.unambiguous_rates)
             for measure in tariff_lookup.measures:
@@ -1227,7 +1243,12 @@ class CustomsAdvisor:
             ),
             tariff_lookup=tariff_lookup,
             control_lookup=control_lookup,
-            origin_documents=origin_document_requirements(inquiry.origin_country or ""),
+            origin_documents=origin_document_requirements(
+                inquiry.origin_country or "",
+                gtip=inquiry.candidate_gtip,
+                dispatch_country=inquiry.dispatch_country,
+                atr_certificate=inquiry.atr_certificate,
+            ),
             sources=sources,
             legal_notice=_legal_notice(as_of),
         )

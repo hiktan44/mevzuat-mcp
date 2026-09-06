@@ -95,11 +95,67 @@ function safeUrl(value) {
   }
 }
 
-function nullableNumber(selector) {
-  const value = $(selector)?.value?.trim();
+function parseLocalizedNumber(raw) {
+  // Accepts Turkish ("1.234,56", "12,5"), plain ("1234.56") and thousands-only ("12.500") input.
+  let value = String(raw ?? "").trim().replace(/\s+/g, "").replace(/[₺$€£]|TL|USD|EUR|GBP|%/gi, "");
   if (!value) return null;
+  if (value.includes(",")) {
+    value = value.replace(/\./g, "").replace(",", ".");
+  } else if (/^-?\d{1,3}(\.\d{3})+$/.test(value)) {
+    value = value.replace(/\./g, "");
+  }
   const number = Number(value);
   return Number.isFinite(number) ? number : null;
+}
+
+function nullableNumber(selector) {
+  const input = $(selector);
+  const number = parseLocalizedNumber(input?.value);
+  if (number == null) {
+    input?.classList.toggle("input-invalid", Boolean(input?.value?.trim()));
+    return null;
+  }
+  const min = input?.dataset?.min != null ? Number(input.dataset.min) : null;
+  const max = input?.dataset?.max != null ? Number(input.dataset.max) : null;
+  const outOfRange = (min != null && number < min) || (max != null && number > max);
+  input?.classList.toggle("input-invalid", outOfRange);
+  return outOfRange ? null : number;
+}
+
+const localizedNumberFormat = new Intl.NumberFormat("tr-TR", { maximumFractionDigits: 4 });
+
+function bindLocalizedNumberInputs() {
+  document.querySelectorAll("input[data-number]").forEach((input) => {
+    input.addEventListener("blur", () => {
+      const number = parseLocalizedNumber(input.value);
+      if (number == null) {
+        input.classList.toggle("input-invalid", Boolean(input.value.trim()));
+        return;
+      }
+      input.classList.remove("input-invalid");
+      input.value = localizedNumberFormat.format(number);
+    });
+    input.addEventListener("focus", () => {
+      // Raw digits are easier to edit; the value is re-formatted on blur.
+      const number = parseLocalizedNumber(input.value);
+      if (number != null) input.value = String(number).replace(".", ",");
+    });
+  });
+}
+
+async function loadCountryList() {
+  const list = $("#countryList");
+  if (!list) return;
+  try {
+    const data = await fetchJson("/api/tariff/countries");
+    list.innerHTML = (data.items || []).map((item) => {
+      const label = `${item.iso2} · ${item.regime_label}${item.pending_note ? " · yürürlük doğrulanmalı" : ""}`;
+      return `<option value="${escapeHtml(item.name)}" label="${escapeHtml(label)}"></option>`;
+    }).join("");
+    state.countryList = data.items || [];
+  } catch (error) {
+    console.warn("Ülke listesi yüklenemedi", error);
+  }
 }
 
 function formatDate(value, includeTime = false) {
@@ -597,6 +653,7 @@ async function loadAuthState() {
     $("#appAccountButton").hidden = false;
     $("#appAccountButton").textContent = `${firstName} · Hesabım`;
     refreshConsultationBadge();
+    renderWatchList();
     if (new URLSearchParams(location.search).get("account")) openAccount();
   } catch (_) {
     // The application remains usable as a guest if account state is unavailable.
@@ -884,7 +941,7 @@ function renderCost(cost) {
     <tr><td>KDV matrahı tahmini</td><td>${amount(cost.vat_base_estimate)}</td></tr>
     <tr><td>KDV</td><td>${amount(cost.vat)}</td></tr>
     <tr><td>Bilinen kalemlerle toplam</td><td>${amount(cost.known_landed_total)}</td></tr>
-  </tbody></table><p class="rate-warning">${escapeHtml(cost.note)}</p>`;
+  </tbody></table>${(cost.missing_rates || []).length ? `<div class="result-caution"><b>Toplam için eksik girdiler:</b> ${cost.missing_rates.map((item) => escapeHtml(item)).join(" · ")}</div>` : ""}<p class="rate-warning">${escapeHtml(cost.note)}</p>${renderLiraSummary(cost.try_summary)}`;
 }
 
 function renderMeasureCoverage(coverage) {
@@ -928,6 +985,7 @@ function renderExpertReviewPacket(packet) {
 }
 
 function renderCustomsResult(data) {
+  exportStore.precheck = data;
   state.currentCustomsResult = data;
   const sourceMap = customsSourceMap(data);
   const statusLabels = {
@@ -953,7 +1011,7 @@ function renderCustomsResult(data) {
         <time>${escapeHtml(formatDate(data.as_of, true))}</time>
       </header>
       <section class="answer-section"><h3>Aday GTİP / CN kodları</h3>${candidates}</section>
-      ${data.tariff_lookup ? `<section class="answer-section"><h3>Resmî tarife snapshot eşleşmesi</h3>${tariffMatchSummary(data.tariff_lookup)}${renderMeasureCoverage(data.tariff_lookup.measure_coverage)}<table class="evidence-table"><thead><tr><th>GTİP / Önlem</th><th>Oran</th><th>Menşe sütunu</th><th>Kaynak satırı</th><th>Kanıt</th></tr></thead><tbody>${tariffRows(data.tariff_lookup.measures)}</tbody></table>${applyRatesButton(data.tariff_lookup, "precheck")}${(data.tariff_lookup.warnings || []).length ? `<div class="result-caution">${data.tariff_lookup.warnings.map((item) => escapeHtml(item)).join(" · ")}</div>` : ""}</section>` : ""}
+      ${data.tariff_lookup ? `<section class="answer-section"><h3>Resmî tarife snapshot eşleşmesi</h3>${tariffMatchSummary(data.tariff_lookup)}${renderMeasureCoverage(data.tariff_lookup.measure_coverage)}${renderTradeMeasures(data.tariff_lookup.trade_measures)}${renderExciseTax(data.tariff_lookup.excise_tax)}<table class="evidence-table"><thead><tr><th>GTİP / Önlem</th><th>Oran</th><th>Menşe sütunu</th><th>Kaynak satırı</th><th>Kanıt</th></tr></thead><tbody>${tariffRows(data.tariff_lookup.measures)}</tbody></table>${exportBar("precheck", [{ table: "measures", label: "Tarife satırları" }, ...(data.deterministic_cost ? [{ table: "cost", label: "Maliyet taslağı" }] : [])])}${applyRatesButton(data.tariff_lookup, "precheck")}${(data.tariff_lookup.warnings || []).length ? `<div class="result-caution">${data.tariff_lookup.warnings.map((item) => escapeHtml(item)).join(" · ")}</div>` : ""}</section>` : ""}
       ${data.origin_documents ? `<section class="answer-section"><h3>Menşe belgeleri · ${escapeHtml(data.origin_documents.regime_name)}</h3><ul class="missing-list">${(data.origin_documents.documents || []).map((item) => `<li><b>${escapeHtml(item.name)}</b> — ${escapeHtml(item.applicability)}${item.note ? ` <small>${escapeHtml(item.note)}</small>` : ""}</li>`).join("")}</ul><div class="result-caution">${escapeHtml((data.origin_documents.caveats || []).join(" "))}</div></section>` : ""}
       ${data.control_lookup ? `<section class="answer-section"><h3>Resmî kontrol tebliği Ek-1 eşleşmeleri</h3>${renderControlTool(data.control_lookup)}</section>` : ""}
       <section class="answer-section"><h3>Eksik veya teyit edilmesi gereken bilgiler</h3><ul class="missing-list">${(data.missing_information?.length ? data.missing_information : ["Kritik eksik alan bildirilmedi."]).map((item) => `<li>${escapeHtml(item)}</li>`).join("")}</ul></section>
@@ -1414,7 +1472,7 @@ async function refreshCandidateRates() {
     const tariff = await fetchJson("/api/tariff/lookup", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ gtip: candidate.code, origin_country: origin }),
+      body: JSON.stringify({ gtip: candidate.code, origin_country: origin, dispatch_country: $("#dispatchCountry")?.value.trim() || null, atr_certificate: $("#assistAtr")?.value || null }),
     });
     const safe = tariff.unambiguous_rates || {};
     return {
@@ -1521,6 +1579,7 @@ function customsRequestBody() {
     classification_models: (state.customsClassificationResult?.models || []).slice(0, 3),
     origin_country: $("#originCountry").value.trim() || null,
     dispatch_country: $("#dispatchCountry").value.trim() || null,
+    atr_certificate: $("#assistAtr")?.value || null,
     intended_use: $("#intendedUse").value.trim() || null,
     target_user: $("#targetUser").value.trim() || null,
     declared_product_type: $("#declaredProductType").value.trim() || null,
@@ -1557,6 +1616,18 @@ function customsRequestBody() {
     sct_amount: nullableNumber("#sctAmount"),
     surveillance_unit_value: nullableNumber("#surveillanceUnitValue"),
     has_surveillance_certificate: $("#hasSurveillanceCertificate").value === "" ? null : $("#hasSurveillanceCertificate").value === "true",
+    ...liraFields("assist"),
+  };
+}
+
+function liraFields(prefix) {
+  return {
+    trt_bandrol_rate: nullableNumber(`#${prefix}TrtBandrolRate`),
+    exchange_rate: nullableNumber(`#${prefix}ExchangeRate`),
+    exchange_rate_date: $(`#${prefix}ExchangeRateDate`)?.value || null,
+    stamp_duty_try: nullableNumber(`#${prefix}StampDutyTry`),
+    port_storage_try: nullableNumber(`#${prefix}PortStorageTry`),
+    gekap_try: nullableNumber(`#${prefix}GekapTry`),
   };
 }
 
@@ -2096,7 +2167,187 @@ function applyRatesButton(tariff, source) {
   return `<div class="apply-rates"><div><b>Bulunan oranları maliyet hesabına aktar</b><small>${escapeHtml(summary)} · ${escapeHtml(tariff.gtip)}${tariff.origin_country ? ` · ${escapeHtml(tariff.origin_country)}` : ""}</small></div><button type="button" data-apply-rates="${escapeHtml(source)}">Bu oranları kullan</button></div>`;
 }
 
+// ---- Dışa aktarım (CSV) ve panoya kopyalama --------------------------------
+const exportStore = {};
+
+function csvCell(value) {
+  const text = value == null ? "" : String(value);
+  return /[;"\n\r]/.test(text) ? `"${text.replace(/"/g, '""')}"` : text;
+}
+
+function csvNumber(value) {
+  // Excel (tr-TR) ondalık ayırıcı olarak virgül bekler.
+  return value == null || value === "" ? "" : String(value).replace(".", ",");
+}
+
+function buildCsv(headers, rows) {
+  return "\ufeff" + [headers, ...rows].map((row) => row.map(csvCell).join(";")).join("\r\n");
+}
+
+function buildTsv(headers, rows) {
+  return [headers, ...rows].map((row) => row.map((value) => String(value ?? "").replace(/[\t\n\r]+/g, " ")).join("\t")).join("\n");
+}
+
+function downloadTextFile(name, text, mime = "text/csv;charset=utf-8") {
+  const blob = new Blob([text], { type: mime });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement("a");
+  link.href = url;
+  link.download = name;
+  document.body.appendChild(link);
+  link.click();
+  link.remove();
+  window.setTimeout(() => URL.revokeObjectURL(url), 1000);
+}
+
+function fileStamp() {
+  return new Date().toISOString().slice(0, 10);
+}
+
+const exportTables = {
+  measures(data) {
+    const tariff = data.tariff || data.tariff_lookup || data;
+    const rows = [...(tariff.measures || []), ...(tariff.conditional_measures || [])].map((item) => [
+      item.gtip, tariffMeasureLabels[item.measure_type] || item.measure_type, csvNumber(item.rate ?? item.rate_text),
+      item.country_group, item.country_group_description, item.description || "", item.footnote || "", item.condition || "",
+      item.list_name, item.source_file, item.source_sheet, item.source_row, item.valid_from, item.retrieved_at, item.archive_sha256,
+    ]);
+    return {
+      name: `tarife-${tariff.gtip}-${(tariff.origin_country || "mense").replace(/\s+/g, "_")}-${fileStamp()}.csv`,
+      headers: ["GTİP", "Önlem", "Oran %", "Menşe sütunu", "Sütun açıklaması", "Eşya tanımı", "Dipnot", "Şart", "Liste", "Kaynak dosya", "Sayfa", "Satır", "Yürürlük", "Alınma tarihi", "Arşiv SHA-256"],
+      rows,
+    };
+  },
+  cost(data) {
+    const cost = data.cost || data.deterministic_cost;
+    if (!cost) return null;
+    const currency = cost.currency || "";
+    const rows = (cost.lines || []).map((line) => [line.label, csvNumber(line.base), csvNumber(line.rate), csvNumber(line.amount), currency, line.formula || ""]);
+    if (cost.total_taxes != null) rows.push(["Toplam vergi", "", "", csvNumber(cost.total_taxes), currency, ""]);
+    if (cost.landed_total != null) rows.push(["Genel toplam (vergiler dahil)", "", "", csvNumber(cost.landed_total), currency, ""]);
+    if (cost.unit_landed_cost != null) rows.push(["Birim maliyet", "", "", csvNumber(cost.unit_landed_cost), currency, ""]);
+    (cost.missing_rates || []).forEach((item) => rows.push(["Eksik girdi", "", "", "", "", item]));
+    const lira = cost.try_summary;
+    if (lira) {
+      (lira.lines || []).forEach((line) => rows.push([`${line.label} (TL)`, "", "", csvNumber(line.amount_try), "TRY", `kur ${lira.exchange_rate}`]));
+      rows.push(["KDV matrahı (TL)", "", "", csvNumber(lira.vat_base_try), "TRY", ""]);
+      rows.push(["Toplam vergi (TL)", "", "", csvNumber(lira.total_taxes_try), "TRY", ""]);
+      rows.push(["Genel toplam (TL)", "", "", csvNumber(lira.landed_total_try), "TRY", ""]);
+    }
+    const tariff = data.tariff || data.tariff_lookup || {};
+    return {
+      name: `maliyet-${tariff.gtip || "gtip"}-${fileStamp()}.csv`,
+      headers: ["Kalem", "Matrah", "Oran %", "Tutar", "Para birimi", "Formül / not"],
+      rows,
+    };
+  },
+  bulk(data) {
+    const rows = (data.rows || []).map((row) => [
+      row.line ?? row.index, row.gtip || "", row.origin_country || "", row.dispatch_country || "", row.description || "",
+      row.status, row.resolved_country_group || "", csvNumber(row.rates?.customs_duty), csvNumber(row.rates?.additional_duty),
+      csvNumber(row.rates?.financial_liability), csvNumber(row.rates?.kkdf), csvNumber(row.rates?.vat),
+      csvNumber(row.customs_value), csvNumber(row.total_taxes), csvNumber(row.landed_total), csvNumber(row.unit_landed_cost),
+      row.currency || "", csvNumber(row.total_taxes_try), csvNumber(row.landed_total_try), (row.missing_rates || []).join(" | "), row.error || (row.warnings || []).join(" | "),
+    ]);
+    return {
+      name: `toplu-hesap-${fileStamp()}.csv`,
+      headers: ["Satır", "GTİP", "Menşe", "Sevk", "Açıklama", "Durum", "Sütun", "GV %", "İGV %", "EMY %", "KKDF %", "KDV %", "Gümrük kıymeti", "Toplam vergi", "Genel toplam", "Birim maliyet", "Para birimi", "Toplam vergi (TL)", "Genel toplam (TL)", "Eksik girdiler", "Hata / uyarılar"],
+      rows,
+    };
+  },
+  scenarios(data) {
+    const rows = (data.rows || []).map((row) => [
+      row.origin_country, row.dispatch_country || "", row.origin_documents?.regime_name || "", row.resolved_country_group || "",
+      csvNumber(row.unambiguous_rates?.customs_duty), csvNumber(row.unambiguous_rates?.additional_duty), csvNumber(row.unambiguous_rates?.additional_financial_liability),
+      row.atr_free_circulation ? "evet" : "hayır", (row.origin_proof_required || []).map((key) => tariffMeasureLabels[key] || key).join(", "),
+      Object.entries(row.fallback_rates || {}).map(([key, value]) => `${tariffMeasureLabels[key] || key} %${value}`).join(", "),
+      (row.origin_documents?.documents || []).map((item) => item.name).join(" | "), (row.warnings || []).join(" | "),
+    ]);
+    return {
+      name: `mense-senaryolari-${data.gtip}-${fileStamp()}.csv`,
+      headers: ["Menşe", "Sevk ülkesi", "Rejim", "Sütun", "Gümrük vergisi %", "İGV %", "EMY %", "A.TR serbest dolaşım", "Menşe tevsiki gereken", "Tevsik yoksa oran", "Belgeler", "Uyarılar"],
+      rows,
+    };
+  },
+};
+
+function exportBar(kind, tables) {
+  const buttons = tables.map(({ table, label }) => `
+    <button type="button" data-export="${escapeHtml(kind)}" data-table="${escapeHtml(table)}" data-format="csv">${escapeHtml(label)} · CSV</button>
+    <button type="button" data-export="${escapeHtml(kind)}" data-table="${escapeHtml(table)}" data-format="copy">${escapeHtml(label)} · Kopyala</button>`).join("");
+  return `<div class="export-bar" role="group" aria-label="Dışa aktar">${buttons}</div>`;
+}
+
+document.addEventListener("click", (event) => {
+  const button = event.target.closest("[data-export]");
+  if (!button) return;
+  const data = exportStore[button.dataset.export];
+  const builder = exportTables[button.dataset.table];
+  const table = data && builder ? builder(data) : null;
+  if (!table || !table.rows.length) return showToast("Dışa aktarılacak satır yok.");
+  if (button.dataset.format === "copy") {
+    copyText(buildTsv(table.headers, table.rows), `${table.rows.length} satır panoya kopyalandı (Excel'e yapıştırılabilir).`);
+    return;
+  }
+  downloadTextFile(table.name, buildCsv(table.headers, table.rows));
+  showToast(`${table.name} indirildi.`);
+});
+
+function renderLiraSummary(summary) {
+  if (!summary) return "";
+  const lira = (value) => value == null ? "—" : `${numberFormat.format(value)} TL`;
+  return `<div class="formula-ledger lira-ledger"><h3>TL beyanname özeti · ${escapeHtml(summary.status === "complete" ? "tam" : "eksik girdi")}</h3>
+    ${(summary.lines || []).map((line) => `<div class="formula-line"><span>${escapeHtml(line.label)}</span><code>${lira(line.amount_try)}</code></div>`).join("")}
+    <div class="formula-line"><strong>KDV matrahı (TL)</strong><code>${lira(summary.vat_base_try)}</code></div>
+    <div class="formula-line"><strong>Toplam vergi (TL)</strong><code>${lira(summary.total_taxes_try)}</code></div>
+    <div class="formula-line"><strong>Genel toplam (TL)</strong><code>${lira(summary.landed_total_try)}</code></div>
+    ${summary.unit_landed_cost_try != null ? `<div class="formula-line"><strong>Birim maliyet (TL)</strong><code>${lira(summary.unit_landed_cost_try)}</code></div>` : ""}
+    <p class="rate-warning">${(summary.notes || []).map((item) => escapeHtml(item)).join(" ")}</p></div>`;
+}
+
+const TRADE_MEASURE_LABELS = { anti_dumping: "Damping / sübvansiyon", safeguard: "Korunma önlemleri", surveillance: "Gözetim tebliğleri", tariff_quota: "Tarım tarife kontenjanları", communiques: "İthalat Tebliğleri" };
+function tradeSourceText(sources) {
+  return Object.entries(sources || {}).map(([kind, meta]) => {
+    const state = meta.origin === "synced" ? `resmî eşitleme ${String(meta.fetched_at || "").slice(0, 10)}` : meta.origin === "seed" ? "depo tohum verisi" : "yüklü değil";
+    return `${TRADE_MEASURE_LABELS[kind] || kind}: ${state}`;
+  }).join(" · ");
+}
+function renderExciseTax(excise) {
+  if (!excise) return "";
+  const rows = (excise.matches || []).map((hit) => {
+    const values = Object.entries(hit.values || {}).map(([key, value]) => `${escapeHtml(key)}: ${escapeHtml(String(value))}`).join("<br>");
+    return `<tr><td><code>${escapeHtml(hit.matched_code)}</code></td><td>${escapeHtml(hit.list_label)}</td><td>${escapeHtml(hit.description || "")}</td><td>${values || "—"}</td></tr>`;
+  });
+  const related = (excise.related_positions || []).map((hit) => `<li><code>${escapeHtml(hit.matched_code)}</code> · ${escapeHtml(hit.list_label)} ${escapeHtml(hit.description || "")}</li>`);
+  const empty = related.length
+    ? `<p class="missing-list">Bu GTİP ekli listelerde yok; aynı pozisyonda ÖTV satırları var:</p><ul class="missing-list">${related.join("")}</ul>`
+    : `<p class="missing-list">Bu GTİP 4760 sayılı Kanunun ekli listelerinde bulunamadı (ÖTV'ye tabi görünmüyor).</p>`;
+  return `<details class="advanced-fields trade-measures" ${rows.length || related.length ? "open" : ""}><summary><span>ÖTV kapsamı</span><small>${rows.length ? `${rows.length} liste satırı` : (related.length ? "kod değişmiş olabilir" : "kapsam dışı")}</small></summary>
+    ${rows.length ? `<div class="scenario-table-wrap"><table class="evidence-table"><thead><tr><th>Kod</th><th>Liste</th><th>Eşya</th><th>Oran / tutar</th></tr></thead><tbody>${rows.join("")}</tbody></table></div>` : empty}
+    ${(excise.warnings || []).map((item) => `<p class="rate-warning">${escapeHtml(item)}</p>`).join("")}
+    <p class="rate-warning">Kaynak: ${escapeHtml(excise.legal_basis || "")}.</p></details>`;
+}
+
+function renderTradeMeasures(trade) {
+  if (!trade) return "";
+  const statusLabel = { in_force: "yürürlükte", expired: "süresi dolmuş", unknown: "süre bilgisi yok" };
+  const groups = [
+    ["Damping / sübvansiyon", (trade.anti_dumping || []).filter((hit) => hit.origin_match !== false)],
+    ["Korunma önlemi", (trade.safeguard || []).filter((hit) => hit.origin_match !== false)],
+    ["Gözetim", trade.surveillance || []],
+    ["Tarife kontenjanı", (trade.tariff_quota || []).filter((hit) => hit.origin_match !== false)],
+  ];
+  const rows = groups.flatMap(([label, hits]) => hits.map((hit) => `<tr><td>${escapeHtml(label)}</td><td><code>${escapeHtml(hit.matched_code)}</code> ${escapeHtml(hit.product || "")}</td><td>${escapeHtml(hit.country || "")}</td><td>${escapeHtml(hit.rate_text || "—")} ${escapeHtml(hit.unit || "")}</td><td>${escapeHtml(hit.legal_act || "")}<br><small>${escapeHtml(hit.gazette || "")}${hit.expires ? ` · bitiş ${escapeHtml(hit.expires)}` : ""}${hit.notes ? ` · ${escapeHtml(hit.notes)}` : ""}</small></td><td><span class="measure-status ${escapeHtml(hit.status || "")}">${escapeHtml(statusLabel[hit.status] || hit.status || "")}</span></td></tr>`));
+  const hidden = (trade.anti_dumping || []).filter((hit) => hit.origin_match === false).length;
+  const empty = `<p class="missing-list">Bu GTİP için resmî listelerde ${trade.origin_country ? "bu menşeye uygulanan " : ""}damping, korunma veya gözetim satırı bulunmadı.</p>`;
+  return `<details class="advanced-fields trade-measures" ${rows.length ? "open" : ""}><summary><span>Damping, korunma, gözetim ve kontenjan kapsamı</span><small>${rows.length ? `${rows.length} resmî satır` : "eşleşen önlem yok"}</small></summary>
+    ${rows.length ? `<div class="scenario-table-wrap"><table class="evidence-table"><thead><tr><th>Önlem</th><th>Kapsam</th><th>Ülke</th><th>Oran / kıymet</th><th>Dayanak</th><th>Durum</th></tr></thead><tbody>${rows.join("")}</tbody></table></div>` : empty}
+    ${hidden ? `<p class="rate-warning">${hidden} damping satırı başka menşe ülkelere ait olduğu için gösterilmedi.</p>` : ""}
+    <p class="rate-warning">${escapeHtml(tradeSourceText(trade.sources))}. Oran ve tutarlar resmî tabloda yazıldığı gibidir; firma bazlı oranlar ve kontenjan muafiyetleri için tebliğ metnini doğrulayın.</p></details>`;
+}
+
 function renderTariffTool(data) {
+  exportStore.tool = data;
   const tariff = data.tariff || data;
   const cost = data.cost;
   const warnings = [...(tariff.warnings || []), ...(cost?.warnings || [])];
@@ -2104,10 +2355,15 @@ function renderTariffTool(data) {
     ${(cost.lines || []).map((line) => `<div class="formula-line"><span>${escapeHtml(line.label)} <small>${escapeHtml(line.formula)}</small></span><code>${line.amount == null ? "—" : `${numberFormat.format(line.amount)} ${escapeHtml(cost.currency)}`}</code></div>`).join("")}
     <div class="formula-line"><strong>Toplam vergi</strong><code>${cost.total_taxes == null ? "Oran eksik" : `${numberFormat.format(cost.total_taxes)} ${escapeHtml(cost.currency)}`}</code></div>
     <div class="formula-line"><strong>Genel toplam (vergiler dahil)</strong><code>${cost.landed_total == null ? "Oran eksik" : `${numberFormat.format(cost.landed_total)} ${escapeHtml(cost.currency)}`}</code></div>
-    <p class="rate-warning">Toplamlar sabit beyanname harcını içermez; kredili/vadeli ödemede KKDF eklenir, peşin ödemede bu kalem %0'dır. Kesin tutar için beyan öncesi gümrük müşaviri teyidi alın.</p></div>` : "";
+    ${cost.unit_landed_cost != null ? `<div class="formula-line"><strong>Birim maliyet</strong><code>${numberFormat.format(cost.unit_landed_cost)} ${escapeHtml(cost.currency)}</code></div>` : ""}
+    ${(cost.missing_rates || []).length ? `<div class="result-caution"><b>Toplam için eksik girdiler:</b> ${cost.missing_rates.map((item) => escapeHtml(item)).join(" · ")}</div>` : ""}
+    <p class="rate-warning">Kredili/vadeli ödemede KKDF eklenir, peşin ödemede bu kalem %0'dır. Beyanname damga vergisi ve TL giderler kur girildiğinde TL özetinde gösterilir. Kesin tutar için beyan öncesi gümrük müşaviri teyidi alın.</p></div>${renderLiraSummary(cost.try_summary)}` : "";
   return `<div class="answer-head"><span class="answer-status${tariff.status === "matched" ? "" : " warning"}">${escapeHtml(tariff.status)}</span><div><h2>${escapeHtml(tariff.gtip)} · ${escapeHtml(tariff.origin_country || "menşe seçilmedi")}</h2><p>Ülke grubu: ${escapeHtml(tariff.resolved_country_group || "çözümlenmedi")} · ${escapeHtml(tariff.as_of)}</p></div></div>
     ${tariffMatchSummary(tariff)}
+    ${renderTradeMeasures(tariff.trade_measures)}
+    ${renderExciseTax(tariff.excise_tax)}
     <table class="evidence-table"><thead><tr><th>GTİP / Önlem</th><th>Oran</th><th>Menşe sütunu</th><th>Kaynak satırı</th><th>Kanıt</th></tr></thead><tbody>${tariffRows(tariff.measures)}</tbody></table>
+    ${exportBar("tool", [{ table: "measures", label: "Tarife satırları" }, ...(cost ? [{ table: "cost", label: "Maliyet defteri" }] : [])])}
     ${applyRatesButton(tariff, "tool")}
     ${tariff.conditional_measures?.length ? `<details class="advanced-fields"><summary><span>Şarta bağlı askıya alma / nihai kullanım satırları</span><small>${tariff.conditional_measures.length} kayıt</small></summary><table class="evidence-table"><tbody>${tariffRows(tariff.conditional_measures)}</tbody></table></details>` : ""}
     ${costLedger}
@@ -2133,6 +2389,8 @@ document.addEventListener("click", (event) => {
     const origin = $("#tariffOrigin").value.trim();
     if (code && !$("#candidateGtip").value.trim()) { $("#candidateGtip").value = code; $("#candidateGtip").dispatchEvent(new Event("input", { bubbles: true })); }
     if (origin && !$("#originCountry").value.trim()) $("#originCountry").value = origin;
+    const dispatch = $("#tariffDispatch")?.value.trim();
+    if (dispatch && !$("#dispatchCountry").value.trim()) $("#dispatchCountry").value = dispatch;
     const invoice = $("#tariffInvoice").value.trim();
     if (invoice && !$("#invoiceValue").value.trim()) { $("#invoiceValue").value = invoice; $("#freight").value = $("#tariffFreight").value || $("#freight").value; $("#insurance").value = $("#tariffInsurance").value || $("#insurance").value; $("#currency").value = $("#tariffCurrency").value; }
     switchCustomsView("assistant");
@@ -2150,15 +2408,26 @@ $("#tariffForm").addEventListener("submit", async (event) => {
   const button = event.currentTarget.querySelector("button[type=submit]");
   button.disabled = true;
   output.innerHTML = '<div class="analysis-loading"><i></i><div><b>Resmî tarife satırları alınıyor</b><span>Menşe grubu, dipnot ve snapshot kanıtı denetleniyor…</span></div></div>';
-  const common = { gtip: $("#tariffGtip").value.trim(), origin_country: $("#tariffOrigin").value.trim() };
+  const common = {
+    gtip: $("#tariffGtip").value.trim(),
+    origin_country: $("#tariffOrigin").value.trim(),
+    dispatch_country: $("#tariffDispatch")?.value.trim() || null,
+    atr_certificate: $("#tariffAtr")?.value || null,
+  };
   try {
     const invoice = nullableNumber("#tariffInvoice");
     const data = invoice == null
       ? await fetchJson("/api/tariff/lookup", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(common) })
       : await fetchJson("/api/tariff/cost", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({
           ...common, invoice_value: invoice, freight: nullableNumber("#tariffFreight") || 0,
-          insurance: nullableNumber("#tariffInsurance") || 0, currency: $("#tariffCurrency").value,
+          insurance: nullableNumber("#tariffInsurance") || 0, other_costs: nullableNumber("#tariffOtherCosts") || 0,
+          quantity: nullableNumber("#tariffQuantity"), currency: $("#tariffCurrency").value,
           vat_rate: nullableNumber("#tariffVat"), payment_method: $("#tariffPayment").value || null,
+          additional_financial_liability_rate: nullableNumber("#tariffEmy"), kkdf_rate: nullableNumber("#tariffKkdf"),
+          anti_dumping_amount: nullableNumber("#tariffAntiDumping"), sct_amount: nullableNumber("#tariffSct"),
+          surveillance_unit_value: nullableNumber("#tariffSurveillance"),
+          has_surveillance_certificate: $("#tariffSurveillanceCertificate").value === "" ? null : $("#tariffSurveillanceCertificate").value === "true",
+          ...liraFields("tariff"),
         }) });
     output.innerHTML = renderTariffTool(data);
     const scenarioBox = $("#scenarioBox");
@@ -2178,16 +2447,75 @@ $("#tariffForm").addEventListener("submit", async (event) => {
 });
 
 function renderScenarioRows(data) {
+  exportStore.scenarios = data;
   const fmt = (value) => value == null ? "kod başına değişiyor" : `%${numberFormat.format(value)}`;
   return `<div class="scenario-table-wrap"><table class="evidence-table"><thead><tr><th>Menşe</th><th>Sütun</th><th>Gümrük vergisi</th><th>İGV / ek vergi</th><th>Tercih belgesi</th><th>Not</th></tr></thead><tbody>${(data.rows || []).map((row) => {
     const docs = row.origin_documents;
     const docText = docs ? (docs.documents || []).map((item) => item.name).join(", ") : "—";
-    const notes = (row.warnings || []).slice(0, 2);
+    const notes = [];
+    if (row.origin_recognised === false) notes.push("Menşe ülke tanınmadı; 'Diğer Ülkeler' varsayıldı");
+    if (row.atr_free_circulation) notes.push("GV: A.TR ile serbest dolaşım sütunu; İGV/EMY menşeye göre");
+    else if (row.atr_available) notes.push("A.TR teyit edilirse GV serbest dolaşım sütunundan hesaplanır");
+    if ((row.origin_proof_required || []).length) {
+      const fallback = Object.entries(row.fallback_rates || {}).map(([key, value]) => `${tariffMeasureLabels[key] || key} %${numberFormat.format(value)}`).join(", ");
+      notes.push(`İGV/EMY tercihi menşe tevsikine bağlı${fallback ? ` (tevsik yoksa ${fallback})` : ""}`);
+    }
+    notes.push(...(row.warnings || []).filter((item) => !item.includes("kapsam matrisi")).slice(0, 1));
     if (row.unambiguous_rates?.customs_duty == null) notes.push("Oran bütün alt GTİP12 satırlarında ortak değil");
     return `<tr><td><b>${escapeHtml(row.origin_country)}</b><small>${escapeHtml(docs?.regime_name || "")}</small></td><td>${escapeHtml(row.resolved_country_group || "—")}</td><td>${escapeHtml(fmt(row.unambiguous_rates?.customs_duty))}</td><td>${escapeHtml(fmt(row.unambiguous_rates?.additional_duty))}</td><td>${escapeHtml(docText)}</td><td>${escapeHtml(notes.join(" · ") || "—")}</td></tr>`;
   }).join("")}</tbody></table></div>
+  ${exportBar("scenarios", [{ table: "scenarios", label: "Senaryo tablosu" }])}
   <p class="rate-warning">Senaryo satırları resmî tarife arşivinin güncel snapshot'ından ve belge kural tablosundan üretilir; bağlayıcı tarife bilgisi değildir.</p>`;
 }
+
+function renderBulkResult(data) {
+  exportStore.bulk = data;
+  const money = (value, currency) => value == null ? "—" : `${numberFormat.format(value)} ${escapeHtml(currency || "")}`;
+  const pct = (value) => value == null ? "—" : `%${numberFormat.format(value)}`;
+  const statusLabel = { complete: "tam", partial: "eksik girdi", error: "hata" };
+  const rows = (data.rows || []).map((row) => `<tr class="bulk-${escapeHtml(row.status)}">
+      <td>${escapeHtml(row.line ?? row.index)}</td>
+      <td><code>${escapeHtml(row.gtip || "—")}</code>${row.description ? `<small>${escapeHtml(row.description)}</small>` : ""}</td>
+      <td>${escapeHtml(row.origin_country || "—")}${row.dispatch_country ? `<small>sevk: ${escapeHtml(row.dispatch_country)}</small>` : ""}${row.origin_recognised === false ? "<small>menşe tanınmadı</small>" : ""}</td>
+      <td>${escapeHtml(statusLabel[row.status] || row.status)}</td>
+      <td>${pct(row.rates?.customs_duty)} / ${pct(row.rates?.additional_duty)}</td>
+      <td>${money(row.customs_value, row.currency)}</td>
+      <td>${money(row.total_taxes, row.currency)}</td>
+      <td>${money(row.landed_total, row.currency)}${row.landed_total_try != null ? `<small>${numberFormat.format(row.landed_total_try)} TL</small>` : ""}</td>
+      <td>${escapeHtml(row.error || (row.missing_rates || []).join(", ") || (row.warnings || [])[0] || "")}</td>
+    </tr>`).join("");
+  const totals = (data.totals || []).map((item) => `<div class="formula-line"><span><strong>${escapeHtml(item.currency)}</strong> <small>${item.complete_rows}/${item.rows} satır tam</small></span><code>kıymet ${numberFormat.format(item.customs_value)} · vergi ${numberFormat.format(item.total_taxes)} · toplam ${numberFormat.format(item.landed_total)}</code></div>`).join("");
+  const summary = data.summary || {};
+  return `<div class="answer-head"><span class="answer-status${summary.errors ? " warning" : ""}">${summary.rows || 0} satır</span><div><h2>Toplu hesap</h2><p>${summary.complete || 0} tam · ${summary.partial || 0} eksik girdi · ${summary.errors || 0} hata</p></div></div>
+    <div class="scenario-table-wrap"><table class="evidence-table bulk-table"><thead><tr><th>Satır</th><th>GTİP</th><th>Menşe</th><th>Durum</th><th>GV / İGV</th><th>Gümrük kıymeti</th><th>Toplam vergi</th><th>Genel toplam</th><th>Not</th></tr></thead><tbody>${rows}</tbody></table></div>
+    ${exportBar("bulk", [{ table: "bulk", label: "Toplu hesap" }])}
+    ${totals ? `<div class="formula-ledger"><h3>Para birimi bazında toplam (yalnız tam satırlar)</h3>${totals}</div>` : ""}
+    ${data.legal_notice ? `<div class="legal-banner"><strong>Önemli:</strong> ${escapeHtml(data.legal_notice)}</div>` : ""}`;
+}
+
+$("#bulkCalculate")?.addEventListener("click", async () => {
+  const output = $("#bulkOutput");
+  const file = $("#bulkFile")?.files?.[0];
+  if (!file) return showToast("Önce bir CSV veya XLSX dosyası seçin.");
+  if (file.size > 2 * 1024 * 1024) return showToast("Dosya 2 MB sınırını aşıyor.");
+  output.innerHTML = '<div class="answer-loading"><strong>Satırlar hesaplanıyor</strong><span>Her satır için resmî tarife satırı ve maliyet defteri üretiliyor…</span></div>';
+  try {
+    const fileDataUrl = await new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => resolve(reader.result);
+      reader.onerror = () => reject(new Error("Dosya okunamadı."));
+      reader.readAsDataURL(file);
+    });
+    const data = await fetchJson("/api/tariff/bulk", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ file_name: file.name, file_data_url: fileDataUrl }),
+    });
+    output.innerHTML = renderBulkResult(data);
+  } catch (error) {
+    output.innerHTML = `<div class="answer-error"><p>${escapeHtml(error.message)}</p></div>`;
+  }
+});
 
 $("#scenarioCompare").addEventListener("click", async () => {
   const output = $("#scenarioOutput");
@@ -2202,7 +2530,7 @@ $("#scenarioCompare").addEventListener("click", async () => {
     const data = await fetchJson("/api/tariff/scenarios", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ gtip, origins }),
+      body: JSON.stringify({ gtip, origins, dispatch_country: $("#tariffDispatch")?.value.trim() || null, atr_certificate: $("#tariffAtr")?.value || null }),
     });
     output.innerHTML = renderScenarioRows(data);
   } catch (error) {
@@ -2227,6 +2555,7 @@ document.addEventListener("click", async (event) => {
   const result = state.currentCustomsResult;
   if (!result) { showToast("Gönderilecek ön değerlendirme dosyası bulunamadı."); return; }
   if (!state.auth?.authenticated) { showToast("E-posta ile göndermek için Google ile giriş yapın; dosya kendi adresinize gider."); return; }
+  if (state.auth?.email_enabled === false) { showToast("E-posta gönderimi sunucuda henüz yapılandırılmadı; dosyayı PDF olarak kaydedebilirsiniz."); return; }
   button.disabled = true;
   try {
     const data = await fetchJson("/api/email/precheck", {
@@ -2285,13 +2614,26 @@ $("#ingestSource")?.addEventListener("click", async () => {
   }
 });
 
+function renderRuleDocuments(rule) {
+  const documents = rule.required_documents || [];
+  const exemptions = rule.exemptions || [];
+  if (!documents.length && !exemptions.length && !rule.required_documents_excerpt) return "";
+  const documentList = documents.length
+    ? `<ol class="document-list">${documents.map((item) => `<li class="document-${escapeHtml(item.kind)}">${escapeHtml(item.text)}${item.kind === "conditional" ? " <small>şarta bağlı</small>" : ""}</li>`).join("")}</ol>`
+    : (rule.required_documents_excerpt ? `<p>${escapeHtml(rule.required_documents_excerpt)}</p>` : "");
+  const exemptionList = exemptions.length
+    ? `<details class="advanced-fields"><summary><span>Muafiyet / istisna / kapsam dışı hükümleri</span><small>${exemptions.length} cümle · resmî metinden</small></summary><ul class="missing-list">${exemptions.map((item) => `<li>${escapeHtml(item)}</li>`).join("")}</ul><p class="rate-warning">Bu cümleler ürünün kapsam dışı olduğunu kanıtlamaz; ürün, ithalatçı ve rejim şartları resmî metinden doğrulanmalıdır.</p></details>`
+    : "";
+  return `<details class="advanced-fields"><summary><span>Yüklenmesi gereken belgeler</span><small>${documents.length ? `${documents.length} satır` : "resmî metinden"}</small></summary>${documentList}</details>${exemptionList}`;
+}
+
 function renderControlTool(data) {
   const cards = (data.matches || []).map((match) => {
     const rule = match.rule;
     return `<article class="control-card"><header><code>${escapeHtml(rule.code)}</code><b>${escapeHtml(rule.title)}</b><a href="${safeUrl(rule.source_url)}" target="_blank" rel="noreferrer">Resmî metin ↗</a></header>
       <dl><div><dt>Ek-1 eşleşmesi</dt><dd>${escapeHtml(match.matched_scope.gtip_prefix)} · ${escapeHtml(match.match_type)}</dd></div><div><dt>Sistem</dt><dd>${escapeHtml(rule.system)}</dd></div><div><dt>Fiilî denetim</dt><dd>${rule.risk_based ? "Risk analizine bağlı" : "Yetkili kurum kararı"}</dd></div><div><dt>Laboratuvar</dt><dd>${rule.laboratory_test_possible ? "Mümkün; otomatik değil" : "Metinde tespit edilmedi"}</dd></div></dl>
       <p><strong>Kapsam satırı:</strong> ${escapeHtml(match.matched_scope.source_line)}<br>${escapeHtml(match.assessment)}</p>
-      ${rule.required_documents_excerpt ? `<details class="advanced-fields"><summary><span>Belge listesi özeti</span><small>Resmî metinden</small></summary><p>${escapeHtml(rule.required_documents_excerpt)}</p></details>` : ""}
+      ${renderRuleDocuments(rule)}
       <div class="result-caution">${match.cautions.map((item) => escapeHtml(item)).join(" · ")}</div></article>`;
   }).join("");
   return `<div class="answer-head"><span class="answer-status${data.status === "matched" ? "" : " warning"}">${escapeHtml(data.status)}</span><div><h2>${escapeHtml(data.gtip)} kontrol dosyası</h2><p>${escapeHtml(data.as_of)} itibarıyla indekslenmiş resmî tebliğ ekleri · kapsam: ${escapeHtml(data.scope_determination || "belirsiz")} · fiilî denetim sonucu bu sistemde belirlenmez</p></div></div>
@@ -2321,35 +2663,99 @@ function savedScenarios() {
   try { return JSON.parse(localStorage.getItem("gumrukce-scenarios") || "[]"); } catch (_) { return []; }
 }
 
-function renderWatchList() {
-  const target = $("#watchList");
-  const items = savedWatchItems();
-  target.innerHTML = items.length ? items.map((item, index) => `<div class="watch-item"><code>${escapeHtml(item.gtip)}</code><span>${escapeHtml(item.label || "Adsız ürün")}</span><button type="button" data-watch-query="${index}">Kontrol et</button><button type="button" data-watch-remove="${index}">Kaldır</button></div>`).join("") : '<p class="missing-list">Bu cihazda izlenen GTİP yok.</p>';
-  const scenarios = savedScenarios();
-  $("#scenarioList").innerHTML = scenarios.length ? scenarios.map((item, index) => `<div class="watch-item"><code>${escapeHtml(item.gtip || "GTİP yok")}</code><span>${escapeHtml(item.title)}<small>${escapeHtml(formatDate(item.savedAt, true))} · ${escapeHtml(item.origin || "menşe yok")}</small></span><button type="button" data-scenario-open="${index}">Aç</button><button type="button" data-scenario-remove="${index}">Kaldır</button></div>`).join("") : '<p class="missing-list">Henüz kayıtlı ön değerlendirme yok.</p>';
+function watchlistOnServer() {
+  return Boolean(state.auth?.authenticated);
 }
 
-$("#addWatch").addEventListener("click", () => {
+function renderWatchChanges(item) {
+  const changes = item.changes || [];
+  if (!changes.length) return "";
+  const rows = changes.slice(0, 20).map((change) => `<tr><td><code>${escapeHtml(change.gtip)}</code></td><td>${escapeHtml(change.measure_label || change.measure_type)}</td><td>${escapeHtml(change.country_group)}</td><td>${escapeHtml(change.before ?? "—")}</td><td>${escapeHtml(change.after ?? "— (satır kaldırıldı)")}</td></tr>`).join("");
+  return `<details class="advanced-fields watch-changes"><summary><span>${escapeHtml(item.change_count || changes.length)} resmî satır değişikliği</span><small>${escapeHtml(changes[0].source_title || "")} · yeni sürüm ${escapeHtml(changes[0].new_snapshot || "")}</small></summary>
+    <div class="scenario-table-wrap"><table class="evidence-table"><thead><tr><th>GTİP</th><th>Önlem</th><th>Sütun</th><th>Önce</th><th>Sonra</th></tr></thead><tbody>${rows}</tbody></table></div></details>`;
+}
+
+function renderWatchItems(items, { server }) {
+  const target = $("#watchList");
+  if (!items.length) {
+    target.innerHTML = `<p class="missing-list">${server ? "Hesabınızda izlenen GTİP yok." : "Bu cihazda izlenen GTİP yok. Google ile giriş yaparsanız liste hesabınızda saklanır ve resmî satır değiştiğinde e-posta alırsınız."}</p>`;
+    return;
+  }
+  target.innerHTML = items.map((item, index) => `<div class="watch-item${item.change_count ? " has-changes" : ""}"><code>${escapeHtml(item.gtip)}</code><span>${escapeHtml(item.label || "Adsız ürün")}${item.change_count ? `<small class="watch-badge">${escapeHtml(item.change_count)} değişiklik</small>` : ""}${item.origin_country ? `<small>menşe: ${escapeHtml(item.origin_country)}</small>` : ""}</span><button type="button" data-watch-query="${index}">Kontrol et</button><button type="button" data-watch-remove="${index}" data-watch-id="${escapeHtml(item.id || "")}">Kaldır</button>${renderWatchChanges(item)}</div>`).join("");
+}
+
+async function migrateLocalWatchItems() {
+  const local = savedWatchItems();
+  if (!local.length || !watchlistOnServer()) return;
+  try {
+    await fetchJson("/api/watchlist", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ items: local.map((item) => ({ gtip: item.gtip, label: item.label || "" })) }) });
+    localStorage.removeItem("gumrukce-watchlist");
+    showToast(`${local.length} izlenen GTİP hesabınıza taşındı.`);
+  } catch (_) {
+    // Local copy stays until the server accepts it.
+  }
+}
+
+async function renderWatchList() {
+  const scenarios = savedScenarios();
+  $("#scenarioList").innerHTML = scenarios.length ? scenarios.map((item, index) => `<div class="watch-item"><code>${escapeHtml(item.gtip || "GTİP yok")}</code><span>${escapeHtml(item.title)}<small>${escapeHtml(formatDate(item.savedAt, true))} · ${escapeHtml(item.origin || "menşe yok")}</small></span><button type="button" data-scenario-open="${index}">Aç</button><button type="button" data-scenario-remove="${index}">Kaldır</button></div>`).join("") : '<p class="missing-list">Henüz kayıtlı ön değerlendirme yok.</p>';
+  if (!watchlistOnServer()) {
+    state.watchItems = savedWatchItems();
+    renderWatchItems(state.watchItems, { server: false });
+    return;
+  }
+  try {
+    await migrateLocalWatchItems();
+    const data = await fetchJson("/api/watchlist");
+    state.watchItems = data.items || [];
+    renderWatchItems(state.watchItems, { server: true });
+    const note = $("#watchNotifyNote");
+    if (note) note.textContent = data.email_enabled
+      ? "İzlenen GTİP'in resmî tarife satırı yeni sürümde değişirse e-posta adresinize bildirim gönderilir."
+      : "E-posta bildirimi sunucuda henüz yapılandırılmadı; değişiklikler bu listede görünür.";
+  } catch (error) {
+    state.watchItems = savedWatchItems();
+    renderWatchItems(state.watchItems, { server: false });
+  }
+}
+
+$("#addWatch").addEventListener("click", async () => {
   const gtip = $("#watchGtip").value.replace(/\D/g, "");
-  if (gtip.length !== 12) return showToast("İzleme için 12 haneli GTİP girin.");
+  if (![4, 6, 8, 10, 12].includes(gtip.length)) return showToast("İzleme için 4, 6, 8, 10 veya 12 haneli GTİP girin.");
+  const label = $("#watchLabel").value.trim();
+  if (watchlistOnServer()) {
+    try {
+      await fetchJson("/api/watchlist", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ gtip, label }) });
+      showToast("GTİP hesabınızdaki izleme listesine eklendi.");
+      renderWatchList();
+    } catch (error) { showToast(error.message); }
+    return;
+  }
   const items = savedWatchItems();
-  if (!items.some((item) => item.gtip === gtip)) items.push({ gtip, label: $("#watchLabel").value.trim(), addedAt: new Date().toISOString() });
+  if (!items.some((item) => item.gtip === gtip)) items.push({ gtip, label, addedAt: new Date().toISOString() });
   localStorage.setItem("gumrukce-watchlist", JSON.stringify(items.slice(-100)));
   renderWatchList();
   showToast("GTİP bu cihazdaki izleme listesine eklendi.");
 });
 
-$("#watchList").addEventListener("click", (event) => {
+$("#watchList").addEventListener("click", async (event) => {
   const remove = event.target.closest("[data-watch-remove]");
   const query = event.target.closest("[data-watch-query]");
   if (remove) {
-    const items = savedWatchItems(); items.splice(Number(remove.dataset.watchRemove), 1);
-    localStorage.setItem("gumrukce-watchlist", JSON.stringify(items)); renderWatchList();
+    if (watchlistOnServer() && remove.dataset.watchId) {
+      try { await fetchJson(`/api/watchlist/${encodeURIComponent(remove.dataset.watchId)}`, { method: "DELETE" }); } catch (error) { showToast(error.message); }
+    } else {
+      const items = savedWatchItems(); items.splice(Number(remove.dataset.watchRemove), 1);
+      localStorage.setItem("gumrukce-watchlist", JSON.stringify(items));
+    }
+    renderWatchList();
   }
   if (query) {
-    const item = savedWatchItems()[Number(query.dataset.watchQuery)];
+    const item = (state.watchItems || [])[Number(query.dataset.watchQuery)];
     if (!item) return;
-    $("#controlsGtip").value = item.gtip; switchCustomsView("controls"); $("#controlsForm").requestSubmit();
+    const digits = String(item.gtip).replace(/\D/g, "");
+    if (digits.length === 12) { $("#controlsGtip").value = digits; switchCustomsView("controls"); $("#controlsForm").requestSubmit(); return; }
+    $("#tariffGtip").value = digits; if (item.origin_country) $("#tariffOrigin").value = item.origin_country; switchCustomsView("tariff"); $("#tariffForm").requestSubmit();
   }
 });
 
@@ -2382,12 +2788,24 @@ async function loadChanges() {
     const tariffSummaries = Object.entries(data.tariff || {}).map(([name, value]) => {
       const sourceLabel = changeSourceLabels[name] || name;
       const statusText = changeStatusLabels[value.status] || value.status || (value.changes?.length ? "değişiklik var" : "tek sürüm");
+      const total = value.total_changes ?? value.changes?.length ?? 0;
       const note = value.status === "no_previous_snapshot"
         ? "Karşılaştırılacak ikinci resmî sürüm henüz arşivlenmedi; sonraki sürüm güncellemesinden sonra satır farkları burada listelenir."
-        : (value.message || `${value.changes?.length || 0} satır farkı`);
-      return `<article class="candidate-card"><code>${escapeHtml(sourceLabel)}</code><b>${escapeHtml(statusText)}</b><p>${escapeHtml(note)}</p></article>`;
+        : `${total} satır farkı${value.new_snapshot ? ` · yeni sürüm ${value.new_snapshot}` : ""}`;
+      const rows = (value.changes || []).slice(0, 50).map((change) => `<tr><td><code>${escapeHtml(change.gtip)}</code></td><td>${escapeHtml(tariffMeasureLabels[change.measure_type] || change.measure_type)}</td><td>${escapeHtml(change.country_group)}</td><td>${escapeHtml(change.before ?? "—")}</td><td>${escapeHtml(change.after ?? "— (satır kaldırıldı)")}</td></tr>`).join("");
+      const table = rows ? `<details class="advanced-fields"><summary><span>Satır farkları</span><small>${Math.min(total, 50)} / ${total}</small></summary><div class="scenario-table-wrap"><table class="evidence-table"><thead><tr><th>GTİP</th><th>Önlem</th><th>Sütun</th><th>Önce</th><th>Sonra</th></tr></thead><tbody>${rows}</tbody></table></div></details>` : "";
+      return `<article class="candidate-card"><code>${escapeHtml(sourceLabel)}</code><b>${escapeHtml(statusText)}</b><p>${escapeHtml(note)}</p>${table}</article>`;
     }).join("");
-    output.innerHTML = `<div class="candidate-grid">${tariffSummaries || '<p class="missing-list">Tarife sürümü henüz yok.</p>'}</div>
+    const tradeStatus = data.trade_measure_status || {};
+    const tradeDatasets = Object.entries(tradeStatus.datasets || {}).map(([kind, meta]) => `<div class="formula-line"><span><strong>${escapeHtml(meta.label || TRADE_MEASURE_LABELS[kind] || kind)}</strong><br><small>${escapeHtml(meta.origin === "synced" ? `resmî eşitleme ${String(meta.fetched_at || "").slice(0, 16).replace("T", " ")}` : meta.origin === "seed" ? "depo tohum verisi (ilk eşitleme bekleniyor)" : "yüklü değil")}</small></span><code>${escapeHtml(meta.item_count ?? 0)} satır</code></div>`).join("");
+    const lastSync = tradeStatus.last_sync?.finished_at ? `Son eşitleme ${escapeHtml(String(tradeStatus.last_sync.finished_at).slice(0, 16).replace("T", " "))}` : "Eşitleme henüz çalışmadı";
+    const tradeRows = (data.trade_measures || []).map((change) => {
+      const detail = change.detail || {};
+      const items = [...(detail.added || []).map((item) => `<li><b>Yeni:</b> ${escapeHtml(item.summary)}</li>`), ...(detail.removed || []).map((item) => `<li><b>Kaldırıldı:</b> ${escapeHtml(item.summary)}</li>`), ...(detail.modified || []).map((item) => `<li><b>Değişti:</b> ${escapeHtml(item.before)} → ${escapeHtml(item.after)}</li>`)].slice(0, 40).join("");
+      return `<details class="advanced-fields"><summary><span>${escapeHtml(detail.label || TRADE_MEASURE_LABELS[change.kind] || change.kind)}</span><small>${escapeHtml(String(change.changed_at || "").slice(0, 10))} · +${escapeHtml(change.added)} / −${escapeHtml(change.removed)} / ~${escapeHtml(change.modified)}</small></summary><ul class="missing-list">${items}</ul></details>`;
+    }).join("");
+    const tradeLedger = `<div class="formula-ledger"><h3>Damping, korunma, gözetim ve İthalat Tebliğleri (günlük eşitleme)</h3>${tradeDatasets}<p class="rate-warning">${lastSync}. Her gün Ticaret Bakanlığı ve mevzuat.gov.tr'den yeniden okunur; farklar aşağıda ve izleme listesi bildirimlerinde görünür.</p>${tradeRows || '<p class="missing-list">Önlem listelerinde henüz kaydedilmiş fark yok.</p>'}</div>`;
+    output.innerHTML = `<div class="candidate-grid">${tariffSummaries || '<p class="missing-list">Tarife sürümü henüz yok.</p>'}</div>${tradeLedger}
       <div class="formula-ledger"><h3>Kontrol tebliği değişiklikleri</h3>${controlRows.length ? controlRows.map((item) => `<div class="formula-line"><span><strong>${escapeHtml(item.code)}</strong> · ${escapeHtml(item.title)}<br><small>${escapeHtml(item.changed_at)}</small></span><code>${item.scope_count_delta > 0 ? "+" : ""}${escapeHtml(item.scope_count_delta)}</code></div>`).join("") : '<p class="missing-list">Karşılaştırılabilir ikinci tebliğ sürümü henüz oluşmadı.</p>'}</div>`;
   } catch (error) { output.innerHTML = `<div class="answer-error"><p>${escapeHtml(error.message)}</p></div>`; }
 }
@@ -2405,5 +2823,66 @@ $("#themeToggle").addEventListener("click", () => {
 
 loadCatalogStatus();
 loadAuthState();
+loadCountryList();
+async function fetchCustomsRate(prefix) {
+  const currencyEl = $(prefix === "tariff" ? "#tariffCurrency" : "#currency");
+  const dateEl = $(`#${prefix}ExchangeRateDate`);
+  const rateEl = $(`#${prefix}ExchangeRate`);
+  const note = $(`#${prefix}FxNote`);
+  const button = document.querySelector(`.fx-fetch[data-prefix="${prefix}"]`);
+  const currency = currencyEl?.value || "USD";
+  const show = (message) => { if (note) { note.hidden = false; note.textContent = message; } };
+  if (currency === "TRY") {
+    rateEl.value = "1";
+    show("Fatura Türk lirası ise kur 1 alınır.");
+    return;
+  }
+  const params = new URLSearchParams({ currency });
+  if (dateEl?.value) params.set("date", dateEl.value);
+  if (button) button.disabled = true;
+  try {
+    const data = await fetchJson(`/api/tariff/exchange-rate?${params}`);
+    rateEl.value = String(data.rate).replace(".", ",");
+    rateEl.classList.remove("input-invalid");
+    if (dateEl && !dateEl.value) dateEl.value = data.registration_date;
+    show(`${data.note} Dayanak: ${data.legal_basis}.`);
+  } catch (error) {
+    show(`Kur alınamadı: ${error.message}`);
+  } finally {
+    if (button) button.disabled = false;
+  }
+}
+document.querySelectorAll(".fx-fetch").forEach((button) => {
+  button.addEventListener("click", () => fetchCustomsRate(button.dataset.prefix));
+});
+
+async function loadDeclarationStatus() {
+  const hint = $("#declarationHint");
+  if (!hint) return;
+  try {
+    const data = await fetchJson("/api/customs/declaration/status");
+    hint.textContent = data.configured ? (state.auth?.authenticated ? "Hazır" : "Giriş gerekir") : "Sunucuda Eylemio hesabı tanımlı değil";
+  } catch { hint.textContent = "Durum alınamadı"; }
+}
+async function queryDeclaration() {
+  const output = $("#declarationOutput");
+  const button = $("#declarationQuery");
+  const number = ($("#declarationNo")?.value || "").trim();
+  if (!number) { output.innerHTML = '<div class="answer-error"><p>Beyanname numarasını girin.</p></div>'; return; }
+  button.disabled = true;
+  output.innerHTML = '<div class="analysis-loading"><i></i><div><b>Beyanname sorgulanıyor</b><span>Eylemio üzerinden Ticaret Bakanlığı servisine bağlanılıyor…</span></div></div>';
+  try {
+    const data = await fetchJson("/api/customs/declaration", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ declaration_no: number }) });
+    const rows = (data.summary || []).map((pair) => `<div class="formula-line"><span>${escapeHtml(pair.label)}</span><code>${escapeHtml(pair.value)}</code></div>`).join("");
+    output.innerHTML = `<div class="formula-ledger"><h3>${escapeHtml(data.declaration_no)} · ${escapeHtml(data.message || "sorgu tamamlandı")}</h3>${rows || '<p class="missing-list">Konektör alan döndürmedi.</p>'}<details class="advanced-fields"><summary><span>Ham yanıt</span><small>${escapeHtml(data.account?.name || "")}</small></summary><pre class="raw-json">${escapeHtml(JSON.stringify(data.data || {}, null, 2))}</pre></details><p class="rate-warning">${escapeHtml(data.source || "")}</p></div>`;
+  } catch (error) {
+    output.innerHTML = `<div class="answer-error"><p>${escapeHtml(error.message)}</p></div>`;
+  } finally { button.disabled = false; }
+}
+$("#declarationQuery")?.addEventListener("click", queryDeclaration);
+$("#declarationNo")?.addEventListener("keydown", (event) => { if (event.key === "Enter") { event.preventDefault(); queryDeclaration(); } });
+loadDeclarationStatus();
+
+bindLocalizedNumberInputs();
 if (new URLSearchParams(location.search).get("scope") === "customs" || location.hash === "#customs") switchScope("customs");
 runTicaretSearch({ offset: 0 });

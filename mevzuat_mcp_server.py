@@ -7,7 +7,7 @@ import asyncio
 import logging
 from contextlib import asynccontextmanager
 from pydantic import Field
-from typing import Any, Literal, Optional
+from typing import Callable, Coroutine, Any, Literal, Optional
 
 from fastmcp import FastMCP
 
@@ -35,6 +35,10 @@ from customs_advisor import (
     ProductClassificationResult,
     decode_image_data_url,
 )
+from exchange_rates import ExchangeRateError, ExchangeRateService, parse_registration_date
+from eylemio_client import EylemioClient, EylemioError, summarise_declaration
+from trade_measures import KIND_LABELS as TRADE_MEASURE_LABELS, TradeMeasureEngine, summary_lines as trade_measure_summary
+from tax_lists import ExciseTaxIndex, summary_lines as excise_tax_summary
 from tariff_engine import (
     LandedCostInput,
     TariffDecisionTreeResult,
@@ -70,6 +74,12 @@ logger = logging.getLogger(__name__)
 
 ticaret_client = TicaretApiClient()
 tariff_engine = TariffEngine()
+exchange_rate_service = ExchangeRateService()
+trade_measure_engine = TradeMeasureEngine()
+excise_tax_index = ExciseTaxIndex()
+tariff_engine.trade_measures = trade_measure_engine
+tariff_engine.excise_tax = excise_tax_index
+eylemio_client = EylemioClient()
 control_engine = ImportControlEngine()
 classification_engine = ClassificationEvidenceEngine()
 customs_advisor_service = CustomsAdvisor(
@@ -79,9 +89,15 @@ customs_advisor_service = CustomsAdvisor(
 )
 
 
+# Extra background coroutines registered by the web layer (e.g. watch-list notifier).
+BACKGROUND_LOOPS: list[tuple[str, "Callable[[], Coroutine[Any, Any, None]]"]] = []
+BACKGROUND_LOOPS.append(("trade-measures-sync", trade_measure_engine.periodic_sync_loop))
+
+
 @asynccontextmanager
 async def _server_lifespan(server):
     """Keep the Ministry catalogue fresh without delaying ASGI startup."""
+    extra_tasks = [asyncio.create_task(factory(), name=name) for name, factory in BACKGROUND_LOOPS]
     refresh_task = asyncio.create_task(
         ticaret_client.periodic_refresh_loop(),
         name="ticaret-catalog-refresh",
@@ -107,7 +123,7 @@ async def _server_lifespan(server):
             "classification_engine": classification_engine,
         }
     finally:
-        for task in (refresh_task, tariff_task, control_task, classification_task):
+        for task in (refresh_task, tariff_task, control_task, classification_task, *extra_tasks):
             task.cancel()
             try:
                 await task
@@ -2591,6 +2607,11 @@ async def lookup_tariff_measures(
         description="Noktalı veya düz 6/8 haneli HS/CN ya da 10/12 haneli Türk tarife kodu.",
     ),
     origin_country: Optional[str] = Field(None, max_length=100, description="Menşe ülke; sevk ülkesinden ayrıdır."),
+    atr_certificate: Optional[bool] = Field(None, description="Sevk AB'den ise A.TR dolaşım belgesi ibraz edilecek mi? Teyit edilmeden serbest dolaşım sütunu uygulanmaz."),
+    dispatch_country: Optional[str] = Field(
+        None, max_length=100,
+        description="Sevk/çıkış ülkesi menşeden farklıysa; AB'den A.TR ile gelen üçüncü ülke menşeli eşyada gümrük vergisi ve İGV ayrı sütunlardan değerlendirilir.",
+    ),
 ) -> TariffLookupResult:
     """Return source-row-level customs duty and additional-duty evidence.
 
@@ -2599,7 +2620,150 @@ async def lookup_tariff_measures(
     conditional end-use rates, workbook/sheet/row, archive checksum and warnings.
     A rate is automatic only when every matching subline has the same unfootnoted rate.
     """
-    return await tariff_engine.lookup(gtip, origin_country=origin_country)
+    return await tariff_engine.lookup(
+        gtip, origin_country=origin_country, dispatch_country=dispatch_country, atr_certificate=atr_certificate
+    )
+
+
+@app.tool(
+    app=True,
+    annotations={
+        "title": "Tescil tarihi için TCMB gümrük kurunu getir",
+        "readOnlyHint": True,
+        "destructiveHint": False,
+        "idempotentHint": True,
+        "openWorldHint": True,
+    }
+)
+async def get_customs_exchange_rate(
+    currency: str = Field("USD", min_length=3, max_length=5, description="Döviz kodu (USD, EUR, GBP, CNY, JPY...)."),
+    registration_date: Optional[str] = Field(
+        None,
+        description="Beyanname tescil tarihi (YYYY-AA-GG veya GG.AA.YYYY). Boşsa bugün.",
+    ),
+) -> dict:
+    """Return the TCMB selling rate in force on the declaration registration date.
+
+    Gümrük Kanunu md. 30 uyarınca gümrük kıymeti, tescil tarihinde yürürlükte olan
+    TCMB döviz satış kuru ile TL'ye çevrilir; yürürlükteki kur, tescil tarihinden
+    önceki son iş gününün bültenidir. Sonuç bülten tarihi, numarası ve kaynağı ile
+    döner; `calculate_import_landed_cost` çağrısında `exchange_rate` ve
+    `exchange_rate_date` olarak kullanılabilir.
+    """
+    try:
+        target = parse_registration_date(registration_date)
+        return await exchange_rate_service.customs_quote(currency, target)
+    except ExchangeRateError as exc:
+        return {"error": str(exc), "currency": currency, "registration_date": registration_date}
+
+
+@app.tool(
+    app=True,
+    annotations={
+        "title": "Damping, korunma ve gözetim önlemlerini sorgula",
+        "readOnlyHint": True,
+        "destructiveHint": False,
+        "idempotentHint": True,
+        "openWorldHint": False,
+    }
+)
+async def lookup_trade_measures(
+    gtip: str = Field(..., min_length=4, max_length=20, description="4-12 haneli GTİP; kısa kodlar ön ek olarak eşlenir."),
+    origin_country: Optional[str] = Field(None, max_length=100, description="Menşe ülke; damping önlemleri ülkeye göre süzülür."),
+) -> dict:
+    """Return official anti-dumping / countervailing, safeguard and surveillance coverage for a code.
+
+    Veri, Ticaret Bakanlığı'nın yürürlükteki önlem listeleri ve mevzuat.gov.tr'deki gözetim
+    tebliğlerinden günlük eşitlenir. Satırlar GTİP ön ekiyle eşleşir; oran/tutar resmî tabloda
+    yazıldığı gibi döner ve hesaba otomatik girilmez.
+    """
+    try:
+        report = trade_measure_engine.lookup(gtip, origin_country)
+    except ValueError as exc:
+        return {"error": str(exc)}
+    payload = report.as_dict()
+    payload["summary"] = trade_measure_summary(report)
+    return payload
+
+
+@app.tool(
+    app=True,
+    annotations={
+        "title": "GTİP'in ÖTV kapsamını sorgula",
+        "readOnlyHint": True,
+        "destructiveHint": False,
+        "idempotentHint": True,
+        "openWorldHint": False,
+    }
+)
+async def lookup_excise_tax(
+    gtip: str = Field(..., min_length=4, max_length=20, description="4-12 haneli GTİP; kısa pozisyon kodları ön ek olarak eşlenir."),
+) -> dict:
+    """Return whether a code falls under an annexed list of the Turkish excise tax law (ÖTV).
+
+    Kaynak, 4760 sayılı Özel Tüketim Vergisi Kanununun ekli (I)-(IV) sayılı listeleridir.
+    Kanun metnindeki oran/tutarlar ile Cumhurbaşkanı kararlarıyla yeniden tespit edilen
+    "uygulanacak" değerler ayrı alanlarda döner; ikincisi boşsa kanuni değer geçerlidir.
+    (III) sayılı listede sütunlar resmî PDF'te birleşik basıldığından oran gösterilmez.
+    Sorgulanan kod listelerde yoksa fakat aynı pozisyonda satır varsa, Armonize Sistem
+    revizyonu nedeniyle kodun değişmiş olabileceği uyarısı verilir.
+    """
+    report = excise_tax_index.lookup(gtip)
+    report["summary"] = excise_tax_summary(report)
+    return report
+
+
+@app.tool(
+    app=True,
+    annotations={
+        "title": "İthalat Tebliğleri dizinini listele",
+        "readOnlyHint": True,
+        "destructiveHint": False,
+        "idempotentHint": True,
+        "openWorldHint": False,
+    }
+)
+async def list_import_communiques(
+    year: Optional[int] = Field(None, ge=2020, le=2100, description="Yıl; boşsa dizindeki tüm yıllar."),
+    query: Optional[str] = Field(None, max_length=120, description="Başlıkta aranacak kelime (ör. 'kontenjan', 'gözetim')."),
+) -> dict:
+    """List the Ministry of Trade import communiqués index (İthalat: YYYY/N) with official links."""
+    entries = trade_measure_engine.communiques(year)
+    if query:
+        needle = query.casefold()
+        entries = [entry for entry in entries if needle in entry.get("title", "").casefold()]
+    return {
+        "count": len(entries),
+        "entries": entries[:200],
+        "dataset": trade_measure_engine.store.metadata("communiques"),
+    }
+
+
+@app.tool(
+    app=True,
+    annotations={
+        "title": "Beyanname durumunu Eylemio üzerinden sorgula",
+        "readOnlyHint": True,
+        "destructiveHint": False,
+        "idempotentHint": True,
+        "openWorldHint": True,
+    }
+)
+async def query_customs_declaration_status(
+    declaration_no: str = Field(..., min_length=8, max_length=24, description="Beyanname (TCGB) numarası."),
+) -> dict:
+    """Read declaration detail/status through the Eylemio customs connector (read-only).
+
+    Eylemio'daki 'ticaret-beyanname' konektörü, gümrük müşavirinin BİLGE web servis hesabıyla
+    Ticaret Bakanlığı'ndan gerçek beyanname bilgisini okur. Sunucuda EYLEMIO_EMAIL /
+    EYLEMIO_PASSWORD tanımlı değilse açıklayıcı hata döner.
+    """
+    try:
+        result = await eylemio_client.declaration_status(declaration_no)
+    except EylemioError as exc:
+        return {"error": str(exc), "declaration_no": declaration_no}
+    result["summary"] = [{"label": label, "value": value} for label, value in summarise_declaration(result)]
+    return result
 
 
 @app.tool(
@@ -2658,6 +2822,18 @@ async def calculate_import_landed_cost(
     sct_amount: Optional[float] = Field(None, ge=0, le=1_000_000_000, description="Doğrulanmış ÖTV toplamı; uygulanmadığı doğrulandıysa 0."),
     surveillance_unit_value: Optional[float] = Field(None, ge=0, le=1_000_000_000, description="Gözetim birim kıymeti; uygulanmadığı doğrulandıysa 0."),
     has_surveillance_certificate: Optional[bool] = Field(None),
+    payment_method: Optional[str] = Field(None, max_length=100, description="Ödeme şekli (peşin, mal mukabili, vadeli akreditif, kredili...); KKDF önerisi için."),
+    dispatch_country: Optional[str] = Field(None, max_length=100, description="Sevk/çıkış ülkesi menşeden farklıysa (A.TR/serbest dolaşım değerlendirmesi)."),
+    atr_certificate: Optional[bool] = Field(None, description="Sevk AB'den ise A.TR dolaşım belgesi ibraz edilecek mi? Teyit edilmeden serbest dolaşım sütunu uygulanmaz."),
+    customs_duty_rate: Optional[float] = Field(None, ge=0, le=1000, description="Yalnızca kullanıcıca doğrulanmış gümrük vergisi oranı; resmî orandan farklıysa uyarı döner."),
+    additional_duty_rate: Optional[float] = Field(None, ge=0, le=1000, description="Yalnızca kullanıcıca doğrulanmış İGV oranı; resmî orandan farklıysa uyarı döner."),
+    additional_financial_liability_rate: Optional[float] = Field(None, ge=0, le=1000, description="Doğrulanmış ek mali yükümlülük oranı; uygulanmıyorsa 0."),
+    trt_bandrol_rate: Optional[float] = Field(None, ge=0, le=100, description="TRT bandrol ücreti oranı (uygulanıyorsa)."),
+    exchange_rate: Optional[float] = Field(None, gt=0, le=1_000_000, description="Beyanname tescil tarihli TCMB döviz satış kuru (1 birim döviz = kaç TL); verilirse TL özeti üretilir."),
+    exchange_rate_date: Optional[str] = Field(None, pattern=r"^\d{4}-\d{2}-\d{2}$", description="Kur tarihi (YYYY-AA-GG)."),
+    stamp_duty_try: Optional[float] = Field(None, ge=0, le=1_000_000_000, description="Beyanname damga vergisi (TL, maktu)."),
+    port_storage_try: Optional[float] = Field(None, ge=0, le=1_000_000_000, description="Tescile kadar liman/ardiye/tahmil-tahliye giderleri (TL)."),
+    gekap_try: Optional[float] = Field(None, ge=0, le=1_000_000_000, description="GEKAP tutarı (TL, beyanla ödenir)."),
 ) -> dict:
     """Calculate a reproducible landed cost with official safe-to-use tariff rates.
 
@@ -2683,7 +2859,19 @@ async def calculate_import_landed_cost(
             sct_amount=sct_amount,
             surveillance_unit_value=surveillance_unit_value,
             has_surveillance_certificate=has_surveillance_certificate,
+            payment_method=payment_method,
+            customs_duty_rate=customs_duty_rate,
+            additional_duty_rate=additional_duty_rate,
+            additional_financial_liability_rate=additional_financial_liability_rate,
+            trt_bandrol_rate=trt_bandrol_rate,
+            exchange_rate=exchange_rate,
+            exchange_rate_date=exchange_rate_date,
+            stamp_duty_try=stamp_duty_try,
+            port_storage_try=port_storage_try,
+            gekap_try=gekap_try,
         ),
+        dispatch_country=dispatch_country,
+        atr_certificate=atr_certificate,
     )
 
 
@@ -2807,6 +2995,7 @@ async def prepare_customs_precheck(
     classification_models: Optional[list[str]] = Field(None, max_length=3, description="Sınıflandırmada kullanılan bağımsız model kimlikleri."),
     origin_country: Optional[str] = Field(None, max_length=100, description="Menşe ülke; sevk ülkesinden ayrıdır."),
     dispatch_country: Optional[str] = Field(None, max_length=100, description="Varsa sevk/çıkış ülkesi."),
+    atr_certificate: Optional[bool] = Field(None, description="Sevk AB'den ise A.TR dolaşım belgesi ibraz edilecek mi? Teyit edilmeden serbest dolaşım sütunu uygulanmaz."),
     intended_use: Optional[str] = Field(None, max_length=300, description="Ürünün kullanım amacı ve hedef kullanıcısı."),
     target_user: Optional[str] = Field(None, max_length=300, description="Hedef kullanıcının cinsiyet ve yaş grubu."),
     declared_product_type: Optional[str] = Field(None, max_length=300, description="İthalatta beyan edilmesi düşünülen ürün türü."),
@@ -2834,6 +3023,12 @@ async def prepare_customs_precheck(
     sct_amount: Optional[float] = Field(None, ge=0, le=1_000_000_000),
     surveillance_unit_value: Optional[float] = Field(None, ge=0, le=1_000_000_000),
     has_surveillance_certificate: Optional[bool] = Field(None),
+    trt_bandrol_rate: Optional[float] = Field(None, ge=0, le=100, description="TRT bandrol ücreti oranı (uygulanıyorsa)."),
+    exchange_rate: Optional[float] = Field(None, gt=0, le=1_000_000, description="Beyanname tescil tarihli TCMB döviz satış kuru (1 birim döviz = kaç TL); verilirse TL özeti üretilir."),
+    exchange_rate_date: Optional[str] = Field(None, pattern=r"^\d{4}-\d{2}-\d{2}$", description="Kur tarihi (YYYY-AA-GG)."),
+    stamp_duty_try: Optional[float] = Field(None, ge=0, le=1_000_000_000, description="Beyanname damga vergisi (TL, maktu)."),
+    port_storage_try: Optional[float] = Field(None, ge=0, le=1_000_000_000, description="Tescile kadar liman/ardiye/tahmil-tahliye giderleri (TL)."),
+    gekap_try: Optional[float] = Field(None, ge=0, le=1_000_000_000, description="GEKAP tutarı (TL, beyanla ödenir)."),
 ) -> CustomsEvidencePack:
     """Prepare the evidence required for a cautious product-specific import answer.
 
@@ -2856,6 +3051,7 @@ async def prepare_customs_precheck(
         classification_models=classification_models or [],
         origin_country=origin_country,
         dispatch_country=dispatch_country,
+        atr_certificate=atr_certificate,
         intended_use=intended_use,
         target_user=target_user,
         declared_product_type=declared_product_type,
@@ -2880,6 +3076,12 @@ async def prepare_customs_precheck(
         sct_amount=sct_amount,
         surveillance_unit_value=surveillance_unit_value,
         has_surveillance_certificate=has_surveillance_certificate,
+        trt_bandrol_rate=trt_bandrol_rate,
+        exchange_rate=exchange_rate,
+        exchange_rate_date=exchange_rate_date,
+        stamp_duty_try=stamp_duty_try,
+        port_storage_try=port_storage_try,
+        gekap_try=gekap_try,
     )
     guard_data(inquiry.model_dump(mode="json"), path="MCP gümrük sorusu")
     return await customs_advisor_service.evidence_pack(inquiry)

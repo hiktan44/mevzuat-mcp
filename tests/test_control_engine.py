@@ -3,12 +3,17 @@ import io
 import tempfile
 import unittest
 import zipfile
+from pathlib import Path
 
 import openpyxl
 
 from control_engine import (
     ImportControlEngine,
+    annex_plan,
+    communique_code_matches,
     extract_annex_scope,
+    extract_exemptions,
+    structure_document_list,
     extract_attachment_scope,
     extract_required_documents,
     extract_scope_table,
@@ -44,6 +49,28 @@ class ControlParsingTests(unittest.TestCase):
         self.assertEqual([row.gtip_prefix for row in rows], ["300590500019", "392690971000"])
         self.assertIn("tıbbi tekstiller", rows[0].description)
 
+    def test_document_excerpt_is_structured_into_rows(self):
+        excerpt = ("YÜKLENMESİ GEREKEN BELGELER 1. Fatura veya proforma fatura 2. Taşıma belgesi 3. Varsa AB'de serbest "
+                   "dolaşımda olduğunu gösteren A.TR belgesi 4. Ürün teknik dosyası, talep edilmesi halinde")
+        rows = structure_document_list(excerpt)
+        self.assertEqual([row.order for row in rows], [1, 2, 3, 4])
+        self.assertEqual(rows[0].text, "Fatura veya proforma fatura")
+        self.assertEqual([row.kind for row in rows], ["required", "required", "conditional", "conditional"])
+        self.assertEqual(structure_document_list(None), [])
+
+    def test_exemption_sentences_are_collected_from_the_text(self):
+        text = ("MADDE 5- (1) Ek-1'de yer alan ürünlerden numune olarak gelenler bu Tebliğ kapsamı dışındadır. "
+                "(2) Sanayicilerin kendi üretimlerinde girdi olarak kullanacakları ürünler için TAREKS başvurusu aranmaz. "
+                "MADDE 6- (1) AB'de serbest dolaşımda bulunan ürünler A.TR Dolaşım Belgesi ile geldiğinde denetime tabi tutulmaz. "
+                "MADDE 7- (1) Bu Tebliğ 1/1/2026 tarihinde yürürlüğe girer. "
+                "Ek-1 8429.11.00.00.00 Paletli buldozerler 8429.40.90.00.00 Diğer yol silindirleri 8701.21.00.00.00 Çekiciler.")
+        found = extract_exemptions(text)
+        self.assertEqual(len(found), 3)
+        self.assertTrue(any("numune" in item for item in found))
+        self.assertTrue(any("Sanayicilerin" in item for item in found))
+        self.assertTrue(any("A.TR" in item for item in found))
+        self.assertFalse(any("8429" in item for item in found))
+
     def test_extracts_document_excerpt(self):
         excerpt = extract_required_documents(SAMPLE)
         self.assertIn("Fatura", excerpt)
@@ -63,6 +90,136 @@ BELGELER
 """
         rows = extract_annex_scope(text, annex_number=2)
         self.assertEqual([row.gtip_prefix for row in rows], ["842911000000", "842940900000"])
+
+    def test_multi_part_annex_tables_are_merged(self):
+        text = """
+Amaç MADDE 1- Ek-1'de yer alan ürünler denetlenir.
+Ek-1 sayılı listede 3005.90.50.00.19 sayılı ürün geçer diyen bir gövde cümlesi.
+Ek-1/A
+CANLI HAYVANLAR
+0101.21.00.00.00 Saf kan damızlık atlar
+Ek-1/B
+ETLER
+0201.10.00.00.00 Karkas
+EK-2 İTHALİ YASAK ATIKLAR
+2710.99.00.00.00 Atık yağlar
+Ek-
+3
+Taahhütname 2026
+"""
+        self.assertEqual([row.gtip_prefix for row in extract_annex_scope(text, 1)], ["010121000000", "020110000000"])
+        self.assertEqual([row.gtip_prefix for row in extract_annex_scope(text, 2)], ["271099000000"])
+        self.assertEqual(extract_annex_scope(text, 3), [])
+
+    def test_communique_code_matches_only_the_full_number(self):
+        self.assertTrue(communique_code_matches("2026/1", "İthalatta Standartlara Uygunluk Denetimi Tebliği (Ürün Güvenliği ve Denetimi: 2026/1)"))
+        self.assertTrue(communique_code_matches("2026/32", "Makinaların İthalat Denetimi Tebliği (Ürün Güvenliği ve Denetimi : 2026 / 32)"))
+        self.assertFalse(communique_code_matches("2026/1", "Tüketici Ürünlerinin İthalat Denetimi Tebliği (Ürün Güvenliği ve Denetimi: 2026/12)"))
+        self.assertFalse(communique_code_matches("2026/2", "Sağlık Bakanlığınca Denetlenen Bazı Ürünlerin İthalat Denetimi Tebliği (ÜGD: 2026/20)"))
+        self.assertFalse(communique_code_matches("2026/3", "Makinaların İthalat Denetimi Tebliği (ÜGD: 2026/32)"))
+
+    def test_annex_plan_supports_legacy_and_multi_annex_configuration(self):
+        self.assertEqual(annex_plan({}), [{"annex": 1, "kind": "scope"}])
+        self.assertEqual(annex_plan({"scope_annex": 2}), [{"annex": 2, "kind": "scope"}])
+        self.assertEqual(
+            annex_plan({"scope_annexes": [1, {"annex": 2, "kind": "prohibited"}, {"annex": 3, "kind": "bogus"}]}),
+            [{"annex": 1, "kind": "scope"}, {"annex": 2, "kind": "prohibited"}, {"annex": 3, "kind": "scope"}],
+        )
+
+    def test_shipped_config_declares_the_official_prohibited_annexes(self):
+        """Yasak ekleri resmî tebliğ metinlerinden doğrulandı; yapılandırma bunu taşımalı."""
+        import json
+
+        rules = {
+            rule["code"]: rule
+            for rule in json.loads(Path("control_sources.json").read_text(encoding="utf-8"))["rules"]
+        }
+        expected = {
+            # 2026/3 MADDE 4/(1): Ek-2/A ve Ek-2/B'deki atıkların girişi yasak, Ek-1 kontrole tabi.
+            "2026/3": [{"annex": 1, "kind": "scope"}, {"annex": 2, "kind": "prohibited"}],
+            # 2026/6 MADDE 4/(1) ve 12/(1): Ek-1 ve Ek-3 yasak; Ek-2 (florlu sera gazları) kontrole tabi.
+            "2026/6": [
+                {"annex": 1, "kind": "prohibited"},
+                {"annex": 2, "kind": "scope"},
+                {"annex": 3, "kind": "prohibited"},
+            ],
+            # 2026/23 MADDE 2/(1) ve 4/(4): Ek-2'deki metal hurdaların girişi yasak.
+            "2026/23": [{"annex": 1, "kind": "scope"}, {"annex": 2, "kind": "prohibited"}],
+        }
+        for code, plan in expected.items():
+            self.assertIn(code, rules, code)
+            self.assertEqual(annex_plan(rules[code]), plan, code)
+            self.assertTrue(rules[code].get("annex_note"), code)
+
+    def test_rules_without_a_prohibited_annex_stay_scope_only(self):
+        import json
+
+        rules = json.loads(Path("control_sources.json").read_text(encoding="utf-8"))["rules"]
+        for rule in rules:
+            if rule["code"] in {"2026/3", "2026/6", "2026/23"}:
+                continue
+            kinds = {item["kind"] for item in annex_plan(rule)}
+            self.assertEqual(kinds, {"scope"}, rule["code"])
+
+    def test_prohibited_list_rows_are_reported_separately(self):
+        with tempfile.TemporaryDirectory() as directory:
+            engine = ImportControlEngine(data_dir=directory)
+            engine.rules_config = [item for item in engine.rules_config if item["code"] == "2026/3"]
+            with engine._connect() as db:
+                db.execute(
+                    """INSERT INTO control_snapshots (id, code, title, category, mevzuat_id, source_url,
+                    official_gazette_date, official_gazette_number, document_sha256, retrieved_at, valid_from,
+                    scope_count, authority, system, risk_based, physical_inspection_possible,
+                    laboratory_test_possible, required_documents_excerpt, active)
+                    VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)""",
+                    (
+                        "waste", "2026/3", "Atık Tebliği", "atıklar", "3", "https://mevzuat.adalet.gov.tr/",
+                        "2025-12-31", "33124", "abc", "2026-01-01T00:00:00+03:00", "2026-01-01", 2,
+                        "Çevre, Şehircilik ve İklim Değişikliği Bakanlığı", "Bakanlık", 0, 1, 0, None, 1,
+                    ),
+                )
+                db.executemany(
+                    "INSERT INTO control_scope (snapshot_id, gtip_prefix, description, source_line, source_offset, excluded, list_kind) VALUES (?,?,?,?,?,?,?)",
+                    [
+                        ("waste", "3915", "Plastik döküntü", "39.15 Plastik döküntü", 1, 0, "scope"),
+                        ("waste", "271099", "Atık yağ", "2710.99 Atık yağ", 2, 0, "prohibited"),
+                    ],
+                )
+            controlled = asyncio.run(engine.lookup("391510000000"))
+            banned = asyncio.run(engine.lookup("271099000000"))
+            asyncio.run(engine.close())
+            self.assertEqual(controlled.matches[0].matched_scope.list_kind, "scope")
+            self.assertEqual(controlled.matches[0].rule.required_documents, [])
+            self.assertEqual(banned.matches[0].matched_scope.list_kind, "prohibited")
+            self.assertIn("ithali yasak", banned.matches[0].assessment)
+
+    def test_legacy_scope_table_is_migrated_with_list_kind(self):
+        with tempfile.TemporaryDirectory() as directory:
+            path = f"{directory}/controls.sqlite3"
+            import sqlite3
+            with sqlite3.connect(path) as db:
+                db.executescript(
+                    """
+                    CREATE TABLE control_snapshots (id TEXT PRIMARY KEY, code TEXT NOT NULL, title TEXT NOT NULL,
+                        category TEXT NOT NULL, mevzuat_id TEXT NOT NULL, source_url TEXT NOT NULL,
+                        official_gazette_date TEXT, official_gazette_number TEXT, document_sha256 TEXT NOT NULL,
+                        retrieved_at TEXT NOT NULL, valid_from TEXT NOT NULL, scope_count INTEGER NOT NULL,
+                        authority TEXT NOT NULL, system TEXT NOT NULL, risk_based INTEGER NOT NULL,
+                        physical_inspection_possible INTEGER NOT NULL, laboratory_test_possible INTEGER NOT NULL,
+                        required_documents_excerpt TEXT, active INTEGER NOT NULL DEFAULT 0);
+                    CREATE TABLE control_scope (snapshot_id TEXT NOT NULL REFERENCES control_snapshots(id) ON DELETE CASCADE,
+                        gtip_prefix TEXT NOT NULL, description TEXT, source_line TEXT NOT NULL,
+                        source_offset INTEGER NOT NULL, excluded INTEGER NOT NULL DEFAULT 0,
+                        PRIMARY KEY (snapshot_id, gtip_prefix));
+                    INSERT INTO control_snapshots VALUES ('old','2026/18','T','t','1','u',NULL,NULL,'d','r','2026-01-01',1,'a','s',1,1,1,NULL,1);
+                    INSERT INTO control_scope VALUES ('old','6104','Kadın giyim','6104',1,0);
+                    """
+                )
+            engine = ImportControlEngine(data_dir=directory)
+            with engine._connect() as db:
+                rows = db.execute("SELECT gtip_prefix, list_kind FROM control_scope").fetchall()
+            asyncio.run(engine.close())
+            self.assertEqual([tuple(row) for row in rows], [("6104", "scope")])
 
     def test_extracts_inline_gtp_table(self):
         text = """
@@ -85,8 +242,11 @@ Yürürlükten kaldırılan tebliğ
             engine.rules_config = [item for item in engine.rules_config if item["code"] == "2026/31"]
             with engine._connect() as db:
                 db.execute(
-                    """INSERT INTO control_snapshots VALUES
-                    (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)""",
+                    """INSERT INTO control_snapshots (id, code, title, category, mevzuat_id, source_url,
+                    official_gazette_date, official_gazette_number, document_sha256, retrieved_at, valid_from,
+                    scope_count, authority, system, risk_based, physical_inspection_possible,
+                    laboratory_test_possible, required_documents_excerpt, active)
+                    VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)""",
                     (
                         "vehicles", "2026/31", "Taşıt Tebliği", "taşıt", "31", "https://mevzuat.adalet.gov.tr/",
                         "2025-12-31", "33124", "abc", "2026-01-01T00:00:00+03:00", "2026-01-01", 1,
@@ -94,7 +254,7 @@ Yürürlükten kaldırılan tebliğ
                     ),
                 )
                 db.executemany(
-                    "INSERT INTO control_scope VALUES (?,?,?,?,?,?)",
+                    "INSERT INTO control_scope (snapshot_id, gtip_prefix, description, source_line, source_offset, excluded) VALUES (?,?,?,?,?,?)",
                     [
                         ("vehicles", "8703", "Binek otomobilleri", "87.03 Binek otomobilleri", 1, 0),
                         ("vehicles", "870310110000", "Acil müdahale araçları hariç", "8703.10.11.00.00 hariç", 20, 1),
@@ -148,8 +308,11 @@ Yürürlükten kaldırılan tebliğ
             engine.rules_config = [item for item in engine.rules_config if item["code"] == "2026/18"]
             with engine._connect() as db:
                 db.execute(
-                    """INSERT INTO control_snapshots VALUES
-                    (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)""",
+                    """INSERT INTO control_snapshots (id, code, title, category, mevzuat_id, source_url,
+                    official_gazette_date, official_gazette_number, document_sha256, retrieved_at, valid_from,
+                    scope_count, authority, system, risk_based, physical_inspection_possible,
+                    laboratory_test_possible, required_documents_excerpt, active)
+                    VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)""",
                     (
                         "snap", "2026/18", "Tekstil Tebliği", "tekstil", "1", "https://mevzuat.adalet.gov.tr/",
                         "2025-12-31", "33124", "abc", "2026-01-01T00:00:00+03:00", "2026-01-01", 1,
@@ -157,11 +320,13 @@ Yürürlükten kaldırılan tebliğ
                     ),
                 )
                 db.execute(
-                    "INSERT INTO control_scope VALUES (?,?,?,?,?,?)",
+                    "INSERT INTO control_scope (snapshot_id, gtip_prefix, description, source_line, source_offset, excluded) VALUES (?,?,?,?,?,?)",
                     ("snap", "6104", "Kadın giyim", "6104 Kadın giyim", 10, 0),
                 )
             result = asyncio.run(engine.lookup("850760000000"))
+            matched = asyncio.run(engine.lookup("610410000000"))
             asyncio.run(engine.close())
+            self.assertEqual([item.text for item in matched.matches[0].rule.required_documents], [])
             self.assertEqual(result.status, "not_found")
             self.assertIn("anlamına gelmez", result.warnings[0])
 

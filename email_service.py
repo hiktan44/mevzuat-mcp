@@ -82,6 +82,52 @@ def render_precheck_email(result: CustomsPrecheckResult, base_url: str) -> str:
 </div>"""
 
 
+def render_watch_email(items: list[dict[str, Any]], base_url: str) -> str:
+    """One e-mail per user listing the official tariff line changes on watched codes."""
+    blocks: list[str] = []
+    for item in items:
+        rows = "".join(
+            f"<tr><td style='padding:4px 10px;border:1px solid #d6dee8;'>{_esc(change.get('gtip'))}</td>"
+            f"<td style='padding:4px 10px;border:1px solid #d6dee8;'>{_esc(change.get('measure_label') or change.get('measure_type'))}</td>"
+            f"<td style='padding:4px 10px;border:1px solid #d6dee8;'>{_esc(change.get('country_group'))}</td>"
+            f"<td style='padding:4px 10px;border:1px solid #d6dee8;'>{_esc(change.get('before') if change.get('before') is not None else '—')}</td>"
+            f"<td style='padding:4px 10px;border:1px solid #d6dee8;'>{_esc(change.get('after') if change.get('after') is not None else '— (satır kaldırıldı)')}</td></tr>"
+            for change in item.get("changes", [])[:20]
+        )
+        label = f" · {_esc(item.get('label'))}" if item.get("label") else ""
+        blocks.append(
+            f"<h3 style='margin:14px 0 6px;font-size:15px;'>{_esc(item.get('gtip'))}{label}</h3>"
+            f"<p style='margin:0 0 6px;font-size:12px;color:#43536c;'>{_esc(item.get('source_title'))} · yeni sürüm {_esc(item.get('new_snapshot'))}</p>"
+            "<table style='border-collapse:collapse;font-size:12px;'><tr>"
+            "<th style='padding:4px 10px;border:1px solid #d6dee8;'>GTİP</th><th style='padding:4px 10px;border:1px solid #d6dee8;'>Önlem</th>"
+            "<th style='padding:4px 10px;border:1px solid #d6dee8;'>Sütun</th><th style='padding:4px 10px;border:1px solid #d6dee8;'>Önce</th>"
+            f"<th style='padding:4px 10px;border:1px solid #d6dee8;'>Sonra</th></tr>{rows}</table>"
+        )
+    return f"""<div style="font-family:Arial,Helvetica,sans-serif;color:#0b1e3f;max-width:640px;">
+  <p style="margin:0 0 4px;font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:#006678;">Ticaret Bilgi Masası · İzleme listesi</p>
+  <h2 style="margin:0 0 8px;font-size:19px;">İzlediğiniz GTİP satırlarında resmî tarife değişikliği</h2>
+  {''.join(blocks)}
+  <p style="margin:14px 0 0;font-size:12px;">Ayrıntı ve kaynak satırları: <a href="{_esc(base_url)}/app?scope=customs#changes" style="color:#006678;">{_esc(base_url)}/app</a></p>
+  <p style="margin:8px 0 0;font-size:11px;color:#738097;">Bu bildirim resmî arşivin yeni sürümüyle önceki sürümün satır karşılaştırmasından üretilmiştir; bağlayıcı tarife bilgisi değildir. Beyan öncesi resmî kaynağı doğrulayın.</p>
+</div>"""
+
+
+def render_consultation_email(kind: str, subject: str, snippet: str, base_url: str) -> str:
+    titles = {
+        "new_request": "Yeni danışmanlık talebi",
+        "message": "Danışmanlık görüşmesinde yeni mesaj",
+        "status": "Danışmanlık talebinin durumu değişti",
+    }
+    return f"""<div style="font-family:Arial,Helvetica,sans-serif;color:#0b1e3f;max-width:640px;">
+  <p style="margin:0 0 4px;font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:#006678;">Ticaret Bilgi Masası · Gümrük danışmanları</p>
+  <h2 style="margin:0 0 8px;font-size:19px;">{_esc(titles.get(kind, 'Danışmanlık bildirimi'))}</h2>
+  <p style="margin:0 0 10px;font-size:13px;"><b>Konu:</b> {_esc(subject)}</p>
+  <blockquote style="margin:0 0 12px;padding:8px 12px;border-left:3px solid #006678;background:#f3f7fa;font-size:13px;">{_esc(snippet)}</blockquote>
+  <p style="margin:0;font-size:12px;">Görüşmeyi uygulamada açın: <a href="{_esc(base_url)}/app?scope=customs" style="color:#006678;">{_esc(base_url)}/app</a></p>
+  <p style="margin:8px 0 0;font-size:11px;color:#738097;">Mesaj içeriği yalnızca kısa bir alıntı olarak gönderildi; tam metin ve dosya uygulama içinde görüntülenir.</p>
+</div>"""
+
+
 class ResendEmailSender:
     """Small async client for the transactional e-mail HTTP API."""
 

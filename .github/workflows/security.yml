@@ -28,7 +28,9 @@ jobs:
         run: uv run python -m unittest discover -s tests -v
       - name: Static syntax checks
         run: |
-          uv run python -m compileall -q .
+          # Sadece depo kaynagini derle; .venv altindaki ucuncu parti paketler
+          # (ornegin olefile'in Python 2 kalintisi olefile2.py) kapsam disi.
+          uv run python -m compileall -q -x '(^|/)\.(venv|git)/' .
           node --check web/app.js
       - name: Secret scan
         uses: gitleaks/gitleaks-action@e0c47f4f8be36e29cdc102c57e68cb5cbf0e8d1e # v3

@@ -1,6 +1,28 @@
 # Proje Devir Notu — Ticaret Bilgi Masası / mevzuat-mcp
 
-Son güncelleme: 4 Eylül 2026
+Son güncelleme: 5 Eylül 2026
+
+## 5 Eylül 2026 oturumu — gümrük müşaviri testi ve kritik motor düzeltmeleri
+
+- Uygulama bir gümrük müşaviri gibi uçtan uca test edildi; 55 bulgu ve eksik özellik listesi
+  `docs/gumrukcu-test-raporu-2026-09-05.md` dosyasında (dosya/satır numaralı, önerilen sırayla).
+- Raporun 1. sırası kapatıldı (126 test): belirlenimci ve ölçü türü bazlı menşe sütunu seçimi,
+  IV/V sayılı liste ayrımı, İGV Ek-2/3 sayfa adı toleransı, tebliğ kodu tam eşleşmesi, çok parçalı ek
+  birleştirme ve `scope_annexes` / `list_kind` (ithali yasak listesi) altyapısı. Ayrıntı raporun
+  "Düzeltme günlüğü" bölümünde.
+- Raporun 2. sırası da kapatıldı (142 test): `countries.py` ortak ülke kayıt defteri, fasıl + sevk ülkesine
+  göre menşe belgesi kuralı (A.TR / EUR.1 tarım / EUR.1 AKÇT / menşe beyanı), `dispatch_country` ile A.TR
+  serbest dolaşım mantığı ve İGV/EMY menşe tevsiki bayrağı, kullanıcı-oran çakışma uyarısı, `extra="forbid"`,
+  MCP maliyet aracına ödeme şekli/EMY/oran parametreleri. Ayrıntı raporun "Düzeltme günlüğü" bölümünde.
+- Eksik özellik listesinden tamamlananlar (5 Eyl akşam): ülke öneri listesi + Türkçe sayı girişi; CSV dışa aktarım ve
+  kopyalama; toplu hesap (`bulk_costing.py`, `/api/tariff/bulk`); TL beyanname özeti (damga vergisi, liman/ardiye,
+  GEKAP, TRT bandrolü; formula v4) ve tamamlanmış Tarife & Maliyet formu; kontrol tebliği belge listesi satırları +
+  muafiyet cümleleri; sunucu izleme listesi + değişiklik/danışman e-posta bildirimleri (`RESEND_API_KEY` gerekir).
+- Sıradaki iş: raporun 3. sırası (Tarife & Maliyet formuna eksik alanlar, "İGV listesinde yok → %0" mantığı,
+  4 haneli karar ağacı) ve 4. sırası (sunucu tarafı doğrulama, görsel redaksiyon atlaması, görsel boyut kontrolü).
+- Cloudflare "Workers Builds: mevzuat-mcp" kontrolü depoya dışarıdan bağlı ve her commit'te kırmızı;
+  depoda Workers yapılandırması yok. Cloudflare panosundan Workers & Pages → mevzuat-mcp → Settings →
+  Builds → Disconnect ile kaldırılmalı (MCP'de bu işlem için araç yok).
 
 ## 4 Eylül 2026 oturumu — rekabet analizi karşılıkları
 
@@ -172,3 +194,12 @@ Aşağıdaki dokuz madde aynı gün kapatıldı (Playwright ile doğrulandı, 10
 - Tasarım yumuşatması "ek katman" olarak dosya sonuna yazıldı; mevcut kuralların üstüne
   yazılmadı ki fark tek blokta görülsün ve gerekirse tek hamlede geri alınsın.
 - Yerel test için gerçek Google hesabı açılmadı; imzalı test çerezi kullanıldı.
+
+## 6 Eylül 2026 – resmî önlem listeleri, günlük eşitleme, TCMB kuru, Eylemio
+
+- `exchange_rates.py`: TCMB bülteni (today.xml / arşiv), tescil tarihinden önceki son iş günü kuralı, döviz satış kuru; `/api/tariff/exchange-rate`, MCP `get_customs_exchange_rate`, formlarda "TCMB kurunu getir".
+- `trade_measures.py`: damping/sübvansiyon (Bakanlık xlsx), korunma (Bakanlık xlsx), gözetim (mevzuat.gov.tr fihrist metinleri) ve İthalat Tebliğleri dizini; `data/official/*.json` tohumları, `trade_measures.sqlite3` anlık görüntü + değişiklik defteri; `TradeMeasureEngine.periodic_sync_loop` günde bir çalışır (`TRADE_MEASURES_SYNC_INTERVAL_SECONDS`). Tarife lookup sonucuna `trade_measures`, maliyet hesabına uyarılar ve kapsam durumu eklendi.
+- Resmî veri sandbox üzerinden çekildi: mevzuat.gov.tr ara sertifika (GeoTrust) göndermediği için `trusted_certificates` ile doğrulama; gözetim metinlerinin 193/194'ü tohumda (856 satır / 851 GTİP; 10 metinde tablo yok); tarım tarife kontenjanları 13 karar / 428 satır (.docx), .doc ekleri sunucuda antiword ile günlük eşitlemede (site 150 istek sonrası yavaşlıyor; eşitleme istekler arasında bekler).
+- `eylemio_client.py`: Eylemio `ticaret-beyanname` konektörü ile beyanname durumu (login → hesap listesi → read). Depo bulunamadığı için API şekli canlı siteden çıkarıldı; yanıt alanları genel olarak gösterilir.
+- Testler: 183 (exchange_rates 6, trade_measures 11, eylemio 4).
+- Tarife kontenjanı ekleri: 21 ülke / 863 satır tohumda; `.doc` dosyaları `olefile` ile saf Python'da okunuyor (antiword yalnız son çare), başlık eşleştirmesi caption sonuna bakıyor ve kısa/kaymış satırları hizalıyor.
