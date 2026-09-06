@@ -498,8 +498,10 @@ def _quota_rows_from_cells(rows: Iterable[list[str]]) -> list[dict[str, str]]:
                     columns["description"] = index
             continue
         code_index = gtip_col if header else 0
+        seq_shift = 0
         if code_index + 1 < len(cells) and re.fullmatch(r"\d{1,3}", cells[code_index]) and _ROW_CODE_RE.match(cells[code_index + 1]):
-            code_index += 1  # baştaki "Sıra No" sütunu
+            code_index += 1  # baştaki "Sıra No" sütunu başlıkta yoksa satır sağa kayar
+            seq_shift = 1
         if code_index >= len(cells):
             continue
         code = cells[code_index]
@@ -507,11 +509,15 @@ def _quota_rows_from_cells(rows: Iterable[list[str]]) -> list[dict[str, str]]:
             continue
         item: dict[str, str] = {"gtip": code, "description": ""}
         if header:
-            desc_index = columns.get("description", code_index + 1)
+            desc_index = columns.get("description", code_index) + seq_shift
+            if desc_index <= code_index:
+                desc_index = code_index + 1
             # Açıklama hücresi boş bırakılıp sütunlar sola kaydığında (kısa satır) miktar açıklama yerine gelir.
-            shift = 1 if desc_index < len(cells) and _QUANTITY_RE.match(cells[desc_index]) and len(cells) < len(header) else 0
+            shift = 1 if desc_index < len(cells) and _QUANTITY_RE.match(cells[desc_index]) and len(cells) < len(header) + seq_shift else 0
             for field_name, index in columns.items():
-                source = index - shift if shift and index > desc_index else index
+                source = index + seq_shift
+                if shift and source > desc_index:
+                    source -= 1
                 if field_name == "description" and shift:
                     continue
                 if 0 <= source < len(cells) and cells[source]:
