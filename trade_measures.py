@@ -66,7 +66,7 @@ _ROW_CODE_RE = re.compile(r"^\s*(\d{4}(?:\.\d{2}){1,4}|\d{2}\.\d{2}(?:\.\d{2}){0
 PARSER_VERSION = 4
 _QUANTITY_RE = re.compile(r"^\d[\d.,]*\s*(?:ton|kg|adet|baş|bas|litre|lt|m3|m2|hl)\b", re.I)
 # Kod, resmî tabloda dipnot işaretiyle bitebilir ("4820.30.00.00.00+").
-_TEXT_ITEM_RE = re.compile(r"(\d{4}(?:\.\d{2}){1,4}|\d{2}\.\d{2}(?:\.\d{2}){0,4})[+*]?\s+(.+?)\s+(\d+(?:[.,]\d+)?)(?=\s+(?:\d{4}(?:\.\d{2}){1,4}|\d{2}\.\d{2}(?:\.\d{2}){0,4})[+*]?\s|\s*(?:\*|Gözetim|MADDE|$))")
+_TEXT_ITEM_RE = re.compile(r"(\d{4}(?:\.\d{2}){1,4}|\d{2}\.\d{2}(?:\.\d{2}){0,4})[+*]?\s+(.+?)\s+(\d+(?:[.,]\d+)?)(?=\s+(?:\d{4}(?:\.\d{2}){1,4}|\d{2}\.\d{2}(?:\.\d{2}){0,4})[+*]?\s|\s*(?:\*|Gözetim|MADDE|$))", re.DOTALL)
 _ALL_COUNTRIES = {"tüm ülkeler", "tum ulkeler", "all countries"}
 KINDS = ("anti_dumping", "safeguard", "surveillance", "tariff_quota", "communiques")
 AGRI_QUOTA_PAGE = "https://ticaret.gov.tr/ithalat/askiya-alma-ve-tarife-kontenjani/tarim-urunlerinde-acilan-tarife-kontenjanlari"
@@ -414,7 +414,12 @@ def parse_surveillance_page(html_text: str, meta: dict[str, Any] | None = None) 
             stop = re.search(r"\s(?:Gözetim uygulaması|MADDE 2|Yürürlük)\b", tail)
             segment = tail[: stop.start()] if stop else tail[:20000]
             for code, description, value in _TEXT_ITEM_RE.findall(segment):
-                items.append({"gtip": code, "description": description.strip(" -–"), "value": value, "unit": default_unit})
+                items.append({
+                    "gtip": code,
+                    "description": re.sub(r"\s+", " ", description).strip(" -–"),
+                    "value": value,
+                    "unit": default_unit,
+                })
     if not items:
         items, default_unit = _prose_surveillance_items(text, default_unit)
     if default_unit is None:

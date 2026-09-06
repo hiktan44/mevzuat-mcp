@@ -142,6 +142,20 @@ class ParserTests(unittest.TestCase):
         )
         self.assertEqual([item["value"] for item in doc["items"]], ["3.600", "2.100"])
 
+    def test_description_wrapping_across_lines_is_joined(self):
+        # Resmî sayfada eşya tanımı satır sonuna sarabilir; tek satıra indirilmeli.
+        text = (
+            "<p>G.T.İ .P. Eşyanın Tanımı CIF Kıymet (ABD Doları/Ton*) "
+            "4820.30.00.00.00+ Klasörler,\n  ciltler (kitap kapakları hariç), dosya gömlekleri 3.600 "
+            "* Ton: Brüt ağırlık Gözetim uygulaması MADDE 2</p>"
+        )
+        doc = tm.parse_surveillance_page(text, {})
+        self.assertEqual(len(doc["items"]), 1)
+        self.assertEqual(
+            doc["items"][0]["description"],
+            "Klasörler, ciltler (kitap kapakları hariç), dosya gömlekleri",
+        )
+
     def test_scope_written_only_in_the_madde_2_sentence(self):
         # Tablosu olmayan eski tebliğlerde kapsam doğrudan MADDE 2 cümlesindedir.
         text = (
