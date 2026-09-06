@@ -911,10 +911,7 @@ class TariffEngine:
             "anti_dumping": self._trade_coverage("anti_dumping", "Ürün, menşe ve üretici/ihracatçı bazlı güncel damping/sübvansiyon önlemi henüz yapılandırılmış hesap motorunda değildir."),
             "surveillance": self._trade_coverage("surveillance", "Gözetim tebliği, birim kıymet, menşe ve yürürlük tarihi ayrıca doğrulanmalıdır."),
             "safeguard": self._trade_coverage("safeguard", "Korunma önlemi ve varsa ülke/istisna kapsamı ayrıca doğrulanmalıdır."),
-            "tariff_quota": MeasureCoverage(
-                status="not_integrated",
-                note="Tarife kontenjanı tahsis ve bakiye durumu işlem tarihinde ayrıca doğrulanmalıdır.",
-            ),
+            "tariff_quota": self._trade_coverage("tariff_quota", "Tarife kontenjanı tahsis ve bakiye durumu işlem tarihinde ayrıca doğrulanmalıdır."),
             "vat": MeasureCoverage(
                 status="user_confirmation_required",
                 note="Ürüne özgü güncel KDV oranı resmî kaynaktan doğrulanıp girilmelidir.",

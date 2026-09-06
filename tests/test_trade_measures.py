@@ -115,6 +115,31 @@ class ParserTests(unittest.TestCase):
         self.assertEqual(doc["items"][1]["value"], "5")
         self.assertEqual(doc["parser_version"], tm.PARSER_VERSION)
 
+    def test_quota_docx_and_discovery(self):
+        import zipfile
+        ns = "http://schemas.openxmlformats.org/wordprocessingml/2006/main"
+        def cell(text):
+            return f'<w:tc><w:p><w:r><w:t>{text}</w:t></w:r></w:p></w:tc>'
+        rows = [
+            ["G.T.İ.P.", "Madde İsmi", "Kontenjan Miktarı (Ton)", "Kontenjan Dönemi", "Uygulanacak Gümrük Vergisi (%)"],
+            ["0702.00.00.00.00", "Domates", "10.000", "1/1-31/12", "0"],
+            ["0805.10", "Portakal", "5.000", "1/1-31/12", "0"],
+        ]
+        body = "".join("<w:tr>" + "".join(cell(c) for c in r) + "</w:tr>" for r in rows)
+        xml = f'<?xml version="1.0"?><w:document xmlns:w="{ns}"><w:body><w:tbl>{body}</w:tbl></w:body></w:document>'
+        buffer = io.BytesIO()
+        with zipfile.ZipFile(buffer, "w") as archive:
+            archive.writestr("word/document.xml", xml)
+        doc = tm.parse_quota_document(buffer.getvalue(), "Fas Karar.docx", {"title": "Fas Krallığı Menşeli Bazı Tarım Ürünleri İthalatında Tarife Kontenjanı Uygulanması Hakkında Karar", "url": "https://ticaret.gov.tr/x/Fas%20Karar.docx"})
+        self.assertEqual(doc["origin"], "Fas Krallığı")
+        self.assertEqual(doc["item_count"], 2)
+        self.assertEqual(doc["items"][0]["quantity"], "10.000")
+        self.assertEqual(doc["items"][0]["duty_rate"], "0")
+        self.assertEqual(doc["items"][1]["period"], "1/1-31/12")
+        links = tm.discover_quota_documents('<a href="/data/abc/Fas Karar.doc">Fas Krallığı Menşeli Bazı Tarım Ürünleri İthalatında Tarife Kontenjanı</a><a href="/data/abc/x.pdf">Kontenjan pdf</a>', "https://ticaret.gov.tr/ithalat")
+        self.assertEqual(len(links), 1)
+        self.assertEqual(links[0]["url"], "https://ticaret.gov.tr/data/abc/Fas%20Karar.doc")
+
 
 class EngineTests(unittest.TestCase):
     def setUp(self):
@@ -127,6 +152,7 @@ class EngineTests(unittest.TestCase):
             json.dumps([tm.parse_surveillance_page(SURVEILLANCE_HTML, {"mevzuat_no": "46246", "rg_date": "09/04/2026", "rg_no": "33219", "title": "Gözetim 2026/37"})]),
             encoding="utf-8",
         )
+        (seed / "agricultural_quotas.json").write_text(json.dumps([{"title": "Fas Krallığı Menşeli Bazı Tarım Ürünleri İthalatında Tarife Kontenjanı Uygulanması Hakkında Karar", "origin": "Fas Krallığı", "url": "https://ticaret.gov.tr/x/Fas.docx", "items": [{"gtip": "0805.10", "description": "Portakal", "quantity": "5.000 Ton", "period": "1/1-31/12", "duty_rate": "0"}]}]), encoding="utf-8")
         self.engine = tm.TradeMeasureEngine(self.tmp)
         self.engine.store = tm.TradeMeasureStore(self.tmp, seed_dir=seed)
 
@@ -156,6 +182,15 @@ class EngineTests(unittest.TestCase):
         lines = tm.summary_lines(surveillance)
         self.assertTrue(lines and lines[0].startswith("Gözetim"))
 
+    def test_quota_hits_match_origin(self):
+        report = self.engine.lookup("080510220000", "Fas")
+        self.assertEqual(len(report.tariff_quota), 1)
+        self.assertTrue(report.tariff_quota[0].origin_match)
+        self.assertIn("5.000 Ton", report.tariff_quota[0].rate_text)
+        other = self.engine.lookup("080510220000", "Mısır")
+        self.assertFalse(other.tariff_quota[0].origin_match)
+        self.assertTrue(any(line.startswith("Tarife kontenjanı") for line in tm.summary_lines(report)))
+
     def test_short_code_matches_longer_official_rows(self):
         report = self.engine.lookup("848180", None)
         self.assertEqual(len(report.surveillance), 1)
@@ -181,6 +216,7 @@ class EngineTests(unittest.TestCase):
         status = self.engine.status()
         self.assertEqual(status["datasets"]["anti_dumping"]["origin"], "seed")
         self.assertEqual(status["datasets"]["communiques"]["origin"], "missing")
+        self.assertEqual(status["datasets"]["tariff_quota"]["origin"], "seed")
 
 
 class OfficialSeedTests(unittest.TestCase):

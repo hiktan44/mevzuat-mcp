@@ -65,11 +65,13 @@ _ROW_CODE_RE = re.compile(r"^\s*(\d{4}(?:\.\d{2}){1,4}|\d{2}\.\d{2}(?:\.\d{2}){0
 PARSER_VERSION = 2
 _TEXT_ITEM_RE = re.compile(r"(\d{4}(?:\.\d{2}){1,4}|\d{2}\.\d{2}(?:\.\d{2}){0,4})\s+(.+?)\s+(\d+(?:[.,]\d+)?)(?=\s+(?:\d{4}(?:\.\d{2}){1,4}|\d{2}\.\d{2}(?:\.\d{2}){0,4})\s|\s*(?:\*|Gözetim|MADDE|$))")
 _ALL_COUNTRIES = {"tüm ülkeler", "tum ulkeler", "all countries"}
-KINDS = ("anti_dumping", "safeguard", "surveillance", "communiques")
+KINDS = ("anti_dumping", "safeguard", "surveillance", "tariff_quota", "communiques")
+AGRI_QUOTA_PAGE = "https://ticaret.gov.tr/ithalat/askiya-alma-ve-tarife-kontenjani/tarim-urunlerinde-acilan-tarife-kontenjanlari"
 KIND_LABELS = {
     "anti_dumping": "Damping / sübvansiyon önlemleri",
     "safeguard": "Korunma önlemleri",
     "surveillance": "Gözetim tebliğleri",
+    "tariff_quota": "Tarım ürünleri tarife kontenjanları",
     "communiques": "İthalat Tebliğleri dizini",
 }
 
@@ -100,6 +102,18 @@ def code_matches(candidate: str, gtip: str) -> bool:
     return gtip.startswith(candidate) or candidate.startswith(gtip)
 
 
+def _ascii_key(text: str) -> str:
+    """Başlık eşleştirme için: küçük harf, Türkçe harfler sadeleştirilmiş, yalnız harfler."""
+    lowered = (text or "").replace("İ", "i").replace("I", "ı").lower().replace("\u0307", "")
+    table = str.maketrans("çğıöşü", "cgiosu")
+    return re.sub(r"[^a-z]", "", lowered.translate(table))
+
+
+def _is_code_header(text: str) -> bool:
+    key = _ascii_key(text)
+    return key.startswith("gtip") or key.startswith("gtp") or key in {"gtipno", "gtipkodu", "gtpkodu"}
+
+
 def _clean(value: Any) -> str:
     if value is None:
         return ""
@@ -110,11 +124,29 @@ def _clean(value: Any) -> str:
     return re.sub(r"[ \t\xa0]+", " ", str(value)).strip()
 
 
+_GROUP_KEYS = {"avrupa birli": "__eu__", "efta": "__efta__", "birleşik krall": "birlesik_krallik", "birlesik krall": "birlesik_krallik"}
+
+
 def _country_key(value: str) -> str | None:
     if not value:
         return None
-    country = find_country(value.split("/")[0].strip())
-    return country.key if country else None
+    name = value.split("/")[0].strip()
+    lowered = name.lower()
+    for needle, key in _GROUP_KEYS.items():
+        if needle in lowered:
+            if key.startswith("__"):
+                return key
+            country = find_country("Birleşik Krallık")
+            return country.key if country else key
+    country = find_country(name)
+    if country:
+        return country.key
+    words = name.split()
+    for length in range(len(words) - 1, 0, -1):
+        country = find_country(" ".join(words[:length]))
+        if country:
+            return country.key
+    return None
 
 
 def _country_matches(origin: str | None, measure_country: str) -> bool | None:
@@ -126,6 +158,11 @@ def _country_matches(origin: str | None, measure_country: str) -> bool | None:
         return True
     origin_key = _country_key(origin)
     measure_key = _country_key(measure_country)
+    if measure_key in {"__eu__", "__efta__"}:
+        origin_entry = find_country(origin)
+        if origin_entry is None:
+            return None
+        return origin_entry.regime == ("eu" if measure_key == "__eu__" else "efta")
     if origin_key and measure_key:
         return origin_key == measure_key
     return origin.strip().lower() == measure_country.split("/")[0].strip().lower()
@@ -271,11 +308,11 @@ def parse_surveillance_page(html_text: str, meta: dict[str, Any] | None = None) 
             if not cells:
                 continue
             joined = " ".join(cells).lower()
-            if not header_found and ("g.t.i.p" in joined or "gtip" in joined or "gtİp" in joined or "g.t.İ.p" in joined or "gtp" in joined):
+            if not header_found and any(_is_code_header(cell) for cell in cells):
                 header_found = True
                 for index, cell in enumerate(cells):
                     low = cell.lower()
-                    if any(token in low for token in ("g.t.i.p", "g.t.İ.p", "gtip", "gtİp", "gtp")) and "tanım" not in low:
+                    if _is_code_header(cell):
                         gtip_col = index
                     elif "tanım" in low or "eşya" in low or "esya" in low or "madde" in low:
                         desc_col = index
@@ -391,6 +428,118 @@ def parse_communique_index(html_text: str, base_url: str, year: int) -> list[dic
     return entries
 
 
+def _docx_table_rows(payload: bytes) -> list[list[str]]:
+    """OOXML belgesindeki tablo satırlarını hücre metinleriyle döndürür (ek bağımlılık gerekmez)."""
+    import zipfile
+    from xml.etree import ElementTree
+
+    ns = {"w": "http://schemas.openxmlformats.org/wordprocessingml/2006/main"}
+    with zipfile.ZipFile(io.BytesIO(payload)) as archive:
+        root = ElementTree.fromstring(archive.read("word/document.xml"))
+    rows: list[list[str]] = []
+    for tr in root.iter(f"{{{ns['w']}}}tr"):
+        cells = []
+        for tc in tr.findall("w:tc", ns):
+            text = " ".join(t.text or "" for t in tc.iter(f"{{{ns['w']}}}t"))
+            cells.append(re.sub(r"\s+", " ", text).strip())
+        rows.append(cells)
+    return rows
+
+
+def _legacy_doc_text(payload: bytes) -> str:
+    """Eski .doc dosyaları için antiword (Docker imajında mevcut); yoksa boş döner."""
+    import shutil
+    import subprocess
+    import tempfile
+
+    executable = shutil.which("antiword")
+    if not executable:
+        return ""
+    with tempfile.NamedTemporaryFile(suffix=".doc", delete=False) as handle:
+        handle.write(payload)
+        path = handle.name
+    try:
+        completed = subprocess.run([executable, "-m", "UTF-8.txt", "-w", "0", path], capture_output=True, check=False, timeout=30)  # nosec B603
+        return completed.stdout.decode("utf-8", errors="replace") if completed.returncode == 0 else ""
+    finally:
+        try:
+            os.unlink(path)
+        except OSError:
+            pass
+
+
+def _quota_rows_from_cells(rows: Iterable[list[str]]) -> list[dict[str, str]]:
+    items: list[dict[str, str]] = []
+    header: list[str] = []
+    for cells in rows:
+        if not cells:
+            continue
+        if not header and any(_is_code_header(cell) for cell in cells):
+            header = [_ascii_key(c) for c in cells]
+            continue
+        code = cells[0].strip()
+        if not _ROW_CODE_RE.match(code):
+            continue
+        item = {"gtip": code, "description": cells[1] if len(cells) > 1 else ""}
+        for index, cell in enumerate(cells[2:], start=2):
+            label = header[index] if index < len(header) else ""
+            if "donem" in label or "tarih" in label:
+                item.setdefault("period", cell)
+            elif "vergi" in label or "oran" in label:
+                item.setdefault("duty_rate", cell)
+            elif "kod" in label:
+                item.setdefault("quota_code", cell)
+            elif "miktar" in label or "kontenjan" in label:
+                item.setdefault("quantity", cell)
+        if "quantity" not in item and len(cells) > 2:
+            item["quantity"] = cells[2]
+        items.append(item)
+    return items
+
+
+def parse_quota_document(payload: bytes, filename: str, meta: dict[str, Any] | None = None) -> dict[str, Any]:
+    """Tarım ürünleri tarife kontenjanı kararı (.docx/.doc) ekindeki GTİP / miktar / vergi tablosu."""
+    lowered = filename.lower()
+    if lowered.endswith(".docx"):
+        rows = _docx_table_rows(payload)
+    else:
+        text = _legacy_doc_text(payload)
+        rows = [[cell.strip() for cell in line.split("|") if cell.strip()] for line in text.splitlines() if "|" in line]
+        if not rows:
+            rows = [re.split(r"\s{2,}", line.strip()) for line in text.splitlines() if _ROW_CODE_RE.match(line.strip().split(" ")[0] if line.strip() else "")]
+    items = _quota_rows_from_cells(rows)
+    result = dict(meta or {})
+    title = result.get("title", "")
+    origin = re.search(r"^(.+?)\s+(?:Menşeli|Çıkışlı)", title)
+    result.update(
+        {
+            "origin": origin.group(1).strip() if origin else "",
+            "items": items,
+            "item_count": len(items),
+            "parser_version": PARSER_VERSION,
+        }
+    )
+    return result
+
+
+def discover_quota_documents(html_text: str, base_url: str) -> list[dict[str, str]]:
+    """Tarım ürünleri sayfasındaki karar/tebliğ (.doc/.docx) bağlantıları, başlıkla birlikte."""
+    soup = BeautifulSoup(html_text, "html.parser")
+    found: list[dict[str, str]] = []
+    seen: set[str] = set()
+    for anchor in soup.find_all("a", href=True):
+        href = anchor["href"]
+        title = re.sub(r"\s+", " ", anchor.get_text(" ", strip=True))
+        if not re.search(r"\.docx?(\?|$)", href, flags=re.I) or "kontenjan" not in title.lower():
+            continue
+        url = urljoin(base_url, quote(href, safe=":/%()"))
+        if url in seen:
+            continue
+        seen.add(url)
+        found.append({"title": title, "url": url, "filename": href.rsplit("/", 1)[-1]})
+    return found
+
+
 # --------------------------------------------------------------------------- store
 
 @dataclass(frozen=True)
@@ -427,6 +576,7 @@ class TradeMeasureReport:
     anti_dumping: list[MeasureHit] = field(default_factory=list)
     safeguard: list[MeasureHit] = field(default_factory=list)
     surveillance: list[MeasureHit] = field(default_factory=list)
+    tariff_quota: list[MeasureHit] = field(default_factory=list)
     sources: dict[str, Any] = field(default_factory=dict)
     warnings: list[str] = field(default_factory=list)
 
@@ -445,6 +595,7 @@ class TradeMeasureReport:
             "anti_dumping": [hit.as_dict() for hit in self.anti_dumping],
             "safeguard": [hit.as_dict() for hit in self.safeguard],
             "surveillance": [hit.as_dict() for hit in self.surveillance],
+            "tariff_quota": [hit.as_dict() for hit in self.tariff_quota],
             "surveillance_unit_value": self.surveillance_unit_value,
             "sources": self.sources, "warnings": self.warnings,
         }
@@ -492,6 +643,7 @@ class TradeMeasureStore:
             "anti_dumping": "antidumping_measures.json",
             "safeguard": "safeguard_measures.json",
             "surveillance": "surveillance_measures.json",
+            "tariff_quota": "agricultural_quotas.json",
             "communiques": "import_communiques.json",
         }
         path = self.seed_dir / names[kind]
@@ -584,7 +736,7 @@ def _count_items(kind: str, payload: Any) -> int:
         return 0
     if kind == "anti_dumping":
         return len(payload.get("definitive", [])) + len(payload.get("provisional", []))
-    if kind == "surveillance":
+    if kind in {"surveillance", "tariff_quota"}:
         return sum(len(doc.get("items", [])) for doc in payload)
     return len(payload)
 
@@ -618,6 +770,14 @@ def _item_keys(kind: str, payload: Any) -> dict[str, tuple[str, list[str]]]:
                 code = normalise_code(item.get("gtip", ""))
                 keys[f"{doc.get('mevzuat_no')}|{code}"] = (
                     f"{doc.get('title')}: {item.get('gtip')} {item.get('value')} {item.get('unit') or ''}".strip(),
+                    [code] if code else [],
+                )
+    elif kind == "tariff_quota":
+        for doc in payload:
+            for item in doc.get("items", []):
+                code = normalise_code(item.get("gtip", ""))
+                keys[f"{doc.get('url')}|{code}|{item.get('quantity', '')}"] = (
+                    f"{doc.get('origin') or doc.get('title')}: {item.get('gtip')} {item.get('quantity', '')} {item.get('duty_rate', '')}".strip(),
                     [code] if code else [],
                 )
     elif kind == "communiques":
@@ -687,15 +847,16 @@ class TradeMeasureEngine:
         if len(digits) not in {4, 6, 8, 10, 12}:
             raise ValueError("GTİP 4, 6, 8, 10 veya 12 haneli olmalıdır.")
         report = TradeMeasureReport(gtip=digits, origin_country=origin_country, as_of=today.isoformat())
-        report.sources = {kind: self.store.metadata(kind) for kind in ("anti_dumping", "safeguard", "surveillance")}
+        report.sources = {kind: self.store.metadata(kind) for kind in ("anti_dumping", "safeguard", "surveillance", "tariff_quota")}
         if len(digits) < 12:
             report.warnings.append("Kod 12 haneden kısa; ön ek eşleşmeleri kapsam adayıdır, alt satıra göre doğrulayın.")
         report.anti_dumping = self._antidumping_hits(digits, origin_country, today)
         report.safeguard = self._safeguard_hits(digits, origin_country, today)
         report.surveillance = self._surveillance_hits(digits, today)
+        report.tariff_quota = self._quota_hits(digits, origin_country)
         if origin_country and any(hit.origin_match is None for hit in report.anti_dumping):
             report.warnings.append("Menşe ülke resmî listedeki ülke adıyla eşleştirilemedi; damping satırlarını elle doğrulayın.")
-        for kind in ("anti_dumping", "safeguard", "surveillance"):
+        for kind in ("anti_dumping", "safeguard", "surveillance", "tariff_quota"):
             if report.sources[kind]["origin"] == "missing":
                 report.warnings.append(f"{KIND_LABELS[kind]} verisi yüklü değil.")
         return report
@@ -794,6 +955,35 @@ class TradeMeasureEngine:
                 )
         return hits
 
+    def _quota_hits(self, gtip: str, origin: str | None) -> list[MeasureHit]:
+        data = self.store.load("tariff_quota") or []
+        hits: list[MeasureHit] = []
+        for doc in data:
+            for item in doc.get("items", []):
+                code = normalise_code(item.get("gtip", ""))
+                if not code_matches(code, gtip):
+                    continue
+                details = " · ".join(part for part in (item.get("quantity", ""), item.get("period", ""), f"vergi {item['duty_rate']}" if item.get("duty_rate") else "") if part)
+                hits.append(
+                    MeasureHit(
+                        measure_type="tariff_quota",
+                        matched_code=code,
+                        country=doc.get("origin") or doc.get("title", ""),
+                        origin_match=_country_matches(origin, doc.get("origin") or doc.get("title", "")),
+                        rate_text=details,
+                        unit_value_usd=None,
+                        unit=None,
+                        product=item.get("description", ""),
+                        legal_act=doc.get("title", ""),
+                        gazette="",
+                        expires=None,
+                        status="in_force",
+                        notes="Kontenjan dâhilinde ithalatta indirimli/sıfır vergi; tahsis için Bakanlığa (İthalatBİS) başvuru gerekir.",
+                        source=doc.get("url", AGRI_QUOTA_PAGE),
+                    )
+                )
+        return hits
+
     def communiques(self, year: int | None = None) -> list[dict[str, str]]:
         data = self.store.load("communiques") or []
         if year:
@@ -818,6 +1008,7 @@ class TradeMeasureEngine:
                 "anti_dumping": self._sync_antidumping,
                 "safeguard": self._sync_safeguard,
                 "surveillance": self._sync_surveillance,
+                "tariff_quota": self._sync_quotas,
                 "communiques": self._sync_communiques,
             }
             for kind in wanted:
@@ -853,6 +1044,27 @@ class TradeMeasureEngine:
         payload = parse_safeguard_workbook((await self._get(link)).content)
         diff = self.store.save("safeguard", payload, source_url=link, source_label="Ticaret Bakanlığı – Yürürlükte Bulunan Korunma Önlemleri")
         return SyncOutcome("safeguard", True, "güncellendi", len(payload), diff, link)
+
+    async def _sync_quotas(self) -> SyncOutcome:
+        page = await self._get(AGRI_QUOTA_PAGE)
+        links = discover_quota_documents(page.text, AGRI_QUOTA_PAGE)
+        if not links:
+            raise ValueError("Tarım ürünleri tarife kontenjanı sayfasında karar belgesi bulunamadı.")
+        docs: list[dict[str, Any]] = []
+        for link in links:
+            cached = self.store.surveillance_doc(f"quota:{link['url']}")
+            if cached and cached.get("parser_version") == PARSER_VERSION:
+                docs.append(cached)
+                continue
+            response = await self._get(link["url"])
+            doc = parse_quota_document(response.content, link["filename"], link)
+            doc["mevzuat_no"] = f"quota:{link['url']}"
+            self.store.save_surveillance_doc(doc)
+            docs.append(doc)
+            await asyncio.sleep(0.3)
+        docs = [doc for doc in docs if doc.get("items")]
+        diff = self.store.save("tariff_quota", docs, source_url=AGRI_QUOTA_PAGE, source_label="Ticaret Bakanlığı – tarım ürünlerinde açılan tarife kontenjanları")
+        return SyncOutcome("tariff_quota", True, "güncellendi", _count_items("tariff_quota", docs), diff, AGRI_QUOTA_PAGE)
 
     async def _sync_communiques(self) -> SyncOutcome:
         year = datetime.now().year
@@ -968,4 +1180,8 @@ def summary_lines(report: TradeMeasureReport) -> list[str]:
         lines.append(f"Korunma önlemi: {hit.product} ({hit.matched_code}) – {hit.rate_text} [{hit.legal_act}, bitiş {hit.expires}]")
     for hit in report.surveillance:
         lines.append(f"Gözetim: {hit.product} ({hit.matched_code}) – birim kıymet {hit.rate_text} {hit.unit or ''} [{hit.legal_act}]")
+    for hit in report.tariff_quota:
+        if hit.origin_match is False:
+            continue
+        lines.append(f"Tarife kontenjanı: {hit.country} – {hit.product} ({hit.matched_code}) – {hit.rate_text} [{hit.legal_act}]")
     return lines
