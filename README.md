@@ -117,6 +117,21 @@ Her çağrı katı JSON şeması ve `require_parameters=true` kullanır; bu nede
 
 > Hukuki yorumlar bilgilendirme amaçlıdır. Sonuçlarda verilen resmî URL, tarih, sayı, mülga/yürürlük durumu ve varsa sonraki değişiklikler karar öncesinde doğrulanmalıdır.
 
+### Resmî önlem listeleri, TCMB kuru ve günlük eşitleme
+
+Tarife sorgusu ve maliyet hesabı, resmî listelerden okunan **ticaret politikası önlemlerini** GTİP ve menşe ile eşler ve tabloda gösterir:
+
+* **Damping / sübvansiyon**: Ticaret Bakanlığı İthalat Genel Müdürlüğü'nün "Yürürlükteki Önlemler" çalışma kitabı (kesin ve geçici önlemler, ülke, oran/tutar, tebliğ ve bitiş tarihi).
+* **Korunma önlemleri**: Korunma Önlemleri Dairesi'nin "Yürürlükte Bulunan Korunma Önlemleri" listesi (dönemsel tutarlar, kontenjan tahsisi olan önlemler işaretlenir).
+* **Gözetim**: mevzuat.gov.tr'deki yürürlükteki "İthalatta Gözetim Uygulanmasına İlişkin Tebliğ" metinlerinden çıkarılan GTİP / birim gümrük kıymeti tabloları. Kapsamdaki kodlarda maliyet hesabı birim kıymeti önerir ve gözetim belgesi yoksa kıymetin yükseltileceğini uyarır.
+* **İthalat Tebliğleri dizini**: Bakanlığın yıllık "İthalat Tebliğleri" sayfasındaki tebliğ adı, numarası ve Resmî Gazete bağlantıları (`/api/tariff/communiques`).
+
+Bu listeler `data/official/` altındaki tohum dosyalarıyla açılır; sunucu **her gün** (`TRADE_MEASURES_SYNC_INTERVAL_SECONDS`, varsayılan 86400) Bakanlık sayfalarındaki güncel çalışma kitaplarını ve mevzuat.gov.tr aramasını yeniden okur, yalnız yeni veya değişen tebliğ metinlerini indirir ve her farkı değişiklik defterine yazar. Farklar **Değişiklikler** sekmesinde görünür, izleme listesindeki GTİP'ler için e-posta bildirimine dâhil edilir. Oran ve tutarlar resmî tabloda yazıldığı gibi metin olarak gösterilir; firma bazlı oranlar hesaba otomatik girilmez, kullanıcı doğrulaması istenir (`/api/tariff/measures`, MCP aracı `lookup_trade_measures`).
+
+**TCMB kuru**: Tarife & Maliyet ve Gümrükçe'ye Sor formlarındaki "TCMB kurunu getir" düğmesi, tescil tarihinde yürürlükte olan döviz satış kurunu (4458 sayılı Gümrük Kanunu md. 30; tescil tarihinden önceki son iş gününün bülteni) TCMB arşivinden alır ve bülten tarihi/numarasıyla birlikte gösterir (`/api/tariff/exchange-rate`, MCP aracı `get_customs_exchange_rate`).
+
+**Eylemio köprüsü**: `EYLEMIO_EMAIL` / `EYLEMIO_PASSWORD` (ve isteğe bağlı `EYLEMIO_ACCOUNT_ID`) tanımlandığında Gümrükçe'ye Sor sayfasındaki "Beyanname durumu" kutusu, Eylemio'daki gümrük konektörü üzerinden (müşavirin BİLGE web servis hesabıyla) beyanname detay ve durumunu salt okunur olarak getirir (`/api/customs/declaration`, MCP aracı `query_customs_declaration_status`). Beyan oluşturmaz ve tescil etmez; giriş yapmış kullanıcılara açıktır.
+
 ## ChatGPT ve Codex bağlantısı
 
 Uzak MCP adresi: `https://gumruksor.com/mcp`

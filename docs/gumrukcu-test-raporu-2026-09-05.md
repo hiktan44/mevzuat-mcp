@@ -263,3 +263,12 @@ kaynak denetimi (evil origin 403), yönetici erişim kontrolü (403/303), mobild
   e-posta gönderir ve `notification_log` ile yinelemez. Danışmanlık talebi, mesaj ve durum değişikliğinde karşı
   tarafa e-posta (kısa alıntı). `/api/auth/me` `email_enabled` döndürür; düğme yapılandırma yoksa uyarır.
   Değişiklikler sekmesi artık fark satırlarını (GTİP, önlem, sütun, önce/sonra) ve toplam sayıyı gösteriyor.
+
+### 6 Eylül – resmî veri ve otomasyon turu
+
+- ✅ **TCMB kuru** (eksik özellik "TCMB TL özeti"): tescil tarihinde yürürlükteki döviz satış kuru (GK md. 30, önceki iş günü bülteni) `exchange_rates.py`; formlarda "TCMB kurunu getir"; `/api/tariff/exchange-rate`; MCP `get_customs_exchange_rate`.
+- ✅ **Damping / sübvansiyon, korunma, gözetim tabloları** (eksik özellik "gözetim/kontenjan/damping tabloları"): Bakanlık "Yürürlükteki Önlemler" ve "Korunma Önlemleri" çalışma kitapları ile mevzuat.gov.tr'deki gözetim tebliğ metinleri `data/official/` altına resmî kaynaktan çekildi; `trade_measures.py` GTİP ön eki + menşe eşlemesi yapar, tarife sorgusu ve maliyet hesabında kapsam ve uyarı gösterir. Tohumda 273 damping satırı, 11 korunma önlemi, 149 gözetim tebliği / 1.070 GTİP satırı (kalan 45 metin günlük eşitlemede tamamlanır).
+- ✅ **İthalat Tebliğleri dizini**: Bakanlık 2026 sayfasındaki 21 tebliğ bağlantısı (`/api/tariff/communiques`, MCP `list_import_communiques`).
+- ✅ **Günlük otomatik güncelleme** (kullanıcı isteği): `TradeMeasureEngine.periodic_sync_loop` her gün Bakanlık sayfalarındaki güncel çalışma kitaplarını keşfeder, mevzuat.gov.tr aramasıyla yeni/değişen gözetim tebliğlerini indirir, farkları değişiklik defterine yazar; farklar Değişiklikler sekmesi ve izleme listesi e-postalarında görünür.
+- ✅ **Eylemio köprüsü** (kullanıcı isteği): `eylemio_client.py` Eylemio gümrük konektörüyle beyanname durumu sorgular (salt okunur); `/api/customs/declaration`, MCP `query_customs_declaration_status`, Gümrükçe'ye Sor sayfasında "Beyanname durumu" kutusu. Eylemio deposu GitHub'da bulunamadığı için API yüzeyi canlı uygulamadan çıkarıldı; sunucuda `EYLEMIO_EMAIL`/`EYLEMIO_PASSWORD` tanımlanmalıdır.
+- ⏳ Sanayi/tarım ürünlerinde açılan tarife kontenjanı kararlarının GTİP ekleri ve GTİP bazlı KDV/ÖTV listeleri henüz ayrıştırılmadı; korunma önlemi kontenjanları listede işaretli.

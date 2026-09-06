@@ -168,5 +168,25 @@ class EngineTests(unittest.TestCase):
         self.assertEqual(status["datasets"]["communiques"]["origin"], "missing")
 
 
+class OfficialSeedTests(unittest.TestCase):
+    """Depodaki resmî tohum dosyaları ve gerçek fihrist sayfası ayrıştırması."""
+
+    def test_real_iframe_page_parses(self):
+        html_text = (Path(__file__).parent / "fixtures" / "surveillance_iframe_sample.htm").read_text(encoding="utf-8", errors="ignore")
+        doc = tm.parse_surveillance_page(html_text, {"mevzuat_no": "46246", "rg_date": "09/04/2026", "rg_no": "33219"})
+        self.assertGreaterEqual(doc["item_count"], 1)
+        self.assertTrue(all(tm.normalise_code(item["gtip"]) for item in doc["items"]))
+
+    def test_seed_files_load_with_default_store(self):
+        engine = tm.TradeMeasureEngine(tempfile.mkdtemp())
+        status = engine.status()["datasets"]
+        self.assertGreater(status["anti_dumping"]["item_count"], 200)
+        self.assertGreater(status["safeguard"]["item_count"], 5)
+        self.assertGreater(status["surveillance"]["item_count"], 500)
+        self.assertGreater(status["communiques"]["item_count"], 10)
+        report = engine.lookup("730640209000", "Çin", today=date(2026, 9, 6))
+        self.assertTrue(report.applicable_anti_dumping)
+
+
 if __name__ == "__main__":
     unittest.main()
