@@ -3,6 +3,7 @@ import io
 import tempfile
 import unittest
 import zipfile
+from pathlib import Path
 
 import openpyxl
 
@@ -124,6 +125,41 @@ Taahhütname 2026
             annex_plan({"scope_annexes": [1, {"annex": 2, "kind": "prohibited"}, {"annex": 3, "kind": "bogus"}]}),
             [{"annex": 1, "kind": "scope"}, {"annex": 2, "kind": "prohibited"}, {"annex": 3, "kind": "scope"}],
         )
+
+    def test_shipped_config_declares_the_official_prohibited_annexes(self):
+        """Yasak ekleri resmî tebliğ metinlerinden doğrulandı; yapılandırma bunu taşımalı."""
+        import json
+
+        rules = {
+            rule["code"]: rule
+            for rule in json.loads(Path("control_sources.json").read_text(encoding="utf-8"))["rules"]
+        }
+        expected = {
+            # 2026/3 MADDE 4/(1): Ek-2/A ve Ek-2/B'deki atıkların girişi yasak, Ek-1 kontrole tabi.
+            "2026/3": [{"annex": 1, "kind": "scope"}, {"annex": 2, "kind": "prohibited"}],
+            # 2026/6 MADDE 4/(1) ve 12/(1): Ek-1 ve Ek-3 yasak; Ek-2 (florlu sera gazları) kontrole tabi.
+            "2026/6": [
+                {"annex": 1, "kind": "prohibited"},
+                {"annex": 2, "kind": "scope"},
+                {"annex": 3, "kind": "prohibited"},
+            ],
+            # 2026/23 MADDE 2/(1) ve 4/(4): Ek-2'deki metal hurdaların girişi yasak.
+            "2026/23": [{"annex": 1, "kind": "scope"}, {"annex": 2, "kind": "prohibited"}],
+        }
+        for code, plan in expected.items():
+            self.assertIn(code, rules, code)
+            self.assertEqual(annex_plan(rules[code]), plan, code)
+            self.assertTrue(rules[code].get("annex_note"), code)
+
+    def test_rules_without_a_prohibited_annex_stay_scope_only(self):
+        import json
+
+        rules = json.loads(Path("control_sources.json").read_text(encoding="utf-8"))["rules"]
+        for rule in rules:
+            if rule["code"] in {"2026/3", "2026/6", "2026/23"}:
+                continue
+            kinds = {item["kind"] for item in annex_plan(rule)}
+            self.assertEqual(kinds, {"scope"}, rule["code"])
 
     def test_prohibited_list_rows_are_reported_separately(self):
         with tempfile.TemporaryDirectory() as directory:
