@@ -127,6 +127,21 @@ class ParserTests(unittest.TestCase):
         self.assertEqual([item["gtip"] for item in doc["items"]], ["4820.30.00.00.00"])
         self.assertEqual(doc["items"][0]["value"], "3.600")
 
+    def test_footnote_marker_after_the_code_is_not_part_of_it(self):
+        # Resmî tabloda kod dipnot işaretiyle bitebilir: "4820.30.00.00.00+".
+        text = (
+            "<p>G.T.İ.P. Eşyanın Tanımı Birim Gümrük Kıymeti (ABD Doları/Kg) "
+            "4820.30.00.00.00+ Klasörler ve dosya gömlekleri 3.600 "
+            "7306.40.20.90.00* Paslanmaz çelik borular 2.100 "
+            "* Kg: brüt ağırlık Gözetim uygulaması MADDE 2</p>"
+        )
+        doc = tm.parse_surveillance_page(text, {})
+        self.assertEqual(
+            [item["gtip"] for item in doc["items"]],
+            ["4820.30.00.00.00", "7306.40.20.90.00"],
+        )
+        self.assertEqual([item["value"] for item in doc["items"]], ["3.600", "2.100"])
+
     def test_scope_written_only_in_the_madde_2_sentence(self):
         # Tablosu olmayan eski tebliğlerde kapsam doğrudan MADDE 2 cümlesindedir.
         text = (

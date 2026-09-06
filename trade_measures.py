@@ -65,7 +65,8 @@ _CODE_RE = re.compile(r"\d{4}(?:\.\d{2}){0,4}|\d{2}\.\d{2}(?:\.\d{2}){0,4}|\d{4,
 _ROW_CODE_RE = re.compile(r"^\s*(\d{4}(?:\.\d{2}){1,4}|\d{2}\.\d{2}(?:\.\d{2}){0,4}|\d{4,12})\s*$")
 PARSER_VERSION = 4
 _QUANTITY_RE = re.compile(r"^\d[\d.,]*\s*(?:ton|kg|adet|baş|bas|litre|lt|m3|m2|hl)\b", re.I)
-_TEXT_ITEM_RE = re.compile(r"(\d{4}(?:\.\d{2}){1,4}|\d{2}\.\d{2}(?:\.\d{2}){0,4})\s+(.+?)\s+(\d+(?:[.,]\d+)?)(?=\s+(?:\d{4}(?:\.\d{2}){1,4}|\d{2}\.\d{2}(?:\.\d{2}){0,4})\s|\s*(?:\*|Gözetim|MADDE|$))")
+# Kod, resmî tabloda dipnot işaretiyle bitebilir ("4820.30.00.00.00+").
+_TEXT_ITEM_RE = re.compile(r"(\d{4}(?:\.\d{2}){1,4}|\d{2}\.\d{2}(?:\.\d{2}){0,4})[+*]?\s+(.+?)\s+(\d+(?:[.,]\d+)?)(?=\s+(?:\d{4}(?:\.\d{2}){1,4}|\d{2}\.\d{2}(?:\.\d{2}){0,4})[+*]?\s|\s*(?:\*|Gözetim|MADDE|$))")
 _ALL_COUNTRIES = {"tüm ülkeler", "tum ulkeler", "all countries"}
 KINDS = ("anti_dumping", "safeguard", "surveillance", "tariff_quota", "communiques")
 AGRI_QUOTA_PAGE = "https://ticaret.gov.tr/ithalat/askiya-alma-ve-tarife-kontenjani/tarim-urunlerinde-acilan-tarife-kontenjanlari"
