@@ -116,6 +116,48 @@ class ParserTests(unittest.TestCase):
         self.assertEqual(doc["items"][1]["value"], "5")
         self.assertEqual(doc["parser_version"], tm.PARSER_VERSION)
 
+    def test_spaced_gtip_header_and_cif_value_column(self):
+        # Bazı tebliğlerde başlık "G.T.İ .P." biçiminde boşluklu ve sütun adı "CIF Kıymet".
+        text = (
+            "<p>(1) G.T.İ .P. Eşyanın Tanımı CIF Kıymet (ABD Doları/Ton*) "
+            "4820.30.00.00.00 Klasörler, ciltler ve dosya gömlekleri 3.600 "
+            "* Ton: Brüt ağırlık Gözetim uygulaması MADDE 2 – (1) ...</p>"
+        )
+        doc = tm.parse_surveillance_page(text, {})
+        self.assertEqual([item["gtip"] for item in doc["items"]], ["4820.30.00.00.00"])
+        self.assertEqual(doc["items"][0]["value"], "3.600")
+
+    def test_scope_written_only_in_the_madde_2_sentence(self):
+        # Tablosu olmayan eski tebliğlerde kapsam doğrudan MADDE 2 cümlesindedir.
+        text = (
+            "<p>Gözetim uygulaması Madde 2 — Gözetim uygulaması 6802.23, 6802.93 ve 6802.99 gümrük tarife "
+            "pozisyonlarında yer alan eşyanın CIF kıymeti 500 ABD Doları/ton (brüt ağırlık)'un altında "
+            "olanlarının ithalatında ülke ayrımı gözetilmeksizin yapılacaktır.</p>"
+        )
+        doc = tm.parse_surveillance_page(text, {})
+        self.assertEqual([item["gtip"] for item in doc["items"]], ["6802.23", "6802.93", "6802.99"])
+        self.assertEqual(doc["items"][0]["value"], "500")
+        self.assertEqual(doc["unit"], "ABD Doları/ton")
+
+    def test_single_code_prose_scope_keeps_the_quoted_product_name(self):
+        text = (
+            '<p>Gözetim uygulaması 3802.90.00.90.13 gümrük tarife istatistik pozisyonlu '
+            '“Ağartma toprağı-Asit aktivasyonlu killer”in ithalatında ülke ayrımı '
+            'gözetilmeksizin yapılacaktır.</p>'
+        )
+        doc = tm.parse_surveillance_page(text, {})
+        self.assertEqual([item["gtip"] for item in doc["items"]], ["3802.90.00.90.13"])
+        self.assertEqual(doc["items"][0]["description"], "Ağartma toprağı-Asit aktivasyonlu killer")
+
+    def test_prose_fallback_does_not_fire_when_a_table_exists(self):
+        table = (
+            '<table><tr><td>G.T.İ.P.</td><td>Eşyanın Tanımı</td><td>Birim Gümrük Kıymeti (ABD Doları/Kg)</td></tr>'
+            '<tr><td>7306.40.20.90.00</td><td>Borular</td><td>2</td></tr></table>'
+            "<p>Gözetim uygulaması 6802.23 gümrük tarife pozisyonlarında yer alan eşyanın</p>"
+        )
+        doc = tm.parse_surveillance_page(table, {})
+        self.assertEqual([item["gtip"] for item in doc["items"]], ["7306.40.20.90.00"])
+
     def test_quota_docx_and_discovery(self):
         import zipfile
         ns = "http://schemas.openxmlformats.org/wordprocessingml/2006/main"

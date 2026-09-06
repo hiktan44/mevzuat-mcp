@@ -63,7 +63,7 @@ SURVEILLANCE_TITLE = "İthalatta Gözetim Uygulanmasına İlişkin Tebliğ"
 
 _CODE_RE = re.compile(r"\d{4}(?:\.\d{2}){0,4}|\d{2}\.\d{2}(?:\.\d{2}){0,4}|\d{4,12}")
 _ROW_CODE_RE = re.compile(r"^\s*(\d{4}(?:\.\d{2}){1,4}|\d{2}\.\d{2}(?:\.\d{2}){0,4}|\d{4,12})\s*$")
-PARSER_VERSION = 3
+PARSER_VERSION = 4
 _QUANTITY_RE = re.compile(r"^\d[\d.,]*\s*(?:ton|kg|adet|baş|bas|litre|lt|m3|m2|hl)\b", re.I)
 _TEXT_ITEM_RE = re.compile(r"(\d{4}(?:\.\d{2}){1,4}|\d{2}\.\d{2}(?:\.\d{2}){0,4})\s+(.+?)\s+(\d+(?:[.,]\d+)?)(?=\s+(?:\d{4}(?:\.\d{2}){1,4}|\d{2}\.\d{2}(?:\.\d{2}){0,4})\s|\s*(?:\*|Gözetim|MADDE|$))")
 _ALL_COUNTRIES = {"tüm ülkeler", "tum ulkeler", "all countries"}
@@ -290,6 +290,53 @@ def _header_unit(text: str) -> str | None:
     return match.group(1).replace("*", "").strip() if match else None
 
 
+# Düz metin tablosunun başlığı: "G.T.İ.P." yazımı boşluklu olabilir ("G.T.İ .P."),
+# kıymet sütunu "Birim Gümrük Kıymeti" ya da "CIF Kıymet" olarak adlandırılır.
+_TEXT_TABLE_HEADER_RE = (
+    r"G\s*\.?\s*T\s*\.?\s*İ\s*\.?\s*P\s*\.?|GTİP|GTP"
+    r")\s+Eşya\S*\s+Tanımı\s+((?:Birim|CIF|Gümrük)[^\d]{0,80}?)(?=\s+\d{2,4}\."
+)
+_TEXT_TABLE_HEADER_RE = r"(?:" + _TEXT_TABLE_HEADER_RE + r")"
+
+# Eski tebliğlerin bir kısmında tablo yoktur; kapsam doğrudan MADDE 2 cümlesinde yazılıdır:
+# "Gözetim uygulaması 6802.23, 6802.93 ve 6802.99 gümrük tarife pozisyonlarında yer alan
+#  eşyanın CIF kıymeti 500 ABD Doları/ton (brüt ağırlık)'un altında olanlarının ithalatında..."
+_PROSE_SCOPE_RE = re.compile(
+    r"Gözetim\s+uygulaması\s+(?P<codes>[\d.,\s]*\d(?:\s*(?:,|ve)\s*[\d.]+)*)\s*"
+    r"gümrük\s+tarife\s+(?:istatistik\s+)?pozisyon",
+    re.IGNORECASE,
+)
+_PROSE_VALUE_RE = re.compile(
+    r"CIF\s+kıymeti\s+(?P<value>[\d.,]+)\s*(?P<unit>ABD\s*Doları\s*/\s*[A-Za-zÇĞİÖŞÜçğıöşü]+)",
+    re.IGNORECASE,
+)
+_PROSE_NAME_RE = re.compile(r"[“\"]([^”\"]{3,160})[”\"]")
+
+
+def _prose_surveillance_items(text: str, default_unit: str | None) -> tuple[list[dict[str, Any]], str | None]:
+    """Tablosu olmayan tebliğlerde kapsamı MADDE 2 cümlesinden çıkarır."""
+    match = _PROSE_SCOPE_RE.search(text)
+    if not match:
+        return [], default_unit
+    codes = extract_codes(match.group("codes"))
+    if not codes:
+        return [], default_unit
+    sentence = text[match.start(): match.start() + 600]
+    value_match = _PROSE_VALUE_RE.search(sentence)
+    value = value_match.group("value") if value_match else ""
+    unit = default_unit
+    if value_match:
+        unit = re.sub(r"\s+", "", value_match.group("unit")).replace("ABDDoları", "ABD Doları")
+    name_match = _PROSE_NAME_RE.search(sentence)
+    description = name_match.group(1).strip() if name_match else ""
+    raw_codes = re.findall(r"\d{4}(?:\.\d{2}){1,4}|\d{2}\.\d{2}(?:\.\d{2}){0,4}", match.group("codes"))
+    items = [
+        {"gtip": raw, "description": description, "value": value, "unit": unit}
+        for raw in raw_codes
+    ]
+    return items, unit
+
+
 def parse_surveillance_page(html_text: str, meta: dict[str, Any] | None = None) -> dict[str, Any]:
     """Gözetim tebliği metnindeki GTİP / eşya tanımı / birim gümrük kıymeti tablolarını çıkarır."""
     soup = BeautifulSoup(html_text, "html.parser")
@@ -358,7 +405,7 @@ def parse_surveillance_page(html_text: str, meta: dict[str, Any] | None = None) 
     text = soup.get_text(" ", strip=True)
     if not items:
         # Bazı eski tebliğlerde tablo <table> yerine düz metin/paragraf olarak yer alır.
-        header = re.search(r"(?:G\.?T\.?İ\.?P\.?|GTİP|GTP)\s+Eşya\S*\s+Tanımı\s+(Birim[^\d]{0,80}?)(?=\s+\d{2,4}\.)", text)
+        header = re.search(_TEXT_TABLE_HEADER_RE, text)
         if header:
             unit_text = header.group(1)
             default_unit = _header_unit(unit_text) or default_unit
@@ -367,6 +414,8 @@ def parse_surveillance_page(html_text: str, meta: dict[str, Any] | None = None) 
             segment = tail[: stop.start()] if stop else tail[:20000]
             for code, description, value in _TEXT_ITEM_RE.findall(segment):
                 items.append({"gtip": code, "description": description.strip(" -–"), "value": value, "unit": default_unit})
+    if not items:
+        items, default_unit = _prose_surveillance_items(text, default_unit)
     if default_unit is None:
         found = re.search(r"\(ABD Doları\s*/\s*([A-Za-zÇĞİÖŞÜçğıöşü0-9]+)\*?\)", text)
         if found:
