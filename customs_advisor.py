@@ -102,6 +102,7 @@ class CustomsInquiry(BaseModel):
     classification_models: list[str] = Field(default_factory=list, max_length=3)
     origin_country: str | None = Field(None, max_length=100)
     dispatch_country: str | None = Field(None, max_length=100)
+    atr_certificate: bool | None = Field(None, description="Sevk AB'den ise A.TR ibraz edilecek mi (teyit edilmeden serbest dolaşım sütunu uygulanmaz).")
     intended_use: str | None = Field(None, max_length=300)
     target_user: str | None = Field(None, max_length=300)
     declared_product_type: str | None = Field(None, max_length=300)
@@ -1150,6 +1151,7 @@ class CustomsAdvisor:
                 inquiry.candidate_gtip,
                 origin_country=inquiry.origin_country,
                 dispatch_country=inquiry.dispatch_country,
+                atr_certificate=inquiry.atr_certificate,
             )
             official_rates.update(tariff_lookup.unambiguous_rates)
             for measure in tariff_lookup.measures:
@@ -1245,6 +1247,7 @@ class CustomsAdvisor:
                 inquiry.origin_country or "",
                 gtip=inquiry.candidate_gtip,
                 dispatch_country=inquiry.dispatch_country,
+                atr_certificate=inquiry.atr_certificate,
             ),
             sources=sources,
             legal_notice=_legal_notice(as_of),

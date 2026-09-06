@@ -166,7 +166,7 @@ COUNTRIES: tuple[Country, ...] = (
     _mfn("japonya", "Japonya", "JP", "japan"),
     _mfn("rusya", "Rusya", "RU", "rusya federasyonu", "russia", "russian federation"),
     _mfn("ukrayna", "Ukrayna", "UA", "ukraine"),
-    _mfn("tayvan", "Tayvan", "TW", "taiwan"),
+    _mfn("tayvan", "Tayvan", "TW", "taiwan", "çin tayvanı", "cin tayvani", "chinese taipei", "tayvan çin"),
     _mfn("hong kong", "Hong Kong", "HK"),
     _mfn("vietnam", "Vietnam", "VN", "viet nam"),
     _mfn("banglades", "Bangladeş", "BD", "bangladesh"),
@@ -224,10 +224,16 @@ def find_country(value: Any) -> Optional[Country]:
     if key in _INDEX:
         return _INDEX[key]
     # "Çin Halk Cumhuriyeti", "Almanya Federal Cumhuriyeti": match on the leading word group.
+    # The longest alias wins so that a compound name ("Çin Tayvanı") is not captured by a
+    # shorter country prefix ("Çin").
+    best: Country | None = None
+    best_length = 0
     for alias, country in _INDEX.items():
-        if len(alias) >= 4 and (key.startswith(alias + " ") or key.endswith(" " + alias)):
-            return country
-    return None
+        if len(alias) < 4 or len(alias) <= best_length:
+            continue
+        if key.startswith(alias + " ") or key.endswith(" " + alias):
+            best, best_length = country, len(alias)
+    return best
 
 
 def by_regime(*regimes: Regime) -> frozenset[str]:

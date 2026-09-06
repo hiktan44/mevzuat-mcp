@@ -214,6 +214,15 @@ def _record_usage(user: dict[str, Any] | None, operation: str) -> None:
         account_service.consume(user, operation)
 
 
+def _tri_state(value: Any) -> bool | None:
+    """'true'/'false'/boş üçlü seçim: belirtilmediyse None döner (varsayım yapılmaz)."""
+    if value is None or value == "":
+        return None
+    if isinstance(value, bool):
+        return value
+    return str(value).strip().lower() in {"true", "1", "evet", "var", "yes"}
+
+
 def _normalise_date(value: Any) -> str | None:
     if not value:
         return None
@@ -1618,6 +1627,7 @@ async def web_tariff_lookup(request: Request):
             str(body.get("gtip", "")),
             origin_country=str(body.get("origin_country", "")).strip()[:100] or None,
             dispatch_country=str(body.get("dispatch_country", "") or "").strip()[:100] or None,
+            atr_certificate=_tri_state(body.get("atr_certificate")),
         )
         return JSONResponse(result.model_dump(mode="json"))
     except (ValueError, ValidationError) as exc:
@@ -1662,10 +1672,11 @@ async def web_tariff_cost(request: Request):
         gtip = str(body.pop("gtip", ""))
         origin = str(body.pop("origin_country", "")).strip()[:100]
         dispatch = str(body.pop("dispatch_country", "") or "").strip()[:100] or None
+        atr_certificate = _tri_state(body.pop("atr_certificate", None))
         if not origin:
             raise ValueError("Menşe ülke gereklidir.")
         inputs = LandedCostInput.model_validate(body)
-        result = await tariff_engine.calculate(gtip, origin, inputs, dispatch_country=dispatch)
+        result = await tariff_engine.calculate(gtip, origin, inputs, dispatch_country=dispatch, atr_certificate=atr_certificate)
         return JSONResponse(result)
     except ValidationError as exc:
         message = exc.errors(include_url=False)[0].get("msg", "Alanları kontrol edin.")
@@ -1764,7 +1775,8 @@ async def web_customs_declaration(request: Request):
     except Exception:
         logger.exception("Eylemio declaration lookup failed")
         return JSONResponse({"error": "Beyanname sorgusu şu anda tamamlanamadı."}, status_code=502)
-    _record_usage(user, "declaration")
+    # Beyanname sorgusu kullanıcının kendi BİLGE hesabından okunur; kota işlemi değildir,
+    # yalnız uç nokta bazlı hız sınırına tabidir.
     result["summary"] = [{"label": label, "value": value} for label, value in summarise_declaration(result)]
     return JSONResponse(result)
 
@@ -1838,11 +1850,12 @@ async def web_tariff_scenarios(request: Request):
             raise ValueError("Menşe listesi geçersiz.")
         origins = list(dict.fromkeys(str(item).strip()[:100] for item in origins_raw if str(item).strip()))[:6]
         dispatch = str(body.get("dispatch_country", "") or "").strip()[:100] or None
+        atr_certificate = _tri_state(body.get("atr_certificate"))
         if not gtip or len(origins) < 2:
             raise ValueError("Karşılaştırma için tarife kodu ve en az iki farklı menşe ülke gereklidir.")
         rows = []
         for origin in origins:
-            lookup = await tariff_engine.lookup(gtip, origin_country=origin, dispatch_country=dispatch)
+            lookup = await tariff_engine.lookup(gtip, origin_country=origin, dispatch_country=dispatch, atr_certificate=atr_certificate)
             documents = origin_document_requirements(origin, gtip=lookup.gtip, dispatch_country=dispatch)
             rows.append(
                 {
@@ -1855,6 +1868,7 @@ async def web_tariff_scenarios(request: Request):
                     "unambiguous_rates": lookup.unambiguous_rates or {},
                     "ambiguous_measure_types": lookup.ambiguous_measure_types,
                     "atr_free_circulation": lookup.atr_free_circulation,
+                    "atr_available": lookup.atr_available,
                     "origin_proof_required": lookup.origin_proof_required,
                     "fallback_rates": lookup.fallback_rates,
                     "origin_documents": documents.model_dump(mode="json") if documents else None,

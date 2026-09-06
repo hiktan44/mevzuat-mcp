@@ -215,6 +215,21 @@ class EngineTests(unittest.TestCase):
         self.assertFalse(other.anti_dumping[0].origin_match)
         self.assertEqual(other.applicable_anti_dumping, [])
 
+    def test_taiwan_measures_do_not_leak_into_china_lookups(self):
+        store = self.engine.store
+        rows = store.load("anti_dumping")
+        rows["definitive"].append({
+            "file_no": "NGS.152.04.2024", "sector": "TK", "product": "Polyester Elyaf", "product_en": "",
+            "gtip": "5503.20.00.00.00", "country": "Çin Tayvanı", "country_en": "Chinese Taipei",
+            "communique": "2026/1", "rg_date": "2026-01-30", "rg_no": "33153", "rate": "%3,2-%12",
+            "kind": "DK", "expires": "2031-01-30", "notes": "",
+        })
+        store.save("anti_dumping", rows, source_url="https://example.test/a.xlsx", source_label="test")
+        taiwan = [hit for hit in self.engine.lookup("550320000000", "Tayvan").anti_dumping if hit.country == "Çin Tayvanı"]
+        china = [hit for hit in self.engine.lookup("550320000000", "Çin").anti_dumping if hit.country == "Çin Tayvanı"]
+        self.assertTrue(taiwan and taiwan[0].origin_match)
+        self.assertTrue(china and china[0].origin_match is False)
+
     def test_expired_measure_flagged(self):
         report = self.engine.lookup("680223000000", "Çin", today=date(2026, 9, 6))
         self.assertEqual(report.anti_dumping[0].status, "expired")

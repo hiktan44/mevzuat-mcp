@@ -101,6 +101,13 @@ class OriginDocumentRuleTests(unittest.TestCase):
         self.assertEqual(origin_document_requirements("guney kore").regime, "fta")
         self.assertEqual(find_country("Çin Halk Cumhuriyeti").key, "cin")
 
+    def test_compound_country_names_are_not_captured_by_a_shorter_prefix(self) -> None:
+        # Resmî damping listelerinde geçen ad "Çin Tayvanı"dır; kısa "Çin" ön eki bunu kapmamalı.
+        self.assertEqual(find_country("Çin Tayvanı").key, "tayvan")
+        self.assertEqual(find_country("Chinese Taipei").key, "tayvan")
+        self.assertEqual(find_country("Çin").key, "cin")
+        self.assertEqual(find_country("Almanya Federal Cumhuriyeti").key, "almanya")
+
     def test_registry_is_internally_consistent(self) -> None:
         keys: dict[str, str] = {}
         for country in COUNTRIES:

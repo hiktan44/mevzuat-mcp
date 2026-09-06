@@ -310,16 +310,32 @@ class TariffPrefixLookupTests(unittest.IsolatedAsyncioTestCase):
         direct = await self.engine.lookup("691110000011", origin_country="Çin")
         self.assertEqual(direct.unambiguous_rates, {"customs_duty": 12.0, "additional_duty": 19.0})
         self.assertFalse(direct.atr_free_circulation)
-        via_eu = await self.engine.lookup("691110000011", origin_country="Çin", dispatch_country="Almanya")
+        # A.TR teyit edilmeden yalnız AB'den sevk edilmiş olmak serbest dolaşım sütununu açmaz.
+        unconfirmed = await self.engine.lookup("691110000011", origin_country="Çin", dispatch_country="Almanya")
+        self.assertFalse(unconfirmed.atr_free_circulation)
+        self.assertTrue(unconfirmed.atr_available)
+        self.assertEqual(unconfirmed.unambiguous_rates, {"customs_duty": 12.0, "additional_duty": 19.0})
+        self.assertTrue(any("A.TR teyit edilmediği için" in item for item in unconfirmed.warnings))
+        via_eu = await self.engine.lookup(
+            "691110000011", origin_country="Çin", dispatch_country="Almanya", atr_certificate=True
+        )
         self.assertTrue(via_eu.atr_free_circulation)
         self.assertEqual(via_eu.unambiguous_rates, {"customs_duty": 0.0, "additional_duty": 19.0})
-        self.assertTrue(any("A.TR ibrazına bağlıdır" in item for item in via_eu.warnings))
+        self.assertTrue(any("A.TR beyan edildiği için" in item for item in via_eu.warnings))
+        declined = await self.engine.lookup(
+            "691110000011", origin_country="Çin", dispatch_country="Almanya", atr_certificate=False
+        )
+        self.assertFalse(declined.atr_free_circulation)
+        self.assertEqual(declined.unambiguous_rates["customs_duty"], 12.0)
 
     async def test_agricultural_goods_from_the_eu_get_no_atr_relief(self) -> None:
         self._insert_measure("a1", "import-2026", "070200000011", "customs_duty", 0, "1")
         self._insert_measure("a2", "import-2026", "070200000011", "customs_duty", 48.6, "7")
-        result = await self.engine.lookup("070200000011", origin_country="Çin", dispatch_country="Almanya")
+        result = await self.engine.lookup(
+            "070200000011", origin_country="Çin", dispatch_country="Almanya", atr_certificate=True
+        )
         self.assertFalse(result.atr_free_circulation)
+        self.assertFalse(result.atr_available)
         self.assertEqual(result.unambiguous_rates, {"customs_duty": 48.6})
         self.assertTrue(any("A.TR düzenlenmez" in item for item in result.warnings))
 

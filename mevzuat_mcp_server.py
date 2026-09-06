@@ -2604,6 +2604,7 @@ async def lookup_tariff_measures(
         description="Noktalı veya düz 6/8 haneli HS/CN ya da 10/12 haneli Türk tarife kodu.",
     ),
     origin_country: Optional[str] = Field(None, max_length=100, description="Menşe ülke; sevk ülkesinden ayrıdır."),
+    atr_certificate: Optional[bool] = Field(None, description="Sevk AB'den ise A.TR dolaşım belgesi ibraz edilecek mi? Teyit edilmeden serbest dolaşım sütunu uygulanmaz."),
     dispatch_country: Optional[str] = Field(
         None, max_length=100,
         description="Sevk/çıkış ülkesi menşeden farklıysa; AB'den A.TR ile gelen üçüncü ülke menşeli eşyada gümrük vergisi ve İGV ayrı sütunlardan değerlendirilir.",
@@ -2616,7 +2617,9 @@ async def lookup_tariff_measures(
     conditional end-use rates, workbook/sheet/row, archive checksum and warnings.
     A rate is automatic only when every matching subline has the same unfootnoted rate.
     """
-    return await tariff_engine.lookup(gtip, origin_country=origin_country, dispatch_country=dispatch_country)
+    return await tariff_engine.lookup(
+        gtip, origin_country=origin_country, dispatch_country=dispatch_country, atr_certificate=atr_certificate
+    )
 
 
 @app.tool(
@@ -2791,6 +2794,7 @@ async def calculate_import_landed_cost(
     has_surveillance_certificate: Optional[bool] = Field(None),
     payment_method: Optional[str] = Field(None, max_length=100, description="Ödeme şekli (peşin, mal mukabili, vadeli akreditif, kredili...); KKDF önerisi için."),
     dispatch_country: Optional[str] = Field(None, max_length=100, description="Sevk/çıkış ülkesi menşeden farklıysa (A.TR/serbest dolaşım değerlendirmesi)."),
+    atr_certificate: Optional[bool] = Field(None, description="Sevk AB'den ise A.TR dolaşım belgesi ibraz edilecek mi? Teyit edilmeden serbest dolaşım sütunu uygulanmaz."),
     customs_duty_rate: Optional[float] = Field(None, ge=0, le=1000, description="Yalnızca kullanıcıca doğrulanmış gümrük vergisi oranı; resmî orandan farklıysa uyarı döner."),
     additional_duty_rate: Optional[float] = Field(None, ge=0, le=1000, description="Yalnızca kullanıcıca doğrulanmış İGV oranı; resmî orandan farklıysa uyarı döner."),
     additional_financial_liability_rate: Optional[float] = Field(None, ge=0, le=1000, description="Doğrulanmış ek mali yükümlülük oranı; uygulanmıyorsa 0."),
@@ -2837,6 +2841,7 @@ async def calculate_import_landed_cost(
             gekap_try=gekap_try,
         ),
         dispatch_country=dispatch_country,
+        atr_certificate=atr_certificate,
     )
 
 
@@ -2960,6 +2965,7 @@ async def prepare_customs_precheck(
     classification_models: Optional[list[str]] = Field(None, max_length=3, description="Sınıflandırmada kullanılan bağımsız model kimlikleri."),
     origin_country: Optional[str] = Field(None, max_length=100, description="Menşe ülke; sevk ülkesinden ayrıdır."),
     dispatch_country: Optional[str] = Field(None, max_length=100, description="Varsa sevk/çıkış ülkesi."),
+    atr_certificate: Optional[bool] = Field(None, description="Sevk AB'den ise A.TR dolaşım belgesi ibraz edilecek mi? Teyit edilmeden serbest dolaşım sütunu uygulanmaz."),
     intended_use: Optional[str] = Field(None, max_length=300, description="Ürünün kullanım amacı ve hedef kullanıcısı."),
     target_user: Optional[str] = Field(None, max_length=300, description="Hedef kullanıcının cinsiyet ve yaş grubu."),
     declared_product_type: Optional[str] = Field(None, max_length=300, description="İthalatta beyan edilmesi düşünülen ürün türü."),
@@ -3015,6 +3021,7 @@ async def prepare_customs_precheck(
         classification_models=classification_models or [],
         origin_country=origin_country,
         dispatch_country=dispatch_country,
+        atr_certificate=atr_certificate,
         intended_use=intended_use,
         target_user=target_user,
         declared_product_type=declared_product_type,

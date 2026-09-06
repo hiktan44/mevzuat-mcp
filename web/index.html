@@ -291,6 +291,7 @@
                 <label class="field"><span>Hedef kullanıcı (cinsiyet / yaş)</span><input id="targetUser" maxlength="300" placeholder="Örn. kız çocuk, 8–12 yaş"></label>
                 <label class="field"><span>İthalatta beyan edilecek ürün türü</span><input id="declaredProductType" maxlength="300" placeholder="Örn. pijama takımı veya günlük giyim takımı"></label>
                 <label class="field"><span>Sevk ülkesi</span><input id="dispatchCountry" list="countryList" autocomplete="off" maxlength="100" placeholder="Menşeden farklıysa"></label>
+                <label class="field"><span>A.TR dolaşım belgesi</span><select id="assistAtr"><option value="">Belirtilmedi</option><option value="true">İbraz edilecek</option><option value="false">Yok</option></select></label>
                 <label class="field"><span>Ürün durumu</span><select id="productCondition"><option value="unknown">Belirtilmedi</option><option value="new">Yeni</option><option value="used">Kullanılmış</option></select></label>
                 <label class="field"><span>Teslim şekli</span><input id="incoterm" maxlength="20" placeholder="EXW, FOB, CIF…"></label>
                 <label class="field"><span>Ödeme şekli</span><input id="paymentMethod" maxlength="80" placeholder="Peşin, mal mukabili, vadeli akreditif…"></label>
@@ -363,6 +364,7 @@
             <label class="field"><span>HS / CN / GTİP kodu <b>*</b></span><input id="tariffGtip" required inputmode="numeric" maxlength="30" placeholder="6, 8, 10 veya 12 hane"></label>
             <label class="field"><span>Menşe ülke <b>*</b></span><input id="tariffOrigin" list="countryList" autocomplete="off" required maxlength="100" placeholder="Örn. Çin"></label>
             <label class="field"><span>Sevk ülkesi</span><input id="tariffDispatch" list="countryList" autocomplete="off" maxlength="100" placeholder="Menşeden farklıysa, örn. Almanya"></label>
+            <label class="field"><span>A.TR dolaşım belgesi</span><select id="tariffAtr"><option value="">Belirtilmedi</option><option value="true">İbraz edilecek</option><option value="false">Yok</option></select></label>
             <label class="field"><span>Fatura bedeli</span><input id="tariffInvoice" type="text" inputmode="decimal" data-number data-min="0.01" placeholder="Maliyet için"></label>
             <label class="field"><span>Navlun</span><input id="tariffFreight" type="text" inputmode="decimal" data-number data-min="0" value="0"></label>
             <label class="field"><span>Sigorta</span><input id="tariffInsurance" type="text" inputmode="decimal" data-number data-min="0" value="0"></label>

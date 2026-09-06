@@ -157,6 +157,8 @@ class TariffLookupResult(BaseModel):
     dispatch_country: str | None = None
     origin_recognised: bool = True
     atr_free_circulation: bool = False
+    atr_available: bool = False
+    atr_certificate: bool | None = None
     origin_proof_required: list[str] = Field(default_factory=list)
     fallback_rates: dict[str, float] = Field(default_factory=dict)
     resolved_country_group: str | None = None
@@ -932,6 +934,7 @@ class TariffEngine:
         *,
         origin_country: str | None = None,
         dispatch_country: str | None = None,
+        atr_certificate: bool | None = None,
         auto_sync: bool = True,
     ) -> TariffLookupResult:
         normalised = _normalise_gtip(gtip)
@@ -984,8 +987,11 @@ class TariffEngine:
         origin_is_eu = bool(origin_entry and origin_entry.regime == "eu")
         dispatch_is_eu = bool(dispatch_entry and dispatch_entry.regime == "eu")
         # Third-country goods in free circulation in the EU: with an A.TR the customs duty
-        # follows the EU column, while İGV/EMY still follow the real origin.
-        atr_route = bool(dispatch_is_eu and not origin_is_eu and all(atr_eligible(code) for code in matched_gtips))
+        # follows the EU column, while İGV/EMY still follow the real origin.  The relief is
+        # applied only when the A.TR movement certificate is confirmed; goods merely dispatched
+        # from the EU (transit, no A.TR) stay on their origin column.
+        atr_available = bool(dispatch_is_eu and not origin_is_eu and all(atr_eligible(code) for code in matched_gtips))
+        atr_route = atr_available and atr_certificate is True
         origin_proof_required: list[str] = []
         fallback_rates: dict[str, float] = {}
         # The column is chosen per measure type: in the IV list the EMY column
@@ -1052,8 +1058,15 @@ class TariffEngine:
                 alternatives.append(measure)
         if atr_route:
             warnings.append(
-                f"Sevk ülkesi {dispatch_entry.name} (AB) ve menşe {origin_country}: gümrük vergisi A.TR ile serbest dolaşım "
-                "sütunundan alındı ve A.TR ibrazına bağlıdır; İGV ve ek mali yükümlülük menşe ülkesi sütunundan uygulanır."
+                f"Sevk ülkesi {dispatch_entry.name} (AB) ve menşe {origin_country}: A.TR beyan edildiği için gümrük vergisi "
+                "serbest dolaşım sütunundan alındı; belge gümrükte ibraz edilmezse menşe ülkesi sütunu uygulanır. "
+                "İGV ve ek mali yükümlülük menşe ülkesi sütunundan uygulanır."
+            )
+        elif atr_available:
+            warnings.append(
+                f"Sevk ülkesi {dispatch_entry.name} (AB), menşe {origin_country}: A.TR teyit edilmediği için gümrük vergisi "
+                "menşe ülkesi sütunundan uygulandı. Eşya AB'de serbest dolaşımdaysa ve A.TR ibraz edilecekse sorguyu "
+                "A.TR beyanıyla yenileyin; gümrük vergisi serbest dolaşım sütunundan hesaplanır."
             )
         elif dispatch_is_eu and not origin_is_eu:
             warnings.append(
@@ -1123,7 +1136,8 @@ class TariffEngine:
             gtip=normalised, match_mode=match_mode, matched_gtips=matched_gtips[:500],
             matched_gtip_count=len(matched_gtips), origin_country=origin_country,
             dispatch_country=dispatch_country, origin_recognised=not origin_country or origin_entry is not None,
-            atr_free_circulation=atr_route, origin_proof_required=origin_proof_required, fallback_rates=fallback_rates,
+            atr_free_circulation=atr_route, atr_available=atr_available, atr_certificate=atr_certificate,
+            origin_proof_required=origin_proof_required, fallback_rates=fallback_rates,
             resolved_country_group=selected, rate_variants=rate_variants,
             unambiguous_rates=unambiguous_rates, ambiguous_measure_types=ambiguous_measure_types,
             measures=primary[:500], conditional_measures=conditional[:240],
@@ -1255,9 +1269,12 @@ class TariffEngine:
         data: LandedCostInput,
         *,
         dispatch_country: str | None = None,
+        atr_certificate: bool | None = None,
     ) -> dict[str, Any]:
         """Apply only one unambiguous, unfootnoted official rate per measure type."""
-        lookup = await self.lookup(gtip, origin_country=origin_country, dispatch_country=dispatch_country)
+        lookup = await self.lookup(
+            gtip, origin_country=origin_country, dispatch_country=dispatch_country, atr_certificate=atr_certificate
+        )
         safe_rates = lookup.unambiguous_rates
         conflicts = [
             f"{measure_type}: alt GTİP satırlarında oran veya önlem kapsamı farklı"

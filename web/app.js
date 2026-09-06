@@ -1472,7 +1472,7 @@ async function refreshCandidateRates() {
     const tariff = await fetchJson("/api/tariff/lookup", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ gtip: candidate.code, origin_country: origin, dispatch_country: $("#dispatchCountry")?.value.trim() || null }),
+      body: JSON.stringify({ gtip: candidate.code, origin_country: origin, dispatch_country: $("#dispatchCountry")?.value.trim() || null, atr_certificate: $("#assistAtr")?.value || null }),
     });
     const safe = tariff.unambiguous_rates || {};
     return {
@@ -1579,6 +1579,7 @@ function customsRequestBody() {
     classification_models: (state.customsClassificationResult?.models || []).slice(0, 3),
     origin_country: $("#originCountry").value.trim() || null,
     dispatch_country: $("#dispatchCountry").value.trim() || null,
+    atr_certificate: $("#assistAtr")?.value || null,
     intended_use: $("#intendedUse").value.trim() || null,
     target_user: $("#targetUser").value.trim() || null,
     declared_product_type: $("#declaredProductType").value.trim() || null,
@@ -2394,6 +2395,7 @@ $("#tariffForm").addEventListener("submit", async (event) => {
     gtip: $("#tariffGtip").value.trim(),
     origin_country: $("#tariffOrigin").value.trim(),
     dispatch_country: $("#tariffDispatch")?.value.trim() || null,
+    atr_certificate: $("#tariffAtr")?.value || null,
   };
   try {
     const invoice = nullableNumber("#tariffInvoice");
@@ -2436,6 +2438,7 @@ function renderScenarioRows(data) {
     const notes = [];
     if (row.origin_recognised === false) notes.push("Menşe ülke tanınmadı; 'Diğer Ülkeler' varsayıldı");
     if (row.atr_free_circulation) notes.push("GV: A.TR ile serbest dolaşım sütunu; İGV/EMY menşeye göre");
+    else if (row.atr_available) notes.push("A.TR teyit edilirse GV serbest dolaşım sütunundan hesaplanır");
     if ((row.origin_proof_required || []).length) {
       const fallback = Object.entries(row.fallback_rates || {}).map(([key, value]) => `${tariffMeasureLabels[key] || key} %${numberFormat.format(value)}`).join(", ");
       notes.push(`İGV/EMY tercihi menşe tevsikine bağlı${fallback ? ` (tevsik yoksa ${fallback})` : ""}`);
@@ -2510,7 +2513,7 @@ $("#scenarioCompare").addEventListener("click", async () => {
     const data = await fetchJson("/api/tariff/scenarios", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ gtip, origins, dispatch_country: $("#tariffDispatch")?.value.trim() || null }),
+      body: JSON.stringify({ gtip, origins, dispatch_country: $("#tariffDispatch")?.value.trim() || null, atr_certificate: $("#tariffAtr")?.value || null }),
     });
     output.innerHTML = renderScenarioRows(data);
   } catch (error) {
