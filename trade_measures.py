@@ -61,7 +61,9 @@ MEVZUAT_PUBLIC = "https://www.mevzuat.gov.tr/mevzuat?MevzuatNo={no}&MevzuatTur=9
 SURVEILLANCE_TITLE = "İthalatta Gözetim Uygulanmasına İlişkin Tebliğ"
 
 _CODE_RE = re.compile(r"\d{4}(?:\.\d{2}){0,4}|\d{2}\.\d{2}(?:\.\d{2}){0,4}|\d{4,12}")
-_ROW_CODE_RE = re.compile(r"^\s*(\d{4}(?:\.\d{2}){1,4}|\d{6,12})\s*$")
+_ROW_CODE_RE = re.compile(r"^\s*(\d{4}(?:\.\d{2}){1,4}|\d{2}\.\d{2}(?:\.\d{2}){0,4}|\d{4,12})\s*$")
+PARSER_VERSION = 2
+_TEXT_ITEM_RE = re.compile(r"(\d{4}(?:\.\d{2}){1,4}|\d{2}\.\d{2}(?:\.\d{2}){0,4})\s+(.+?)\s+(\d+(?:[.,]\d+)?)(?=\s+(?:\d{4}(?:\.\d{2}){1,4}|\d{2}\.\d{2}(?:\.\d{2}){0,4})\s|\s*(?:\*|Gözetim|MADDE|$))")
 _ALL_COUNTRIES = {"tüm ülkeler", "tum ulkeler", "all countries"}
 KINDS = ("anti_dumping", "safeguard", "surveillance", "communiques")
 KIND_LABELS = {
@@ -288,7 +290,7 @@ def parse_surveillance_page(html_text: str, meta: dict[str, Any] | None = None) 
             code_cell = cells[gtip_col] if gtip_col < len(cells) else ""
             if not _ROW_CODE_RE.match(code_cell):
                 # Bazı tablolarda kod ile açıklama aynı hücrede: "8481.10.05.00.00 Filtre..."
-                match = re.match(r"^\s*(\d{4}(?:\.\d{2}){1,4})\s+(.+)$", code_cell)
+                match = re.match(r"^\s*(\d{4}(?:\.\d{2}){1,4}|\d{2}\.\d{2}(?:\.\d{2}){0,4})\s+(.+)$", code_cell)
                 if not match:
                     continue
                 code_text, inline_desc = match.group(1), match.group(2)
@@ -315,6 +317,17 @@ def parse_surveillance_page(html_text: str, meta: dict[str, Any] | None = None) 
                 item["country"] = cells[country_col]
             items.append(item)
     text = soup.get_text(" ", strip=True)
+    if not items:
+        # Bazı eski tebliğlerde tablo <table> yerine düz metin/paragraf olarak yer alır.
+        header = re.search(r"(?:G\.?T\.?İ\.?P\.?|GTİP|GTP)\s+Eşya\S*\s+Tanımı\s+(Birim[^\d]{0,80}?)(?=\s+\d{2,4}\.)", text)
+        if header:
+            unit_text = header.group(1)
+            default_unit = _header_unit(unit_text) or default_unit
+            tail = text[header.end():]
+            stop = re.search(r"\s(?:Gözetim uygulaması|MADDE 2|Yürürlük)\b", tail)
+            segment = tail[: stop.start()] if stop else tail[:20000]
+            for code, description, value in _TEXT_ITEM_RE.findall(segment):
+                items.append({"gtip": code, "description": description.strip(" -–"), "value": value, "unit": default_unit})
     if default_unit is None:
         found = re.search(r"\(ABD Doları\s*/\s*([A-Za-zÇĞİÖŞÜçğıöşü0-9]+)\*?\)", text)
         if found:
@@ -329,6 +342,7 @@ def parse_surveillance_page(html_text: str, meta: dict[str, Any] | None = None) 
             "unit": default_unit,
             "items": items,
             "item_count": len(items),
+            "parser_version": PARSER_VERSION,
         }
     )
     return result
@@ -913,7 +927,7 @@ class TradeMeasureEngine:
         fetched = 0
         for entry in index:
             cached = self.store.surveillance_doc(entry["mevzuat_no"])
-            if cached and cached.get("rg_date") == entry["rg_date"] and cached.get("items") is not None:
+            if cached and cached.get("rg_date") == entry["rg_date"] and cached.get("items") is not None and cached.get("parser_version") == PARSER_VERSION:
                 docs.append(cached)
                 continue
             response = await self._get(MEVZUAT_IFRAME.format(no=entry["mevzuat_no"]))

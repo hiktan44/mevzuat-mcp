@@ -100,6 +100,21 @@ class ParserTests(unittest.TestCase):
         self.assertEqual(index[0]["gazette"], "20251231")
         self.assertEqual(len(index), 1)
 
+    def test_four_digit_positions_and_text_only_tables(self):
+        table = '<table><tr><td>G.T.P.</td><td>Eşyanın Tanımı</td><td>Birim CIF Kıymet (ABD Doları/m2)</td></tr><tr><td>68.09</td><td>Alçı levhalar</td><td>5</td></tr></table>'
+        doc = tm.parse_surveillance_page(table, {})
+        self.assertEqual(doc["items"][0]["gtip"], "68.09")
+        self.assertEqual(doc["unit"], "ABD Doları/m2")
+        text = (
+            "<p>MADDE 1- (1) Bu Tebliğ ... G.T.İ.P. Eşyanın Tanımı Birim Gümrük Kıymeti (ABD Doları/Kg*) "
+            "8481.10.05.00.00 Filtre veya yağlayıcılarla kombine halde olanlar 30 8481.80.99.00.11 Yangın hidrantları 5 "
+            "* Kg: brüt ağırlık Gözetim uygulaması MADDE 2- (1) ...</p>"
+        )
+        doc = tm.parse_surveillance_page(text, {})
+        self.assertEqual([item["gtip"] for item in doc["items"]], ["8481.10.05.00.00", "8481.80.99.00.11"])
+        self.assertEqual(doc["items"][1]["value"], "5")
+        self.assertEqual(doc["parser_version"], tm.PARSER_VERSION)
+
 
 class EngineTests(unittest.TestCase):
     def setUp(self):
