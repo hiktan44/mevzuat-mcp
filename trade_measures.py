@@ -62,7 +62,8 @@ SURVEILLANCE_TITLE = "İthalatta Gözetim Uygulanmasına İlişkin Tebliğ"
 
 _CODE_RE = re.compile(r"\d{4}(?:\.\d{2}){0,4}|\d{2}\.\d{2}(?:\.\d{2}){0,4}|\d{4,12}")
 _ROW_CODE_RE = re.compile(r"^\s*(\d{4}(?:\.\d{2}){1,4}|\d{2}\.\d{2}(?:\.\d{2}){0,4}|\d{4,12})\s*$")
-PARSER_VERSION = 2
+PARSER_VERSION = 3
+_QUANTITY_RE = re.compile(r"^\d[\d.,]*\s*(?:ton|kg|adet|baş|bas|litre|lt|m3|m2|hl)\b", re.I)
 _TEXT_ITEM_RE = re.compile(r"(\d{4}(?:\.\d{2}){1,4}|\d{2}\.\d{2}(?:\.\d{2}){0,4})\s+(.+?)\s+(\d+(?:[.,]\d+)?)(?=\s+(?:\d{4}(?:\.\d{2}){1,4}|\d{2}\.\d{2}(?:\.\d{2}){0,4})\s|\s*(?:\*|Gözetim|MADDE|$))")
 _ALL_COUNTRIES = {"tüm ülkeler", "tum ulkeler", "all countries"}
 KINDS = ("anti_dumping", "safeguard", "surveillance", "tariff_quota", "communiques")
@@ -469,33 +470,62 @@ def _legacy_doc_text(payload: bytes) -> str:
 
 
 def _quota_rows_from_cells(rows: Iterable[list[str]]) -> list[dict[str, str]]:
+    """Karar/tebliğ eklerindeki tablo satırlarını GTİP sütununu başlıktan bularak okur."""
     items: list[dict[str, str]] = []
     header: list[str] = []
-    for cells in rows:
+    gtip_col = 0
+    columns: dict[str, int] = {}
+    for raw_cells in rows:
+        cells = [str(cell).strip() for cell in raw_cells]
         if not cells:
             continue
-        if not header and any(_is_code_header(cell) for cell in cells):
-            header = [_ascii_key(c) for c in cells]
+        if any(_is_code_header(cell) for cell in cells):
+            header = [_ascii_key(cell) for cell in cells]
+            gtip_col = next(index for index, cell in enumerate(cells) if _is_code_header(cell))
+            columns = {}
+            for index, label in enumerate(header):
+                if index == gtip_col:
+                    continue
+                if ("donem" in label or "tarih" in label) and "period" not in columns:
+                    columns["period"] = index
+                elif ("vergi" in label or "oran" in label) and "duty_rate" not in columns:
+                    columns["duty_rate"] = index
+                elif "kod" in label and "quota_code" not in columns:
+                    columns["quota_code"] = index
+                elif ("miktar" in label or "kontenjan" in label) and "quantity" not in columns:
+                    columns["quantity"] = index
+                elif ("madde" in label or "tanim" in label or "esya" in label or "urun" in label) and "description" not in columns:
+                    columns["description"] = index
             continue
-        code = cells[0].strip()
+        offset = 0
+        if not header and len(cells) > 1 and re.fullmatch(r"\d{1,3}", cells[0]) and _ROW_CODE_RE.match(cells[1]):
+            offset = 1  # baştaki "Sıra No" sütunu
+        code_index = gtip_col if header else offset
+        if code_index >= len(cells):
+            continue
+        code = cells[code_index]
         if not _ROW_CODE_RE.match(code):
             continue
-        item = {"gtip": code, "description": cells[1] if len(cells) > 1 else ""}
-        for index, cell in enumerate(cells[2:], start=2):
-            label = header[index] if index < len(header) else ""
-            if "donem" in label or "tarih" in label:
-                item.setdefault("period", cell)
-            elif "vergi" in label or "oran" in label:
-                item.setdefault("duty_rate", cell)
-            elif "kod" in label:
-                item.setdefault("quota_code", cell)
-            elif "miktar" in label or "kontenjan" in label:
-                item.setdefault("quantity", cell)
-        if "quantity" not in item and len(cells) > 2:
-            item["quantity"] = cells[2]
+        item: dict[str, str] = {"gtip": code, "description": ""}
+        if header:
+            for field_name, index in columns.items():
+                if index < len(cells) and cells[index]:
+                    item[field_name] = cells[index]
+            if "description" not in columns and code_index + 1 < len(cells) and not any(index == code_index + 1 for index in columns.values()):
+                item["description"] = cells[code_index + 1]
+        else:
+            item["description"] = cells[code_index + 1] if len(cells) > code_index + 1 else ""
+            if len(cells) > code_index + 2:
+                item["quantity"] = cells[code_index + 2]
+        if _QUANTITY_RE.match(item.get("description", "")):
+            item.setdefault("quantity", item["description"])
+            item["description"] = ""
+        if "quantity" not in item:
+            candidate = next((cell for cell in cells if _QUANTITY_RE.match(cell)), "")
+            if candidate:
+                item["quantity"] = candidate
         items.append(item)
     return items
-
 
 def parse_quota_document(payload: bytes, filename: str, meta: dict[str, Any] | None = None) -> dict[str, Any]:
     """Tarım ürünleri tarife kontenjanı kararı (.docx/.doc) ekindeki GTİP / miktar / vergi tablosu."""
