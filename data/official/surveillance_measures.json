@@ -8199,5 +8199,1106 @@
    }
   ],
   "item_count": 1
+ },
+ {
+  "mevzuat_no": "12811",
+  "title": "İTHALATTA GÖZETİM UYGULANMASINA İLİŞKİN TEBLİĞ (TEBLİĞ NO: 2009/4)",
+  "rg_date": "22.01.2009",
+  "rg_no": "27118",
+  "tertip": "5",
+  "url": "mevzuat?MevzuatNo=12811&MevzuatTur=9&MevzuatTertip=5",
+  "unit": null,
+  "items": [
+   {
+    "gtip": "6806.20.90.00.12",
+    "description": "Genleştirilmiş perlitten blok ürünler",
+    "value": "4",
+    "unit": null
+   },
+   {
+    "gtip": "6806.20.90.00.13",
+    "description": "Genleştirilmiş perlitten harçlar",
+    "value": "4",
+    "unit": null
+   }
+  ],
+  "item_count": 2
+ },
+ {
+  "mevzuat_no": "12810",
+  "title": "İTHALATTA GÖZETİM UYGULANMASINA İLİŞKİN TEBLİĞ (TEBLİĞ NO: 2009/3)",
+  "rg_date": "22.01.2009",
+  "rg_no": "27118",
+  "tertip": "5",
+  "url": "mevzuat?MevzuatNo=12810&MevzuatTur=9&MevzuatTertip=5",
+  "unit": "ABD Doları/Kg",
+  "items": [
+   {
+    "gtip": "8202.31.00.00.00",
+    "description": "İş gören kısmı çelikten olanlar",
+    "value": "12",
+    "unit": "ABD Doları/Kg"
+   },
+   {
+    "gtip": "8202.39.00.00.00",
+    "description": "Diğerleri (aksam ve parçalar dahil )",
+    "value": "20",
+    "unit": "ABD Doları/Kg"
+   }
+  ],
+  "item_count": 2
+ },
+ {
+  "mevzuat_no": "12387",
+  "title": "İTHALATTA GÖZETİM UYGULANMASINA İLİŞKİN TEBLİĞ (TEBLİĞ NO: 2008/19)",
+  "rg_date": "29.08.2008",
+  "rg_no": "26982",
+  "tertip": "5",
+  "url": "mevzuat?MevzuatNo=12387&MevzuatTur=9&MevzuatTertip=5",
+  "unit": "ABD Doları/Kg",
+  "items": [],
+  "item_count": 0
+ },
+ {
+  "mevzuat_no": "12229",
+  "title": "İTHALATTA GÖZETİM UYGULANMASINA İLİŞKİN TEBLİĞ (TEBLİĞ NO: 2008/16)",
+  "rg_date": "28.06.2008",
+  "rg_no": "26920",
+  "tertip": "5",
+  "url": "mevzuat?MevzuatNo=12229&MevzuatTur=9&MevzuatTertip=5",
+  "unit": "ABD Doları/Kg",
+  "items": [
+   {
+    "gtip": "8708.91.35.00.00",
+    "description": "Radyatörler",
+    "value": "15",
+    "unit": "ABD Doları/Kg"
+   }
+  ],
+  "item_count": 1
+ },
+ {
+  "mevzuat_no": "12228",
+  "title": "İTHALATTA GÖZETİM UYGULANMASINA İLİŞKİN TEBLİĞ (TEBLİĞ NO: 2008/15)",
+  "rg_date": "28.06.2008",
+  "rg_no": "26920",
+  "tertip": "5",
+  "url": "mevzuat?MevzuatNo=12228&MevzuatTur=9&MevzuatTertip=5",
+  "unit": "ABD Doları/Kg",
+  "items": [
+   {
+    "gtip": "8708.80.35.00.00",
+    "description": "Süspansiyon amortisörleri",
+    "value": "6",
+    "unit": "ABD Doları/Kg"
+   }
+  ],
+  "item_count": 1
+ },
+ {
+  "mevzuat_no": "12227",
+  "title": "İTHALATTA GÖZETİM UYGULANMASINA İLİŞKİN TEBLİĞ (TEBLİĞ NO: 2008/14)",
+  "rg_date": "28.06.2008",
+  "rg_no": "26920",
+  "tertip": "5",
+  "url": "mevzuat?MevzuatNo=12227&MevzuatTur=9&MevzuatTertip=5",
+  "unit": null,
+  "items": [
+   {
+    "gtip": "8708.70.50.00.13",
+    "description": "Jantlar",
+    "value": "8",
+    "unit": null
+   },
+   {
+    "gtip": "8708.70.99.00.13",
+    "description": "Jantlar",
+    "value": "6",
+    "unit": null
+   }
+  ],
+  "item_count": 2
+ },
+ {
+  "mevzuat_no": "12212",
+  "title": "İTHALATTA GÖZETİM UYGULANMASINA İLİŞKİN TEBLİĞ (Tebliğ No:2008/13)",
+  "rg_date": "20.06.2008",
+  "rg_no": "26912",
+  "tertip": "5",
+  "url": "mevzuat?MevzuatNo=12212&MevzuatTur=9&MevzuatTertip=5",
+  "unit": null,
+  "items": [
+   {
+    "gtip": "9105.11.00.00.00",
+    "description": "Elektrikle çalışanlar",
+    "value": "5",
+    "unit": null
+   }
+  ],
+  "item_count": 1
+ },
+ {
+  "mevzuat_no": "12113",
+  "title": "İTHALATTA GÖZETİM UYGULANMASINA İLİŞKİN TEBLİĞ (TEBLİĞ NO : 2008/12)",
+  "rg_date": "03.05.2008",
+  "rg_no": "26865",
+  "tertip": "5",
+  "url": "mevzuat?MevzuatNo=12113&MevzuatTur=9&MevzuatTertip=5",
+  "unit": "ABD Doları/Kg",
+  "items": [
+   {
+    "gtip": "6702.90.00.00.11",
+    "description": "Yapma çiçekler, yapraklı dallar, meyvalar",
+    "value": "10",
+    "unit": "ABD Doları/Kg"
+   },
+   {
+    "gtip": "6702.90.00.00.12",
+    "description": "Yapma çiçekler, yapraklı dallar, meyvalardan mamul eşya",
+    "value": "10",
+    "unit": "ABD Doları/Kg"
+   },
+   {
+    "gtip": "6702.90.00.00.15",
+    "description": "Aksamı",
+    "value": "8",
+    "unit": "ABD Doları/Kg"
+   }
+  ],
+  "item_count": 3
+ },
+ {
+  "mevzuat_no": "12100",
+  "title": "İTHALATTA GÖZETİM UYGULANMASINA İLİŞKİN TEBLİĞ (TEBLİĞ NO: 2008/11)",
+  "rg_date": "27.04.2008",
+  "rg_no": "26859",
+  "tertip": "5",
+  "url": "mevzuat?MevzuatNo=12100&MevzuatTur=9&MevzuatTertip=5",
+  "unit": null,
+  "items": [
+   {
+    "gtip": "8536.20.10.00.11",
+    "description": "Ev tipi minyatür devre kesiciler (otomatlar)",
+    "value": "11",
+    "unit": null
+   },
+   {
+    "gtip": "8536.20.10.00.19",
+    "description": "Diğerleri",
+    "value": "23",
+    "unit": null
+   }
+  ],
+  "item_count": 2
+ },
+ {
+  "mevzuat_no": "12074",
+  "title": "İTHALATTA GÖZETİM UYGULANMASINA İLİŞKİN TEBLİĞ\r\n\r\n(TEBLİĞ NO: 2008/10)",
+  "rg_date": "09.04.2008",
+  "rg_no": "26842",
+  "tertip": "5",
+  "url": "mevzuat?MevzuatNo=12074&MevzuatTur=9&MevzuatTertip=5",
+  "unit": null,
+  "items": [
+   {
+    "gtip": "9004.10.10.00.00",
+    "description": "Optik tarzda işlenmiş camları olanlar",
+    "value": "",
+    "unit": null
+   },
+   {
+    "gtip": "9004.90.10.00.11",
+    "description": "Optik tarzda işlenmiş camları olanlar",
+    "value": "",
+    "unit": null
+   },
+   {
+    "gtip": "9004.90.90.00.11",
+    "description": "Optik tarzda işlenmiş camları olanlar",
+    "value": "",
+    "unit": null
+   }
+  ],
+  "item_count": 3
+ },
+ {
+  "mevzuat_no": "12041",
+  "title": "İTHALATTA GÖZETİM UYGULANMASINA İLİŞKİN TEBLİĞ (TEBLİĞ NO: 2008/9)",
+  "rg_date": "19.03.2008",
+  "rg_no": "26821",
+  "tertip": "5",
+  "url": "mevzuat?MevzuatNo=12041&MevzuatTur=9&MevzuatTertip=5",
+  "unit": "ABD Doları/Ton",
+  "items": [
+   {
+    "gtip": "0806.20",
+    "description": "Kurutulmuş",
+    "value": "3.000",
+    "unit": "ABD Doları/Ton"
+   }
+  ],
+  "item_count": 1
+ },
+ {
+  "mevzuat_no": "11939",
+  "title": "İTHALATTA GÖZETİM UYGULANMASINA İLİŞKİN TEBLİĞ (TEBLİĞ NO: 2008/5)",
+  "rg_date": "30.01.2008",
+  "rg_no": "26772",
+  "tertip": "5",
+  "url": "mevzuat?MevzuatNo=11939&MevzuatTur=9&MevzuatTertip=5",
+  "unit": null,
+  "items": [
+   {
+    "gtip": "9003.90.00.00.00",
+    "description": "Aksam ve parçalar",
+    "value": "",
+    "unit": null
+   }
+  ],
+  "item_count": 1
+ },
+ {
+  "mevzuat_no": "11938",
+  "title": "İTHALATTA GÖZETİM UYGULANMASINA İLİŞKİN TEBLİĞ (TEBLİĞ NO: 2008/4)",
+  "rg_date": "30.01.2008",
+  "rg_no": "26772",
+  "tertip": "5",
+  "url": "mevzuat?MevzuatNo=11938&MevzuatTur=9&MevzuatTertip=5",
+  "unit": null,
+  "items": [
+   {
+    "gtip": "8407.31.00.00.00",
+    "description": "Silindir hacmi 50 cm3.ü geçmeyenler",
+    "value": "",
+    "unit": null
+   },
+   {
+    "gtip": "8407.32.10.00.00",
+    "description": "Silindir hacmi 50 cm3.ü geçen fakat 125 cm3.ü geçmeyenler",
+    "value": "",
+    "unit": null
+   },
+   {
+    "gtip": "8407.32.90.00.00",
+    "description": "Silindir hacmi 125 cm3.ü geçen fakat 250 cm3.ü geçmeyenler",
+    "value": "",
+    "unit": null
+   },
+   {
+    "gtip": "8714.10.00.00.00",
+    "description": "Motosikletlere ait olanlar (mopedler dahil) (yalnızca şasiler)",
+    "value": "",
+    "unit": null
+   }
+  ],
+  "item_count": 4
+ },
+ {
+  "mevzuat_no": "11919",
+  "title": "İTHALATTA GÖZETİM UYGULANMASINA İLİŞKİN TEBLİĞ\r\n(Tebliğ No:2008/01)",
+  "rg_date": "22.01.2008",
+  "rg_no": "26764",
+  "tertip": "5",
+  "url": "mevzuat?MevzuatNo=11919&MevzuatTur=9&MevzuatTertip=5",
+  "unit": null,
+  "items": [
+   {
+    "gtip": "8531.10.30.00.11",
+    "description": "Gaz alarm cihazları",
+    "value": "15",
+    "unit": null
+   }
+  ],
+  "item_count": 1
+ },
+ {
+  "mevzuat_no": "11696",
+  "title": "İTHALATTA GÖZETİM UYGULANMASINA İLİŞKİN TEBLİĞ\r\n(TEBLİĞNO: 2007/31)",
+  "rg_date": "02.11.2007",
+  "rg_no": "26688",
+  "tertip": "5",
+  "url": "mevzuat?MevzuatNo=11696&MevzuatTur=9&MevzuatTertip=5",
+  "unit": null,
+  "items": [
+   {
+    "gtip": "9615.11.00.00.00",
+    "description": "Sertleştirilmiş kauçuktan veya plastik maddelerden olanlar",
+    "value": "15",
+    "unit": null
+   },
+   {
+    "gtip": "9615.19.00.00.00",
+    "description": "Diğerleri",
+    "value": "15",
+    "unit": null
+   },
+   {
+    "gtip": "9615.90",
+    "description": "Diğerleri",
+    "value": "15",
+    "unit": null
+   }
+  ],
+  "item_count": 3
+ },
+ {
+  "mevzuat_no": "11482",
+  "title": "İTHALATTA GÖZETİM UYGULANMASINA İLİŞKİN TEBLİĞ (TEBLİĞ NO:2007/26)",
+  "rg_date": "02.08.2007",
+  "rg_no": "26601",
+  "tertip": "5",
+  "url": "mevzuat?MevzuatNo=11482&MevzuatTur=9&MevzuatTertip=5",
+  "unit": null,
+  "items": [
+   {
+    "gtip": "6601.10.00.00.00",
+    "description": "Bahçe şemsiyeleri ve benzeri şemsiyeler",
+    "value": "30",
+    "unit": null
+   },
+   {
+    "gtip": "6601.91.00.00.00",
+    "description": "İç içe girebilen milleri olanlar",
+    "value": "6",
+    "unit": null
+   },
+   {
+    "gtip": "6601.99",
+    "description": "Diğerleri",
+    "value": "12",
+    "unit": null
+   },
+   {
+    "gtip": "6602.00.00.00.00",
+    "description": "Bastonlar, iskemle bastonlar, kamçılar, kırbaçlar ve benzerleri",
+    "value": "8",
+    "unit": null
+   },
+   {
+    "gtip": "6603.20.00.00.00",
+    "description": "Şemsiyelerin bir araya getirilmiş tel mesnetleri (mil üzerine monte edilenler dahil)",
+    "value": "15",
+    "unit": null
+   },
+   {
+    "gtip": "6603.90.10.00.00",
+    "description": "Saplar ve uçlar",
+    "value": "6",
+    "unit": null
+   },
+   {
+    "gtip": "6603.90.90.10.00",
+    "description": "66.01 Pozisyonuna giren eşyanın aksamı",
+    "value": "15",
+    "unit": null
+   },
+   {
+    "gtip": "6603.90.90.90.00",
+    "description": "Diğerleri",
+    "value": "15",
+    "unit": null
+   }
+  ],
+  "item_count": 8
+ },
+ {
+  "mevzuat_no": "11481",
+  "title": "İTHALATTA GÖZETİM UYGULANMASINA İLİŞKİN TEBLİĞ (TEBLİĞ NO:2007/27)",
+  "rg_date": "02.08.2007",
+  "rg_no": "26601",
+  "tertip": "5",
+  "url": "mevzuat?MevzuatNo=11481&MevzuatTur=9&MevzuatTertip=5",
+  "unit": "ABD Doları/Ton",
+  "items": [
+   {
+    "gtip": "0805.50",
+    "description": "Limon ( Citrus limon, Citrus limonum) ve tatlı limonlar ) ( Citrus aurantifolia , Citrus latifolia )",
+    "value": "900",
+    "unit": "ABD Doları/Ton"
+   }
+  ],
+  "item_count": 1
+ },
+ {
+  "mevzuat_no": "11266",
+  "title": "İTHALATTA GÖZETİM UYGULANMASINA İLİŞKİN TEBLİĞ (TEBLİĞ NO: 2007/19)",
+  "rg_date": "19.04.2007",
+  "rg_no": "26498",
+  "tertip": "5",
+  "url": "mevzuat?MevzuatNo=11266&MevzuatTur=9&MevzuatTertip=5",
+  "unit": null,
+  "items": [
+   {
+    "gtip": "3920.43.10.00.00",
+    "description": "Kalınlığı 1 mm. yi geçmeyenler",
+    "value": "3.300",
+    "unit": null
+   }
+  ],
+  "item_count": 1
+ },
+ {
+  "mevzuat_no": "11185",
+  "title": "İTHALATTA GÖZETİM UYGULANMASINA İLİŞKİN TEBLİĞ\r\n(TEBLİĞ NO: 2007/18)",
+  "rg_date": "10.03.2007",
+  "rg_no": "26458",
+  "tertip": "5",
+  "url": "mevzuat?MevzuatNo=11185&MevzuatTur=9&MevzuatTertip=5",
+  "unit": "ABD Doları/Ton",
+  "items": [],
+  "item_count": 0
+ },
+ {
+  "mevzuat_no": "11184",
+  "title": "İTHALATTA GÖZETİM UYGULANMASINA İLİŞKİN TEBLİĞ\r\n(TEBLİĞ NO: 2007/17)",
+  "rg_date": "10.03.2007",
+  "rg_no": "26458",
+  "tertip": "5",
+  "url": "mevzuat?MevzuatNo=11184&MevzuatTur=9&MevzuatTertip=5",
+  "unit": "ABD Doları/Ton",
+  "items": [
+   {
+    "gtip": "3922.90.00.90.12",
+    "description": "Sifonlar (Pis ve kirli su tesisatı için)",
+    "value": "7.000",
+    "unit": "ABD Doları/Ton"
+   }
+  ],
+  "item_count": 1
+ },
+ {
+  "mevzuat_no": "11183",
+  "title": "İTHALATTA GÖZETİM UYGULANMASINA İLİŞKİN TEBLİĞ\r\n(TEBLİĞ NO: 2007/16)",
+  "rg_date": "10.03.2007",
+  "rg_no": "26458",
+  "tertip": "5",
+  "url": "mevzuat?MevzuatNo=11183&MevzuatTur=9&MevzuatTertip=5",
+  "unit": "ABD Doları/Ton",
+  "items": [
+   {
+    "gtip": "3407.00.00.90.12",
+    "description": "Model yapmaya mahsus patlar",
+    "value": "10.000",
+    "unit": "ABD Doları/Ton"
+   }
+  ],
+  "item_count": 1
+ },
+ {
+  "mevzuat_no": "11147",
+  "title": "İTHALATTA GÖZETİM UYGULANMASINA İLİŞKİN TEBLİĞ (TEBLİĞ NO: 2007/13)",
+  "rg_date": "01.03.2007",
+  "rg_no": "26449",
+  "tertip": "5",
+  "url": "mevzuat?MevzuatNo=11147&MevzuatTur=9&MevzuatTertip=5",
+  "unit": null,
+  "items": [
+   {
+    "gtip": "1207.40.90.00.11",
+    "description": "Ham",
+    "value": "1.200",
+    "unit": null
+   },
+   {
+    "gtip": "1207.40.90.00.12",
+    "description": "Soyulmuş",
+    "value": "1.600",
+    "unit": null
+   }
+  ],
+  "item_count": 2
+ },
+ {
+  "mevzuat_no": "11002",
+  "title": "İTHALATTA GÖZETİM UYGULANMASINA İLİŞKİN TEBLİĞ\r\n(TEBLİĞ NO: 2007/11)",
+  "rg_date": "10.01.2007",
+  "rg_no": "26399",
+  "tertip": "5",
+  "url": "mevzuat?MevzuatNo=11002&MevzuatTur=9&MevzuatTertip=5",
+  "unit": "ABD Doları/Ton",
+  "items": [
+   {
+    "gtip": "9018.31",
+    "description": "Şırıngalar (iğneli olsun olmasın)",
+    "value": "7.000",
+    "unit": "ABD Doları/Ton"
+   },
+   {
+    "gtip": "9018.31",
+    "description": "Şırıngalar (iğneli olsun olmasın)",
+    "value": "7.000",
+    "unit": "ABD Doları/Ton"
+   }
+  ],
+  "item_count": 2
+ },
+ {
+  "mevzuat_no": "11001",
+  "title": "İTHALATTA GÖZETİM UYGULANMASINA İLİŞKİN TEBLİĞ\r\n(TEBLİĞ NO: 2007/10)",
+  "rg_date": "10.01.2007",
+  "rg_no": "26399",
+  "tertip": "5",
+  "url": "mevzuat?MevzuatNo=11001&MevzuatTur=9&MevzuatTertip=5",
+  "unit": "ABD Doları/Kg",
+  "items": [
+   {
+    "gtip": "8504.31.29.00.00",
+    "description": "Diğerleri",
+    "value": "30",
+    "unit": "ABD Doları/Kg"
+   },
+   {
+    "gtip": "9030.33.70.90.00",
+    "description": "Diğerleri (Yalnız voltmetreler ve ampermetreler )",
+    "value": "140",
+    "unit": "ABD Doları/Kg"
+   },
+   {
+    "gtip": "9030.39.00.19.00",
+    "description": "Diğerleri (Yalnız voltmetreler ve ampermetreler )",
+    "value": "100",
+    "unit": "ABD Doları/Kg"
+   }
+  ],
+  "item_count": 3
+ },
+ {
+  "mevzuat_no": "10998",
+  "title": "İTHALATTA GÖZETİM UYGULANMASINA İLİŞKİN TEBLİĞ\r\n(TEBLİĞ NO: 2007/7)",
+  "rg_date": "10.01.2007",
+  "rg_no": "26399",
+  "tertip": "5",
+  "url": "mevzuat?MevzuatNo=10998&MevzuatTur=9&MevzuatTertip=5",
+  "unit": "ABD Doları/Ton",
+  "items": [
+   {
+    "gtip": "8518.21.00.00.00",
+    "description": "Kabinine monte edilmiş tek hoparlör",
+    "value": "12.000",
+    "unit": "ABD Doları/Ton"
+   },
+   {
+    "gtip": "8518.22.00.00.00",
+    "description": "Aynı kabine monte edilmiş birden fazla hoparlörler",
+    "value": "16.000",
+    "unit": "ABD Doları/Ton"
+   },
+   {
+    "gtip": "8518.29.00.90.00",
+    "description": "Diğerleri",
+    "value": "8.000",
+    "unit": "ABD Doları/Ton"
+   },
+   {
+    "gtip": "8518.90.00.50.00",
+    "description": "Hoparlörlere ait olanlar",
+    "value": "3.500",
+    "unit": "ABD Doları/Ton"
+   }
+  ],
+  "item_count": 4
+ },
+ {
+  "mevzuat_no": "10995",
+  "title": "İTHALATTA GÖZETİM UYGULANMASINA İLİŞKİN TEBLİĞ (TEBLİĞ NO: 2007/4)",
+  "rg_date": "10.01.2007",
+  "rg_no": "26399",
+  "tertip": "5",
+  "url": "mevzuat?MevzuatNo=10995&MevzuatTur=9&MevzuatTertip=5",
+  "unit": null,
+  "items": [],
+  "item_count": 0
+ },
+ {
+  "mevzuat_no": "10878",
+  "title": "İTHALATTA GÖZETİM UYGULANMASINA İLİŞKİN TEBLİĞ\r\n(TEBLİĞ NO: 2006/21)",
+  "rg_date": "21.12.2006",
+  "rg_no": "26383",
+  "tertip": "5",
+  "url": "mevzuat?MevzuatNo=10878&MevzuatTur=9&MevzuatTertip=5",
+  "unit": null,
+  "items": [],
+  "item_count": 0
+ },
+ {
+  "mevzuat_no": "10813",
+  "title": "İTHALATTA GÖZETİM UYGULANMASINA İLİŞKİN TEBLİĞ\r\n(TEBLİĞ NO: 2006/19)",
+  "rg_date": "29.11.2006",
+  "rg_no": "26361",
+  "tertip": "5",
+  "url": "mevzuat?MevzuatNo=10813&MevzuatTur=9&MevzuatTertip=5",
+  "unit": null,
+  "items": [
+   {
+    "gtip": "4820.10.30.00.00",
+    "description": "Not defterleri, mektupluk bloknotlar, hatıra defterleri",
+    "value": "4.000",
+    "unit": null
+   }
+  ],
+  "item_count": 1
+ },
+ {
+  "mevzuat_no": "10812",
+  "title": "İTHALATTA GÖZETİM UYGULANMASINA İLİŞKİN TEBLİĞ\r\n(TEBLİĞ NO: 2006/18)",
+  "rg_date": "29.11.2006",
+  "rg_no": "26361",
+  "tertip": "5",
+  "url": "mevzuat?MevzuatNo=10812&MevzuatTur=9&MevzuatTertip=5",
+  "unit": "ABD Doları/Ton",
+  "items": [
+   {
+    "gtip": "4820.10.90.00.11",
+    "description": "Okul defterleri",
+    "value": "4.400",
+    "unit": "ABD Doları/Ton"
+   }
+  ],
+  "item_count": 1
+ },
+ {
+  "mevzuat_no": "10811",
+  "title": "İTHALATTA GÖZETİM UYGULANMASINA İLİŞKİN TEBLİĞ\r\n(TEBLİĞ NO: 2006/17)",
+  "rg_date": "29.11.2006",
+  "rg_no": "26361",
+  "tertip": "5",
+  "url": "mevzuat?MevzuatNo=10811&MevzuatTur=9&MevzuatTertip=5",
+  "unit": null,
+  "items": [
+   {
+    "gtip": "3926.10.00.00.00",
+    "description": "Okul ve büro malzemeleri",
+    "value": "4.000",
+    "unit": null
+   }
+  ],
+  "item_count": 1
+ },
+ {
+  "mevzuat_no": "10322",
+  "title": "İTHALATTA GÖZETİM UYGULANMASINA İLİŞKİN TEBLİĞ (TEBLİĞ NO: 2006/11)",
+  "rg_date": "23.05.2006",
+  "rg_no": "26176",
+  "tertip": "5",
+  "url": "mevzuat?MevzuatNo=10322&MevzuatTur=9&MevzuatTertip=5",
+  "unit": "ABD Doları/Kg",
+  "items": [
+   {
+    "gtip": "9405.11",
+    "description": "LED ışık kaynağı ile kullanılmaya mahsus olanlar",
+    "value": "8",
+    "unit": "ABD Doları/Kg"
+   },
+   {
+    "gtip": "9405.11.90.00.00",
+    "description": "Diğer maddelerden olanlar (adi metallerden olanlar hariç)",
+    "value": "60",
+    "unit": "ABD Doları/Kg"
+   },
+   {
+    "gtip": "9405.19",
+    "description": "Diğerleri",
+    "value": "8",
+    "unit": "ABD Doları/Kg"
+   },
+   {
+    "gtip": "9405.19.90.00.00",
+    "description": "Diğer maddelerden olanlar (adi metallerden olanlar hariç)",
+    "value": "60",
+    "unit": "ABD Doları/Kg"
+   },
+   {
+    "gtip": "9405.21",
+    "description": "LED ışık kaynağı ile kullanılmaya mahsus olanlar",
+    "value": "10",
+    "unit": "ABD Doları/Kg"
+   },
+   {
+    "gtip": "9405.29",
+    "description": "Diğerleri",
+    "value": "10",
+    "unit": "ABD Doları/Kg"
+   },
+   {
+    "gtip": "9405.31.00.00.00",
+    "description": "LED ışık kaynağı ile kullanılmaya mahsus olanlar",
+    "value": "8",
+    "unit": "ABD Doları/Kg"
+   },
+   {
+    "gtip": "9405.39.00.00.00",
+    "description": "Diğerleri",
+    "value": "8",
+    "unit": "ABD Doları/Kg"
+   },
+   {
+    "gtip": "9405.41.10.00.00",
+    "description": "Projektörler",
+    "value": "14",
+    "unit": "ABD Doları/Kg"
+   },
+   {
+    "gtip": "9405.41.31.00.00",
+    "description": "Plastik maddelerden olanlar",
+    "value": "8",
+    "unit": "ABD Doları/Kg"
+   },
+   {
+    "gtip": "9405.41.39.00.00",
+    "description": "Diğer maddelerden olanlar",
+    "value": "20",
+    "unit": "ABD Doları/Kg"
+   },
+   {
+    "gtip": "9405.42.10.00.00",
+    "description": "Projektörler",
+    "value": "14",
+    "unit": "ABD Doları/Kg"
+   },
+   {
+    "gtip": "9405.42.31.00.00",
+    "description": "Plastik maddelerden olanlar",
+    "value": "8",
+    "unit": "ABD Doları/Kg"
+   },
+   {
+    "gtip": "9405.42.39.00.00",
+    "description": "Diğer maddelerden olanlar",
+    "value": "20",
+    "unit": "ABD Doları/Kg"
+   },
+   {
+    "gtip": "9405.49.10.00.00",
+    "description": "Projektörler",
+    "value": "14",
+    "unit": "ABD Doları/Kg"
+   },
+   {
+    "gtip": "9405.49.40.00.00",
+    "description": "Plastik maddelerden olanlar",
+    "value": "8",
+    "unit": "ABD Doları/Kg"
+   },
+   {
+    "gtip": "9405.49.90.00.00",
+    "description": "Diğer maddelerden olanlar (Kızma esaslı elektrik ampul ve tüplerle kullanılmaya mahsus olanlar veya floresans lambalarla kullanılmaya mahsus olanlar hariç)",
+    "value": "20",
+    "unit": "ABD Doları/Kg"
+   },
+   {
+    "gtip": "9405.49.90.00.00",
+    "description": "Diğer maddelerden olanlar (Yalnızca kızma esaslı elektrik ampul ve tüplerle kullanılmaya mahsus olanlar veya floresans lambalarla kullanılmaya mahsus olanlar)",
+    "value": "8",
+    "unit": "ABD Doları/Kg"
+   },
+   {
+    "gtip": "9405.50",
+    "description": "Elektrikli olmayan aydınlatma cihazları",
+    "value": "10",
+    "unit": "ABD Doları/Kg"
+   }
+  ],
+  "item_count": 19
+ },
+ {
+  "mevzuat_no": "9891",
+  "title": "İTHALATTA GÖZETİM UYGULANMASINA İLİŞKİN TEBLİĞ (TEBLİĞ NO: 2006/2)",
+  "rg_date": "07.02.2006",
+  "rg_no": "26073",
+  "tertip": "5",
+  "url": "mevzuat?MevzuatNo=9891&MevzuatTur=9&MevzuatTertip=5",
+  "unit": "ABD Doları/Ton",
+  "items": [
+   {
+    "gtip": "0713.31.00.00.19",
+    "description": "Diğerleri",
+    "value": "1.000",
+    "unit": "ABD Doları/Ton"
+   },
+   {
+    "gtip": "0713.32.00.00.19",
+    "description": "Diğerleri",
+    "value": "1.000",
+    "unit": "ABD Doları/Ton"
+   },
+   {
+    "gtip": "0713.33.90.00.11",
+    "description": "Barbunya",
+    "value": "1.000",
+    "unit": "ABD Doları/Ton"
+   },
+   {
+    "gtip": "0713.33.90.00.19",
+    "description": "Diğerleri",
+    "value": "1.000",
+    "unit": "ABD Doları/Ton"
+   },
+   {
+    "gtip": "0713.34.00.00.19",
+    "description": "Diğerleri",
+    "value": "1.000",
+    "unit": "ABD Doları/Ton"
+   },
+   {
+    "gtip": "0713.35.00.00.19",
+    "description": "Diğerleri",
+    "value": "1.000",
+    "unit": "ABD Doları/Ton"
+   },
+   {
+    "gtip": "0713.39.00.00.19",
+    "description": "Diğerleri",
+    "value": "1.000",
+    "unit": "ABD Doları/Ton"
+   }
+  ],
+  "item_count": 7
+ },
+ {
+  "mevzuat_no": "9387",
+  "title": "İTHALATTA GÖZETİM UYGULANMASINA İLİŞKİN TEBLİĞ (TEBLİĞ NO: 2005/17)",
+  "rg_date": "03.09.2005",
+  "rg_no": "25925",
+  "tertip": "5",
+  "url": "mevzuat?MevzuatNo=9387&MevzuatTur=9&MevzuatTertip=5",
+  "unit": "ABD Doları/Kg",
+  "items": [
+   {
+    "gtip": "6802.91.00.00.11",
+    "description": "Heykeltıraşlık sanatına göre yontulmuş mermerden salon süs eşyaları",
+    "value": "2",
+    "unit": "ABD Doları/Kg"
+   }
+  ],
+  "item_count": 1
+ },
+ {
+  "mevzuat_no": "9507",
+  "title": "İTHALATTA GÖZETİM UYGULANMASINA İLİŞKİN TEBLİĞ (Tebliğ No: 2005/14)",
+  "rg_date": "29.07.2005",
+  "rg_no": "25890",
+  "tertip": "5",
+  "url": "mevzuat?MevzuatNo=9507&MevzuatTur=9&MevzuatTertip=5",
+  "unit": null,
+  "items": [
+   {
+    "gtip": "7009.91",
+    "description": "Çerçevesiz",
+    "value": "500",
+    "unit": null
+   }
+  ],
+  "item_count": 1
+ },
+ {
+  "mevzuat_no": "9026",
+  "title": "İTHALATTA GÖZETİM UYGULANMASINA İLİŞKİN TEBLİĞ\r\n(TEBLİĞ NO: 2005/12)",
+  "rg_date": "08.07.2005",
+  "rg_no": "25869",
+  "tertip": "5",
+  "url": "mevzuat?MevzuatNo=9026&MevzuatTur=9&MevzuatTertip=5",
+  "unit": "ABD Doları/Kg",
+  "items": [
+   {
+    "gtip": "3922.10.00.00.11",
+    "description": "Banyo küvetleri",
+    "value": "12",
+    "unit": "ABD Doları/Kg"
+   },
+   {
+    "gtip": "3922.10.00.00.12",
+    "description": "Duşlar",
+    "value": "12",
+    "unit": "ABD Doları/Kg"
+   },
+   {
+    "gtip": "9019.10.90.00.13",
+    "description": "Basınçlı su ile masaj yapan hidro banyo sistemleri",
+    "value": "20",
+    "unit": "ABD Doları/Kg"
+   },
+   {
+    "gtip": "9019.10.90.00.19",
+    "description": "Diğerleri",
+    "value": "17",
+    "unit": "ABD Doları/Kg"
+   },
+   {
+    "gtip": "9019.10.90.00.25",
+    "description": "Aksam ve parçalar",
+    "value": "17",
+    "unit": "ABD Doları/Kg"
+   }
+  ],
+  "item_count": 5
+ },
+ {
+  "mevzuat_no": "8950",
+  "title": "İTHALATTA GÖZETİM UYGULANMASINA İLİŞKİN TEBLİĞ (TEBLİĞ NO: 2005/9)",
+  "rg_date": "16.06.2005",
+  "rg_no": "25847",
+  "tertip": "5",
+  "url": "mevzuat?MevzuatNo=8950&MevzuatTur=9&MevzuatTertip=5",
+  "unit": null,
+  "items": [
+   {
+    "gtip": "8546.20.00.00.11",
+    "description": "Anma gerilimi 36 kV.yı geçmeyenler",
+    "value": "5",
+    "unit": null
+   },
+   {
+    "gtip": "8546.20.00.00.12",
+    "description": "Anma gerilimi 36 kV.yı geçen fakat 170 kV.yı geçmeyenler",
+    "value": "5",
+    "unit": null
+   },
+   {
+    "gtip": "8546.20.00.00.13",
+    "description": "Anma gerilimi 170 kV.yı geçenler",
+    "value": "5",
+    "unit": null
+   },
+   {
+    "gtip": "8546.90.10.10.11",
+    "description": "Anma gerilimi 36 kV.yı geçmeyenler",
+    "value": "10",
+    "unit": null
+   },
+   {
+    "gtip": "8546.90.10.10.12",
+    "description": "Anma gerilimi 36 kV.yı geçen fakat 154 kV.yı geçmeyenler",
+    "value": "10",
+    "unit": null
+   },
+   {
+    "gtip": "8546.90.10.10.13",
+    "description": "Anma gerilimi 154 kV.yı geçenler",
+    "value": "10",
+    "unit": null
+   }
+  ],
+  "item_count": 6
+ },
+ {
+  "mevzuat_no": "8814",
+  "title": "İTHALATTA GÖZETİM UYGULANMASINA İLİŞKİN TEBLİĞ\r\n(TEBLİĞ NO: 2005/4)",
+  "rg_date": "29.01.2005",
+  "rg_no": "25711",
+  "tertip": "5",
+  "url": "mevzuat?MevzuatNo=8814&MevzuatTur=9&MevzuatTertip=5",
+  "unit": "ABD Doları/Ton",
+  "items": [],
+  "item_count": 0
+ },
+ {
+  "mevzuat_no": "8602",
+  "title": "İTHALATTA GÖZETİM UYGULANMASINA İLİŞKİN TEBLİĞ \r\n(TEBLİĞ NO: 2004/18)",
+  "rg_date": "20.11.2004",
+  "rg_no": "25646",
+  "tertip": "5",
+  "url": "mevzuat?MevzuatNo=8602&MevzuatTur=9&MevzuatTertip=5",
+  "unit": null,
+  "items": [
+   {
+    "gtip": "9017.80.10.90.19",
+    "description": "Diğer şerit metreler",
+    "value": "8",
+    "unit": null
+   }
+  ],
+  "item_count": 1
+ },
+ {
+  "mevzuat_no": "8942",
+  "title": "İTHALATTA GÖZETİM UYGULANMASINA İLİŞKİN TEBLİĞ\r\n(TEBLİĞ NO: 2004/15)",
+  "rg_date": "22.10.2004",
+  "rg_no": "25621",
+  "tertip": "5",
+  "url": "mevzuat?MevzuatNo=8942&MevzuatTur=9&MevzuatTertip=5",
+  "unit": null,
+  "items": [],
+  "item_count": 0
+ },
+ {
+  "mevzuat_no": "8624",
+  "title": "İTHALATTA GÖZETİM UYGULANMASINA İLİŞKİN TEBLİĞ (TEBLİĞ NO: 2004/9)",
+  "rg_date": "28.08.2004",
+  "rg_no": "25567",
+  "tertip": "5",
+  "url": "mevzuat?MevzuatNo=8624&MevzuatTur=9&MevzuatTertip=5",
+  "unit": null,
+  "items": [
+   {
+    "gtip": "8518.21.90.00.00",
+    "description": "Diğerleri",
+    "value": "",
+    "unit": null
+   },
+   {
+    "gtip": "8518.22.90.00.00",
+    "description": "Diğerleri",
+    "value": "",
+    "unit": null
+   },
+   {
+    "gtip": "8518.29.80.00.00",
+    "description": "Diğerleri",
+    "value": "",
+    "unit": null
+   }
+  ],
+  "item_count": 3
+ },
+ {
+  "mevzuat_no": "8786",
+  "title": "İTHALATTA GÖZETİM UYGULANMASINA İLİŞKİN TEBLİĞ (TEBLİĞ NO:2004/8)",
+  "rg_date": "21.08.2004",
+  "rg_no": "25560",
+  "tertip": "5",
+  "url": "mevzuat?MevzuatNo=8786&MevzuatTur=9&MevzuatTertip=5",
+  "unit": null,
+  "items": [],
+  "item_count": 0
+ },
+ {
+  "mevzuat_no": "8826",
+  "title": "İTHALATTA GÖZETİM UYGULANMASINA İLİŞKİN TEBLİĞ\r\n(TEBLİĞ NO: 2004/5)",
+  "rg_date": "18.07.2004",
+  "rg_no": "25526",
+  "tertip": "5",
+  "url": "mevzuat?MevzuatNo=8826&MevzuatTur=9&MevzuatTertip=5",
+  "unit": null,
+  "items": [],
+  "item_count": 0
+ },
+ {
+  "mevzuat_no": "8824",
+  "title": "İTHALATTA GÖZETİM UYGULANMASINA İLİŞKİN TEBLİĞ\r\n(TEBLİĞ NO: 2004/4)",
+  "rg_date": "18.07.2004",
+  "rg_no": "25526",
+  "tertip": "5",
+  "url": "mevzuat?MevzuatNo=8824&MevzuatTur=9&MevzuatTertip=5",
+  "unit": null,
+  "items": [],
+  "item_count": 0
+ },
+ {
+  "mevzuat_no": "8823",
+  "title": "İTHALATTA GÖZETİM UYGULANMASINA İLİŞKİN TEBLİĞ (TEBLİĞ NO: 2004/3)",
+  "rg_date": "18.07.2004",
+  "rg_no": "25526",
+  "tertip": "5",
+  "url": "mevzuat?MevzuatNo=8823&MevzuatTur=9&MevzuatTertip=5",
+  "unit": "ABD Doları/Kg",
+  "items": [
+   {
+    "gtip": "9025.11",
+    "description": "Sıvılı olanlar (doğrudan doğruya okunanlar)",
+    "value": "35",
+    "unit": "ABD Doları/Kg"
+   }
+  ],
+  "item_count": 1
  }
 ]
