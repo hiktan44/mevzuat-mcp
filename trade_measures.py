@@ -28,6 +28,7 @@ import logging
 import os
 import re
 import sqlite3
+import struct
 import time
 from dataclasses import dataclass, field
 from datetime import UTC, date, datetime
@@ -447,8 +448,101 @@ def _docx_table_rows(payload: bytes) -> list[list[str]]:
     return rows
 
 
+_DOC_MAGIC = b"\xd0\xcf\x11\xe0"
+_FIB_FLAGS_OFFSET = 0x000A
+_FIB_CLX_OFFSET = 0x01A2
+_PIECE_DESCRIPTOR_SIZE = 8
+_PIECE_COMPRESSED_FLAG = 0x40000000
+
+
+def _decode_doc_pieces(document: bytes, table: bytes) -> str:
+    """Word 97-2003 parça tablosunu çözerek belge metnini döndürür.
+
+    Metin ``WordDocument`` akışında parçalar hâlinde durur; her parçanın yeri ve
+    kodlaması ``0Table``/``1Table`` akışındaki CLX parça tablosunda yazılıdır.
+    Sıkıştırılmış parçalar tek baytlık (Türkçe belgelerde cp1254), diğerleri
+    UTF-16LE kodludur. Tablo hücrelerini ayıran ``\x07`` işaretleri korunur.
+    """
+    if len(document) < _FIB_CLX_OFFSET + 8 or not table:
+        return ""
+    clx_offset, clx_length = struct.unpack_from("<II", document, _FIB_CLX_OFFSET)
+    clx = table[clx_offset : clx_offset + clx_length]
+    cursor = 0
+    while cursor + 3 <= len(clx) and clx[cursor] == 1:  # araya giren Prc blokları atlanır
+        cursor += 3 + struct.unpack_from("<H", clx, cursor + 1)[0]
+    if cursor + 5 > len(clx) or clx[cursor] != 2:
+        return ""
+    piece_table = clx[cursor + 5 : cursor + 5 + struct.unpack_from("<I", clx, cursor + 1)[0]]
+    piece_count = (len(piece_table) - 4) // (4 + _PIECE_DESCRIPTOR_SIZE)
+    if piece_count <= 0:
+        return ""
+    positions = [struct.unpack_from("<I", piece_table, 4 * index)[0] for index in range(piece_count + 1)]
+    chunks: list[str] = []
+    for index in range(piece_count):
+        descriptor = 4 * (piece_count + 1) + _PIECE_DESCRIPTOR_SIZE * index
+        location = struct.unpack_from("<I", piece_table, descriptor + 2)[0]
+        length = positions[index + 1] - positions[index]
+        if length <= 0:
+            continue
+        if location & _PIECE_COMPRESSED_FLAG:
+            start = (location & 0x3FFFFFFF) // 2
+            chunks.append(document[start : start + length].decode("cp1254", errors="replace"))
+        else:
+            start = location & 0x3FFFFFFF
+            chunks.append(document[start : start + length * 2].decode("utf-16-le", errors="replace"))
+    return "".join(chunks)
+
+
+def _doc_stream_text(payload: bytes) -> str:
+    """.doc (OLE bileşik) belgesinin akışlarını açıp metnini döndürür."""
+    import olefile
+
+    if not payload.startswith(_DOC_MAGIC):
+        return ""
+    with io.BytesIO(payload) as buffer:
+        if not olefile.isOleFile(buffer):
+            return ""
+        ole = olefile.OleFileIO(buffer)
+        try:
+            if not ole.exists("WordDocument"):
+                return ""
+            document = ole.openstream("WordDocument").read()
+            if len(document) < _FIB_FLAGS_OFFSET + 2:
+                return ""
+            flags = struct.unpack_from("<H", document, _FIB_FLAGS_OFFSET)[0]
+            preferred = "1Table" if flags & 0x0200 else "0Table"
+            table_name = preferred if ole.exists(preferred) else ("1Table" if ole.exists("1Table") else "0Table")
+            if not ole.exists(table_name):
+                return ""
+            table = ole.openstream(table_name).read()
+        finally:
+            ole.close()
+    return _decode_doc_pieces(document, table)
+
+
+def _doc_rows_from_text(text: str) -> list[list[str]]:
+    """.doc metnini tablo satırlarına böler: hücreler ``\x07``, satır sonu boş hücredir."""
+    rows: list[list[str]] = []
+    current: list[str] = []
+    for part in text.split("\x07"):
+        cell = re.sub(r"[\r\x0b\x00-\x06\x08-\x1f]", " ", part)
+        cell = re.sub(r"\s+", " ", cell).strip()
+        if cell:
+            current.append(cell)
+        elif current:
+            rows.append(current)
+            current = []
+    if current:
+        rows.append(current)
+    return rows
+
+
+def _doc_table_rows(payload: bytes) -> list[list[str]]:
+    return _doc_rows_from_text(_doc_stream_text(payload))
+
+
 def _legacy_doc_text(payload: bytes) -> str:
-    """Eski .doc dosyaları için antiword (Docker imajında mevcut); yoksa boş döner."""
+    """.doc için son çare: Docker imajındaki antiword; yoksa boş döner."""
     import shutil
     import subprocess
     import tempfile
@@ -546,10 +640,12 @@ def parse_quota_document(payload: bytes, filename: str, meta: dict[str, Any] | N
     if lowered.endswith(".docx"):
         rows = _docx_table_rows(payload)
     else:
-        text = _legacy_doc_text(payload)
-        rows = [[cell.strip() for cell in line.split("|") if cell.strip()] for line in text.splitlines() if "|" in line]
-        if not rows:
-            rows = [re.split(r"\s{2,}", line.strip()) for line in text.splitlines() if _ROW_CODE_RE.match(line.strip().split(" ")[0] if line.strip() else "")]
+        rows = _doc_table_rows(payload)
+        if not rows:  # OLE okunamazsa antiword metnine düş
+            text = _legacy_doc_text(payload)
+            rows = [[cell.strip() for cell in line.split("|") if cell.strip()] for line in text.splitlines() if "|" in line]
+            if not rows:
+                rows = [re.split(r"\s{2,}", line.strip()) for line in text.splitlines() if _ROW_CODE_RE.match(line.strip().split(" ")[0] if line.strip() else "")]
     items = _quota_rows_from_cells(rows)
     result = dict(meta or {})
     title = result.get("title", "")

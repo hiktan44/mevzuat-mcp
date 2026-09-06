@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import io
 import json
+import struct
 import tempfile
 import unittest
 from datetime import date
@@ -139,6 +140,28 @@ class ParserTests(unittest.TestCase):
         links = tm.discover_quota_documents('<a href="/data/abc/Fas Karar.doc">Fas Krallığı Menşeli Bazı Tarım Ürünleri İthalatında Tarife Kontenjanı</a><a href="/data/abc/x.pdf">Kontenjan pdf</a>', "https://ticaret.gov.tr/ithalat")
         self.assertEqual(len(links), 1)
         self.assertEqual(links[0]["url"], "https://ticaret.gov.tr/data/abc/Fas%20Karar.doc")
+
+    def test_legacy_doc_piece_table_and_rows(self):
+        """Word 97-2003 eki: parça tablosu çözülür, hücreler satırlara ayrılır (antiword gerekmez)."""
+        text = "Tarife Kontenjanı Kod No\x07G.T.İ.P.\x07Madde İsmi\x07Tarife Kontenjanı Dönemi\x07\x07ARN01\x0704.06\x07Peynir\x0701.01-31.12\x07\x07"
+        encoded = text.encode("utf-16-le")
+        document = bytearray(0x400)
+        start = 0x300
+        document[start : start + len(encoded)] = encoded
+        piece_table = struct.pack("<II", 0, len(text)) + struct.pack("<HIH", 0, start, 0)
+        clx = b"\x02" + struct.pack("<I", len(piece_table)) + piece_table
+        struct.pack_into("<II", document, 0x01A2, 0, len(clx))
+        decoded = tm._decode_doc_pieces(bytes(document), clx)
+        self.assertEqual(
+            tm._doc_rows_from_text(decoded),
+            [["Tarife Kontenjanı Kod No", "G.T.İ.P.", "Madde İsmi", "Tarife Kontenjanı Dönemi"], ["ARN01", "04.06", "Peynir", "01.01-31.12"]],
+        )
+        items = tm._quota_rows_from_cells(tm._doc_rows_from_text(decoded))
+        self.assertEqual(items[0]["gtip"], "04.06")
+        self.assertEqual(items[0]["quota_code"], "ARN01")
+        self.assertEqual(items[0]["period"], "01.01-31.12")
+        self.assertEqual(tm._doc_table_rows(b"not an OLE document"), [])
+        self.assertEqual(tm._decode_doc_pieces(b"", b""), "")
 
 
 class EngineTests(unittest.TestCase):
