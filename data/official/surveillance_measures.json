@@ -21,7 +21,8 @@
     "unit": "ABD Doları/Kg"
    }
   ],
-  "item_count": 2
+  "item_count": 2,
+  "parser_version": 2
  },
  {
   "mevzuat_no": "46245",
@@ -39,7 +40,8 @@
     "unit": "ABD Doları/Kg"
    }
   ],
-  "item_count": 1
+  "item_count": 1,
+  "parser_version": 2
  },
  {
   "mevzuat_no": "46244",
@@ -48,22 +50,23 @@
   "rg_no": "33307",
   "tertip": "5",
   "url": "mevzuat?MevzuatNo=46244&MevzuatTur=9&MevzuatTertip=5",
-  "unit": null,
+  "unit": "ABD Doları/Kg",
   "items": [
    {
     "gtip": "8409.91.00.00.12",
     "description": "Pistonlar (motosikletlerde kullanılan pistonlar hariç)",
     "value": "25",
-    "unit": null
+    "unit": "ABD Doları/Kg"
    },
    {
     "gtip": "8409.99.00.00.12",
     "description": "Pistonlar (motosikletlerde kullanılan pistonlar hariç)",
     "value": "",
-    "unit": null
+    "unit": "ABD Doları/Kg"
    }
   ],
-  "item_count": 2
+  "item_count": 2,
+  "parser_version": 2
  },
  {
   "mevzuat_no": "46243",
@@ -72,16 +75,17 @@
   "rg_no": "33307",
   "tertip": "5",
   "url": "mevzuat?MevzuatNo=46243&MevzuatTur=9&MevzuatTertip=5",
-  "unit": null,
+  "unit": "ABD Doları/Kg",
   "items": [
    {
     "gtip": "8213.00.00.10.11",
     "description": "Terzi makasları (yalnız 12,7 cm ve üstündeki makaslar)",
     "value": "20",
-    "unit": null
+    "unit": "ABD Doları/Kg"
    }
   ],
-  "item_count": 1
+  "item_count": 1,
+  "parser_version": 2
  },
  {
   "mevzuat_no": "46242",
@@ -99,7 +103,8 @@
     "unit": "ABD Doları/Kg"
    }
   ],
-  "item_count": 1
+  "item_count": 1,
+  "parser_version": 2
  },
  {
   "mevzuat_no": "46241",
@@ -117,7 +122,8 @@
     "unit": "ABD Doları/Kg"
    }
   ],
-  "item_count": 1
+  "item_count": 1,
+  "parser_version": 2
  },
  {
   "mevzuat_no": "46239",
@@ -126,16 +132,17 @@
   "rg_no": "33307",
   "tertip": "5",
   "url": "mevzuat?MevzuatNo=46239&MevzuatTur=9&MevzuatTertip=5",
-  "unit": null,
+  "unit": "ABD Doları/Kg",
   "items": [
    {
     "gtip": "7229.90.90.00.12",
     "description": "Kaplanmış teller",
     "value": "1,8",
-    "unit": null
+    "unit": "ABD Doları/Kg"
    }
   ],
-  "item_count": 1
+  "item_count": 1,
+  "parser_version": 2
  },
  {
   "mevzuat_no": "46238",
@@ -144,16 +151,17 @@
   "rg_no": "33307",
   "tertip": "5",
   "url": "mevzuat?MevzuatNo=46238&MevzuatTur=9&MevzuatTertip=5",
-  "unit": null,
+  "unit": "ABD Doları/Kg",
   "items": [
    {
     "gtip": "7010.10.00.00.00",
     "description": "Serum ampulleri",
     "value": "10",
-    "unit": null
+    "unit": "ABD Doları/Kg"
    }
   ],
-  "item_count": 1
+  "item_count": 1,
+  "parser_version": 2
  },
  {
   "mevzuat_no": "45094",
@@ -393,7 +401,8 @@
     "unit": "ABD Doları/Kg"
    }
   ],
-  "item_count": 38
+  "item_count": 38,
+  "parser_version": 2
  },
  {
   "mevzuat_no": "44987",
@@ -411,7 +420,8 @@
     "unit": "ABD Doları/Kg"
    }
   ],
-  "item_count": 1
+  "item_count": 1,
+  "parser_version": 2
  },
  {
   "mevzuat_no": "44986",
@@ -549,7 +559,8 @@
     "unit": "ABD Doları/Kg"
    }
   ],
-  "item_count": 21
+  "item_count": 21,
+  "parser_version": 2
  },
  {
   "mevzuat_no": "44985",
@@ -663,7 +674,8 @@
     "unit": "ABD Doları/Kg"
    }
   ],
-  "item_count": 17
+  "item_count": 17,
+  "parser_version": 2
  },
  {
   "mevzuat_no": "44984",
@@ -693,7 +705,8 @@
     "unit": "ABD Doları/Ton"
    }
   ],
-  "item_count": 3
+  "item_count": 3,
+  "parser_version": 2
  },
  {
   "mevzuat_no": "44983",
@@ -708,6 +721,12 @@
     "gtip": "7304.31.20.90.00",
     "description": "Diğerleri",
     "value": "1.800",
+    "unit": "ABD Doları/Ton"
+   },
+   {
+    "gtip": "73.06",
+    "description": "Demir veya çelikten diğer ince ve kalın borular ve içi boş profiller (örneğin açık dikiş veya kaynak yapılmış, perçin yapılmış veya benzeri şekilleri kapatılmış)",
+    "value": "900",
     "unit": "ABD Doları/Ton"
    },
    {
@@ -741,7 +760,8 @@
     "unit": "ABD Doları/Ton"
    }
   ],
-  "item_count": 6
+  "item_count": 7,
+  "parser_version": 2
  },
  {
   "mevzuat_no": "44982",
@@ -789,7 +809,8 @@
     "unit": "ABD Doları/Kg"
    }
   ],
-  "item_count": 6
+  "item_count": 6,
+  "parser_version": 2
  },
  {
   "mevzuat_no": "44981",
@@ -825,7 +846,8 @@
     "unit": "ABD Doları/Adet"
    }
   ],
-  "item_count": 4
+  "item_count": 4,
+  "parser_version": 2
  },
  {
   "mevzuat_no": "44980",
@@ -861,7 +883,8 @@
     "unit": "ABD Doları/Ton"
    }
   ],
-  "item_count": 4
+  "item_count": 4,
+  "parser_version": 2
  },
  {
   "mevzuat_no": "44979",
@@ -903,7 +926,8 @@
     "unit": "ABD Doları/Adet"
    }
   ],
-  "item_count": 5
+  "item_count": 5,
+  "parser_version": 2
  },
  {
   "mevzuat_no": "44978",
@@ -975,7 +999,8 @@
     "unit": "ABD Doları/Kg"
    }
   ],
-  "item_count": 10
+  "item_count": 10,
+  "parser_version": 2
  },
  {
   "mevzuat_no": "44977",
@@ -1143,7 +1168,8 @@
     "unit": "ABD Doları/Kg"
    }
   ],
-  "item_count": 26
+  "item_count": 26,
+  "parser_version": 2
  },
  {
   "mevzuat_no": "44976",
@@ -1197,7 +1223,8 @@
     "unit": "ABD Doları/Kg"
    }
   ],
-  "item_count": 7
+  "item_count": 7,
+  "parser_version": 2
  },
  {
   "mevzuat_no": "44975",
@@ -1269,7 +1296,8 @@
     "unit": "ABD Doları/Ton"
    }
   ],
-  "item_count": 10
+  "item_count": 10,
+  "parser_version": 2
  },
  {
   "mevzuat_no": "44974",
@@ -1293,7 +1321,8 @@
     "unit": "ABD Doları/Ton"
    }
   ],
-  "item_count": 2
+  "item_count": 2,
+  "parser_version": 2
  },
  {
   "mevzuat_no": "44973",
@@ -1311,7 +1340,8 @@
     "unit": "ABD Doları/Ton"
    }
   ],
-  "item_count": 1
+  "item_count": 1,
+  "parser_version": 2
  },
  {
   "mevzuat_no": "44972",
@@ -1359,7 +1389,8 @@
     "unit": "ABD Doları/Ton"
    }
   ],
-  "item_count": 6
+  "item_count": 6,
+  "parser_version": 2
  },
  {
   "mevzuat_no": "44971",
@@ -1368,28 +1399,29 @@
   "rg_no": "33124 4.Mükerrer",
   "tertip": "5",
   "url": "mevzuat?MevzuatNo=44971&MevzuatTur=9&MevzuatTertip=5",
-  "unit": null,
+  "unit": "ABD Doları/Adet",
   "items": [
    {
     "gtip": "8415.10.90.00.19",
     "description": "Diğerleri",
     "value": "250",
-    "unit": null
+    "unit": "ABD Doları/Adet"
    },
    {
     "gtip": "8415.90.00.90.09",
     "description": "Diğerleri",
     "value": "150",
-    "unit": null
+    "unit": "ABD Doları/Adet"
    },
    {
     "gtip": "8415.90.00.90.12",
     "description": "Split sistemlerin iç üniteleri",
     "value": "100",
-    "unit": null
+    "unit": "ABD Doları/Adet"
    }
   ],
-  "item_count": 3
+  "item_count": 3,
+  "parser_version": 2
  },
  {
   "mevzuat_no": "44970",
@@ -1413,7 +1445,8 @@
     "unit": "ABD Doları/Ton"
    }
   ],
-  "item_count": 2
+  "item_count": 2,
+  "parser_version": 2
  },
  {
   "mevzuat_no": "44969",
@@ -1431,7 +1464,8 @@
     "unit": "ABD Doları/Adet"
    }
   ],
-  "item_count": 1
+  "item_count": 1,
+  "parser_version": 2
  },
  {
   "mevzuat_no": "44968",
@@ -1440,16 +1474,17 @@
   "rg_no": "33124 4.Mükerrer",
   "tertip": "5",
   "url": "mevzuat?MevzuatNo=44968&MevzuatTur=9&MevzuatTertip=5",
-  "unit": null,
+  "unit": "ABD Doları/Kg",
   "items": [
    {
     "gtip": "9506.40.00.00.11",
     "description": "Masalar",
     "value": "5",
-    "unit": null
+    "unit": "ABD Doları/Kg"
    }
   ],
-  "item_count": 1
+  "item_count": 1,
+  "parser_version": 2
  },
  {
   "mevzuat_no": "44967",
@@ -1467,7 +1502,8 @@
     "unit": "ABD Doları/Kg"
    }
   ],
-  "item_count": 1
+  "item_count": 1,
+  "parser_version": 2
  },
  {
   "mevzuat_no": "44966",
@@ -1491,7 +1527,8 @@
     "unit": "ABD Doları/Kg"
    }
   ],
-  "item_count": 2
+  "item_count": 2,
+  "parser_version": 2
  },
  {
   "mevzuat_no": "44965",
@@ -1500,16 +1537,17 @@
   "rg_no": "33124 4.Mükerrer",
   "tertip": "5",
   "url": "mevzuat?MevzuatNo=44965&MevzuatTur=9&MevzuatTertip=5",
-  "unit": null,
+  "unit": "ABD Doları/Kg",
   "items": [
    {
     "gtip": "8708.21.90.00.00",
     "description": "Diğerleri",
     "value": "12",
-    "unit": null
+    "unit": "ABD Doları/Kg"
    }
   ],
-  "item_count": 1
+  "item_count": 1,
+  "parser_version": 2
  },
  {
   "mevzuat_no": "44964",
@@ -1518,16 +1556,17 @@
   "rg_no": "33124 4.Mükerrer",
   "tertip": "5",
   "url": "mevzuat?MevzuatNo=44964&MevzuatTur=9&MevzuatTertip=5",
-  "unit": null,
+  "unit": "ABD Doları/Kg",
   "items": [
    {
     "gtip": "8529.10.30.90.00",
     "description": "Diğerleri (Yalnız televizyon çanak antenleri için)",
     "value": "1,7",
-    "unit": null
+    "unit": "ABD Doları/Kg"
    }
   ],
-  "item_count": 1
+  "item_count": 1,
+  "parser_version": 2
  },
  {
   "mevzuat_no": "44963",
@@ -1536,16 +1575,17 @@
   "rg_no": "33124 4.Mükerrer",
   "tertip": "5",
   "url": "mevzuat?MevzuatNo=44963&MevzuatTur=9&MevzuatTertip=5",
-  "unit": null,
+  "unit": "ABD Doları/Kg",
   "items": [
    {
     "gtip": "8428.40.00.00.00",
     "description": "Yürüyen merdiven ve yürüyen platformlar",
     "value": "5",
-    "unit": null
+    "unit": "ABD Doları/Kg"
    }
   ],
-  "item_count": 1
+  "item_count": 1,
+  "parser_version": 2
  },
  {
   "mevzuat_no": "44962",
@@ -1563,7 +1603,8 @@
     "unit": "ABD Doları/Kg"
    }
   ],
-  "item_count": 1
+  "item_count": 1,
+  "parser_version": 2
  },
  {
   "mevzuat_no": "44961",
@@ -1572,34 +1613,35 @@
   "rg_no": "33124 4.Mükerrer",
   "tertip": "5",
   "url": "mevzuat?MevzuatNo=44961&MevzuatTur=9&MevzuatTertip=5",
-  "unit": null,
+  "unit": "ABD Doları/Kg",
   "items": [
    {
     "gtip": "8421.21.00.00.00",
     "description": "Suyun filtre edilmesine veya arıtılmasına mahsus olanlar",
     "value": "10",
-    "unit": null
+    "unit": "ABD Doları/Kg"
    },
    {
     "gtip": "8421.23.00.00.00",
     "description": "İçten yanmalı motorlar için yağ ve yakıt filtreleri",
     "value": "",
-    "unit": null
+    "unit": "ABD Doları/Kg"
    },
    {
     "gtip": "8421.31.00.90.00",
     "description": "Diğerleri",
     "value": "",
-    "unit": null
+    "unit": "ABD Doları/Kg"
    },
    {
     "gtip": "8421.39.25.90.00",
     "description": "Diğerleri",
     "value": "",
-    "unit": null
+    "unit": "ABD Doları/Kg"
    }
   ],
-  "item_count": 4
+  "item_count": 4,
+  "parser_version": 2
  },
  {
   "mevzuat_no": "44960",
@@ -1608,16 +1650,17 @@
   "rg_no": "33124 4.Mükerrer",
   "tertip": "5",
   "url": "mevzuat?MevzuatNo=44960&MevzuatTur=9&MevzuatTertip=5",
-  "unit": null,
+  "unit": "ABD Doları/Adet",
   "items": [
    {
     "gtip": "8414.80.22.90.11",
     "description": "Hava tankı ihtiva edenler",
     "value": "90",
-    "unit": null
+    "unit": "ABD Doları/Adet"
    }
   ],
-  "item_count": 1
+  "item_count": 1,
+  "parser_version": 2
  },
  {
   "mevzuat_no": "44959",
@@ -1626,16 +1669,17 @@
   "rg_no": "33124 4.Mükerrer",
   "tertip": "5",
   "url": "mevzuat?MevzuatNo=44959&MevzuatTur=9&MevzuatTertip=5",
-  "unit": null,
+  "unit": "ABD Doları/Kg",
   "items": [
    {
     "gtip": "8305.20.00.21.00",
     "description": "Demir veya çelikten olanlar",
     "value": "1,7",
-    "unit": null
+    "unit": "ABD Doları/Kg"
    }
   ],
-  "item_count": 1
+  "item_count": 1,
+  "parser_version": 2
  },
  {
   "mevzuat_no": "44958",
@@ -1644,28 +1688,29 @@
   "rg_no": "33124 4.Mükerrer",
   "tertip": "5",
   "url": "mevzuat?MevzuatNo=44958&MevzuatTur=9&MevzuatTertip=5",
-  "unit": null,
+  "unit": "ABD Doları/Kg",
   "items": [
    {
     "gtip": "8212.10.10.00.00",
     "description": "Traş makinaları (bıçakları değiştirilemeyen)",
     "value": "20",
-    "unit": null
+    "unit": "ABD Doları/Kg"
    },
    {
     "gtip": "8212.20.00.10.00",
     "description": "Traş bıçakları",
     "value": "",
-    "unit": null
+    "unit": "ABD Doları/Kg"
    },
    {
     "gtip": "8212.20.00.20.00",
     "description": "Traş bıçağı taslakları",
     "value": "",
-    "unit": null
+    "unit": "ABD Doları/Kg"
    }
   ],
-  "item_count": 3
+  "item_count": 3,
+  "parser_version": 2
  },
  {
   "mevzuat_no": "44957",
@@ -1683,7 +1728,8 @@
     "unit": "ABD Doları/Kg"
    }
   ],
-  "item_count": 1
+  "item_count": 1,
+  "parser_version": 2
  },
  {
   "mevzuat_no": "44956",
@@ -1692,22 +1738,23 @@
   "rg_no": "33124 4.Mükerrer",
   "tertip": "5",
   "url": "mevzuat?MevzuatNo=44956&MevzuatTur=9&MevzuatTertip=5",
-  "unit": null,
+  "unit": "ABD Doları/Kg",
   "items": [
    {
     "gtip": "7314.31.00.00.00",
     "description": "Çinko ile kaplanmış olanlar",
     "value": "3,5",
-    "unit": null
+    "unit": "ABD Doları/Kg"
    },
    {
     "gtip": "7314.39.00.00.00",
     "description": "Diğerleri",
     "value": "",
-    "unit": null
+    "unit": "ABD Doları/Kg"
    }
   ],
-  "item_count": 2
+  "item_count": 2,
+  "parser_version": 2
  },
  {
   "mevzuat_no": "44955",
@@ -1731,7 +1778,8 @@
     "unit": "ABD Doları/Ton"
    }
   ],
-  "item_count": 2
+  "item_count": 2,
+  "parser_version": 2
  },
  {
   "mevzuat_no": "44954",
@@ -1740,16 +1788,17 @@
   "rg_no": "33124 4.Mükerrer",
   "tertip": "5",
   "url": "mevzuat?MevzuatNo=44954&MevzuatTur=9&MevzuatTertip=5",
-  "unit": null,
+  "unit": "ABD Doları/Kg",
   "items": [
    {
     "gtip": "3926.90.97.90.20",
     "description": "Vakumlu saklama torbaları",
     "value": "30",
-    "unit": null
+    "unit": "ABD Doları/Kg"
    }
   ],
-  "item_count": 1
+  "item_count": 1,
+  "parser_version": 2
  },
  {
   "mevzuat_no": "44953",
@@ -1758,16 +1807,17 @@
   "rg_no": "33124 4.Mükerrer",
   "tertip": "5",
   "url": "mevzuat?MevzuatNo=44953&MevzuatTur=9&MevzuatTertip=5",
-  "unit": null,
+  "unit": "ABD Doları/Kg",
   "items": [
    {
     "gtip": "3824.99.92.00.34",
     "description": "Klorlu parafinler",
     "value": "2,5",
-    "unit": null
+    "unit": "ABD Doları/Kg"
    }
   ],
-  "item_count": 1
+  "item_count": 1,
+  "parser_version": 2
  },
  {
   "mevzuat_no": "44952",
@@ -1833,7 +1883,8 @@
     "unit": "ABD Doları/Kg"
    }
   ],
-  "item_count": 9
+  "item_count": 9,
+  "parser_version": 2
  },
  {
   "mevzuat_no": "42746",
@@ -1857,7 +1908,8 @@
     "unit": "ABD Doları/Adet"
    }
   ],
-  "item_count": 2
+  "item_count": 2,
+  "parser_version": 2
  },
  {
   "mevzuat_no": "42662",
@@ -1965,7 +2017,8 @@
     "unit": "ABD Doları/Kg"
    }
   ],
-  "item_count": 16
+  "item_count": 16,
+  "parser_version": 2
  },
  {
   "mevzuat_no": "42661",
@@ -1989,7 +2042,8 @@
     "unit": "ABD Doları/Kg"
    }
   ],
-  "item_count": 2
+  "item_count": 2,
+  "parser_version": 2
  },
  {
   "mevzuat_no": "42640",
@@ -1998,16 +2052,17 @@
   "rg_no": "33009",
   "tertip": "5",
   "url": "mevzuat?MevzuatNo=42640&MevzuatTur=9&MevzuatTertip=5",
-  "unit": null,
+  "unit": "ABD Doları/Kg",
   "items": [
    {
     "gtip": "3905.29.00.00.00",
     "description": "Diğerleri (yalnızca toz polimerler)",
     "value": "2,5",
-    "unit": null
+    "unit": "ABD Doları/Kg"
    }
   ],
-  "item_count": 1
+  "item_count": 1,
+  "parser_version": 2
  },
  {
   "mevzuat_no": "42639",
@@ -2016,16 +2071,17 @@
   "rg_no": "33009",
   "tertip": "5",
   "url": "mevzuat?MevzuatNo=42639&MevzuatTur=9&MevzuatTertip=5",
-  "unit": null,
+  "unit": "ABD Doları/Kg",
   "items": [
    {
     "gtip": "8302.20.00.00.00",
     "description": "Küçük Tekerlekler (Yalnız cam balkon tekerleği)",
     "value": "5,5",
-    "unit": null
+    "unit": "ABD Doları/Kg"
    }
   ],
-  "item_count": 1
+  "item_count": 1,
+  "parser_version": 2
  },
  {
   "mevzuat_no": "42605",
@@ -2043,7 +2099,8 @@
     "unit": "ABD Doları/Kg"
    }
   ],
-  "item_count": 1
+  "item_count": 1,
+  "parser_version": 2
  },
  {
   "mevzuat_no": "42572",
@@ -2061,7 +2118,8 @@
     "unit": "ABD Doları/Kg"
    }
   ],
-  "item_count": 1
+  "item_count": 1,
+  "parser_version": 2
  },
  {
   "mevzuat_no": "42571",
@@ -2079,7 +2137,8 @@
     "unit": "ABD Doları/Kg"
    }
   ],
-  "item_count": 1
+  "item_count": 1,
+  "parser_version": 2
  },
  {
   "mevzuat_no": "42521",
@@ -2088,16 +2147,17 @@
   "rg_no": "32946",
   "tertip": "5",
   "url": "mevzuat?MevzuatNo=42521&MevzuatTur=9&MevzuatTertip=5",
-  "unit": null,
+  "unit": "ABD Doları/Kg",
   "items": [
    {
     "gtip": "7018.20.00.00.00",
     "description": "Çapı 1 mm. den az olan cam kürecikler",
     "value": "0,60",
-    "unit": null
+    "unit": "ABD Doları/Kg"
    }
   ],
-  "item_count": 1
+  "item_count": 1,
+  "parser_version": 2
  },
  {
   "mevzuat_no": "41286",
@@ -2133,7 +2193,8 @@
     "unit": "ABD Doları/Kg"
    }
   ],
-  "item_count": 4
+  "item_count": 4,
+  "parser_version": 2
  },
  {
   "mevzuat_no": "41272",
@@ -2142,40 +2203,41 @@
   "rg_no": "32769 (3. Mükerrer)",
   "tertip": "5",
   "url": "mevzuat?MevzuatNo=41272&MevzuatTur=9&MevzuatTertip=5",
-  "unit": null,
+  "unit": "ABD Doları/Adet",
   "items": [
    {
     "gtip": "8701.91.10.00.00",
     "description": "Tekerlekli zirai traktörler ve ormancılıkta kullanılan tekerlekli traktörler",
     "value": "5.078",
-    "unit": null
+    "unit": "ABD Doları/Adet"
    },
    {
     "gtip": "8701.92.10.00.00",
     "description": "Tekerlekli zirai traktörler ve ormancılıkta kullanılan tekerlekli traktörler",
     "value": "12.000",
-    "unit": null
+    "unit": "ABD Doları/Adet"
    },
    {
     "gtip": "8701.93.10.00.00",
     "description": "Tekerlekli zirai traktörler ve ormancılıkta kullanılan tekerlekli traktörler",
     "value": "25.000",
-    "unit": null
+    "unit": "ABD Doları/Adet"
    },
    {
     "gtip": "8701.94.10.00.00",
     "description": "Tekerlekli zirai traktörler ve ormancılıkta kullanılan tekerlekli traktörler",
     "value": "35.000",
-    "unit": null
+    "unit": "ABD Doları/Adet"
    },
    {
     "gtip": "8701.95.10.00.00",
     "description": "Tekerlekli zirai traktörler ve ormancılıkta kullanılan tekerlekli traktörler",
     "value": "44.890",
-    "unit": null
+    "unit": "ABD Doları/Adet"
    }
   ],
-  "item_count": 5
+  "item_count": 5,
+  "parser_version": 2
  },
  {
   "mevzuat_no": "41230",
@@ -2184,40 +2246,41 @@
   "rg_no": "32769 (3.Mükerrer)",
   "tertip": "5",
   "url": "mevzuat?MevzuatNo=41230&MevzuatTur=9&MevzuatTertip=5",
-  "unit": null,
+  "unit": "ABD Doları/Adet",
   "items": [
    {
     "gtip": "8701.91.10.00.00",
     "description": "Tekerlekli zirai traktörler ve ormancılıkta kullanılan tekerlekli traktörler",
     "value": "5.078",
-    "unit": null
+    "unit": "ABD Doları/Adet"
    },
    {
     "gtip": "8701.92.10.00.00",
     "description": "Tekerlekli zirai traktörler ve ormancılıkta kullanılan tekerlekli traktörler",
     "value": "12.000",
-    "unit": null
+    "unit": "ABD Doları/Adet"
    },
    {
     "gtip": "8701.93.10.00.00",
     "description": "Tekerlekli zirai traktörler ve ormancılıkta kullanılan tekerlekli traktörler",
     "value": "25.000",
-    "unit": null
+    "unit": "ABD Doları/Adet"
    },
    {
     "gtip": "8701.94.10.00.00",
     "description": "Tekerlekli zirai traktörler ve ormancılıkta kullanılan tekerlekli traktörler",
     "value": "35.000",
-    "unit": null
+    "unit": "ABD Doları/Adet"
    },
    {
     "gtip": "8701.95.10.00.00",
     "description": "Tekerlekli zirai traktörler ve ormancılıkta kullanılan tekerlekli traktörler",
     "value": "44.890",
-    "unit": null
+    "unit": "ABD Doları/Adet"
    }
   ],
-  "item_count": 5
+  "item_count": 5,
+  "parser_version": 2
  },
  {
   "mevzuat_no": "41197",
@@ -2289,7 +2352,8 @@
     "unit": null
    }
   ],
-  "item_count": 10
+  "item_count": 10,
+  "parser_version": 2
  },
  {
   "mevzuat_no": "41124",
@@ -2349,7 +2413,8 @@
     "unit": "ABD Doları/Kg"
    }
   ],
-  "item_count": 8
+  "item_count": 8,
+  "parser_version": 2
  },
  {
   "mevzuat_no": "41009",
@@ -2403,7 +2468,8 @@
     "unit": "ABD Doları/Kg"
    }
   ],
-  "item_count": 7
+  "item_count": 7,
+  "parser_version": 2
  },
  {
   "mevzuat_no": "41008",
@@ -2417,7 +2483,7 @@
    {
     "gtip": "4814.20.00.00.00",
     "description": "Duvar kağıtları ve benzeri duvar kaplamaları (ön yüzü pürtüklü kabartmalı, boyalı, desen baskılı veya başka şekilde dekore edilmiş bir kat plastikle sıvanmış veya kaplanmış kâğıttan meydana gelmiş olanlar)",
-    "value": "",
+    "value": "10 (ABD Doları/kg*)",
     "unit": "ABD Doları/kg"
    },
    {
@@ -2435,7 +2501,7 @@
    {
     "gtip": "4814.90.70.20.00",
     "description": "Emdirilmiş, genişliği 60 cm’yi geçen fakat 160 cm’yi geçmeyenler",
-    "value": "",
+    "value": "6 (ABD Doları/kg*)",
     "unit": "ABD Doları/kg"
    },
    {
@@ -2453,121 +2519,13 @@
    {
     "gtip": "8418.30.20.00.00",
     "description": "Hacmi 400 litreyi geçmeyenler",
-    "value": "",
+    "value": "165 (ABD Doları/adet)",
     "unit": "ABD Doları/kg"
    },
    {
     "gtip": "8544.30.00.00.00",
     "description": "Ateşleme bujilerine mahsus kablo bağlantı takımları; taşıtlarda, uçaklarda veya gemilerde kullanılan türden diğer kablo bağlantı takımları (Yalnız akü takviye kablosu)",
-    "value": "",
-    "unit": "ABD Doları/kg"
-   },
-   {
-    "gtip": "8544.42.90.00.00",
-    "description": "Diğerleri (Yalnız akü takviye kablosu)",
-    "value": "",
-    "unit": "ABD Doları/kg"
-   },
-   {
-    "gtip": "4814.20.00.00.00",
-    "description": "Duvar kağıtları ve benzeri duvar kaplamaları (ön yüzü pürtüklü kabartmalı, boyalı, desen baskılı veya başka şekilde dekore edilmiş bir kat plastikle sıvanmış veya kaplanmış kâğıttan meydana gelmiş olanlar)",
-    "value": "",
-    "unit": "ABD Doları/kg"
-   },
-   {
-    "gtip": "4814.90.10.00.00",
-    "description": "Duvar kağıtları ve benzeri duvar kaplamaları, pürtüklenmiş, kabartılmış, yüzeyi boyanmış, motif baskılı veya yüzeyi başka şekilde dekore edilmiş koruyucu şeffaf plastik maddelerle sıvanmış veya kaplanmış kağıtlardan yapılmış olanlar",
-    "value": "",
-    "unit": "ABD Doları/kg"
-   },
-   {
-    "gtip": "4814.90.70.10.00",
-    "description": "Duvar kağıtları ve benzeri duvar kaplamaları (ön yüzü örmeye elverişli maddelerle (bu maddeler birbirine paralel teller halinde birleştirilmiş veya düz dokunmuş olsun olmasın) kaplanmış kâğıttan meydana gelmiş olanlar))",
-    "value": "",
-    "unit": "ABD Doları/kg"
-   },
-   {
-    "gtip": "4814.90.70.20.00",
-    "description": "Emdirilmiş, genişliği 60 cm’yi geçen fakat 160 cm’yi geçmeyenler",
-    "value": "",
-    "unit": "ABD Doları/kg"
-   },
-   {
-    "gtip": "4814.90.70.30.00",
-    "description": "Diğerleri",
-    "value": "",
-    "unit": "ABD Doları/kg"
-   },
-   {
-    "gtip": "4814.90.70.90.00",
-    "description": "Diğerleri",
-    "value": "",
-    "unit": "ABD Doları/kg"
-   },
-   {
-    "gtip": "8418.30.20.00.00",
-    "description": "Hacmi 400 litreyi geçmeyenler",
-    "value": "",
-    "unit": "ABD Doları/kg"
-   },
-   {
-    "gtip": "8544.30.00.00.00",
-    "description": "Ateşleme bujilerine mahsus kablo bağlantı takımları; taşıtlarda, uçaklarda veya gemilerde kullanılan türden diğer kablo bağlantı takımları (Yalnız akü takviye kablosu)",
-    "value": "",
-    "unit": "ABD Doları/kg"
-   },
-   {
-    "gtip": "8544.42.90.00.00",
-    "description": "Diğerleri (Yalnız akü takviye kablosu)",
-    "value": "",
-    "unit": "ABD Doları/kg"
-   },
-   {
-    "gtip": "4814.20.00.00.00",
-    "description": "Duvar kağıtları ve benzeri duvar kaplamaları (ön yüzü pürtüklü kabartmalı, boyalı, desen baskılı veya başka şekilde dekore edilmiş bir kat plastikle sıvanmış veya kaplanmış kâğıttan meydana gelmiş olanlar)",
-    "value": "",
-    "unit": "ABD Doları/kg"
-   },
-   {
-    "gtip": "4814.90.10.00.00",
-    "description": "Duvar kağıtları ve benzeri duvar kaplamaları, pürtüklenmiş, kabartılmış, yüzeyi boyanmış, motif baskılı veya yüzeyi başka şekilde dekore edilmiş koruyucu şeffaf plastik maddelerle sıvanmış veya kaplanmış kağıtlardan yapılmış olanlar",
-    "value": "",
-    "unit": "ABD Doları/kg"
-   },
-   {
-    "gtip": "4814.90.70.10.00",
-    "description": "Duvar kağıtları ve benzeri duvar kaplamaları (ön yüzü örmeye elverişli maddelerle (bu maddeler birbirine paralel teller halinde birleştirilmiş veya düz dokunmuş olsun olmasın) kaplanmış kâğıttan meydana gelmiş olanlar))",
-    "value": "",
-    "unit": "ABD Doları/kg"
-   },
-   {
-    "gtip": "4814.90.70.20.00",
-    "description": "Emdirilmiş, genişliği 60 cm’yi geçen fakat 160 cm’yi geçmeyenler",
-    "value": "",
-    "unit": "ABD Doları/kg"
-   },
-   {
-    "gtip": "4814.90.70.30.00",
-    "description": "Diğerleri",
-    "value": "",
-    "unit": "ABD Doları/kg"
-   },
-   {
-    "gtip": "4814.90.70.90.00",
-    "description": "Diğerleri",
-    "value": "",
-    "unit": "ABD Doları/kg"
-   },
-   {
-    "gtip": "8418.30.20.00.00",
-    "description": "Hacmi 400 litreyi geçmeyenler",
-    "value": "",
-    "unit": "ABD Doları/kg"
-   },
-   {
-    "gtip": "8544.30.00.00.00",
-    "description": "Ateşleme bujilerine mahsus kablo bağlantı takımları; taşıtlarda, uçaklarda veya gemilerde kullanılan türden diğer kablo bağlantı takımları (Yalnız akü takviye kablosu)",
-    "value": "",
+    "value": "30 (ABD Doları/kg*)",
     "unit": "ABD Doları/kg"
    },
    {
@@ -2577,7 +2535,8 @@
     "unit": "ABD Doları/kg"
    }
   ],
-  "item_count": 27
+  "item_count": 9,
+  "parser_version": 2
  },
  {
   "mevzuat_no": "40999",
@@ -2593,21 +2552,10 @@
     "description": "Diğerleri (yalnızca rezistans telleri döşeli ve terminal pimleri bulunan soket/semer tipli polietilen ek parçalar)",
     "value": "10",
     "unit": "ABD Doları/Kg"
-   },
-   {
-    "gtip": "3917.40.00.00.19",
-    "description": "Diğerleri (yalnızca rezistans telleri döşeli ve terminal pimleri bulunan soket/semer tipli polietilen ek parçalar)",
-    "value": "10",
-    "unit": "ABD Doları/Kg"
-   },
-   {
-    "gtip": "3917.40.00.00.19",
-    "description": "Diğerleri (yalnızca rezistans telleri döşeli ve terminal pimleri bulunan soket/semer tipli polietilen ek parçalar)",
-    "value": "10",
-    "unit": "ABD Doları/Kg"
    }
   ],
-  "item_count": 3
+  "item_count": 1,
+  "parser_version": 2
  },
  {
   "mevzuat_no": "40964",
@@ -2631,7 +2579,8 @@
     "unit": "ABD Doları/Kg"
    }
   ],
-  "item_count": 2
+  "item_count": 2,
+  "parser_version": 2
  },
  {
   "mevzuat_no": "40939",
@@ -2645,17 +2594,18 @@
    {
     "gtip": "8715.00.10.00.00",
     "description": "Bebek arabaları",
-    "value": "",
+    "value": "100 (ABD Doları/Adet)",
     "unit": "ABD Doları/Adet"
    },
    {
     "gtip": "8715.00.90.00.00",
     "description": "Aksam ve parçalar",
-    "value": "",
+    "value": "25 (ABD Doları/ Kg*)",
     "unit": "ABD Doları/Adet"
    }
   ],
-  "item_count": 2
+  "item_count": 2,
+  "parser_version": 2
  },
  {
   "mevzuat_no": "40842",
@@ -2664,88 +2614,89 @@
   "rg_no": "32549",
   "tertip": "5",
   "url": "mevzuat?MevzuatNo=40842&MevzuatTur=9&MevzuatTertip=5",
-  "unit": null,
+  "unit": "ABD Doları",
   "items": [
    {
     "gtip": "3921.90.60.00.11",
     "description": "Polietilenden olanlar (Yalnız mesnedi şerit ve benzerlerinden dokunmuş mensucattan olanlar)",
-    "value": "",
-    "unit": null
+    "value": "2,5 $/Kg",
+    "unit": "ABD Doları"
    },
    {
     "gtip": "8208.30.00.00.00",
     "description": "Gıda sanayiinde kullanılan makinalara veya mutfak cihazlarına mahsus olanlar (Yalnız 8509.40 gümrük tarife pozisyonlu gıda maddelerini öğütücü ve/veya karıştırıcı elektrikli ev cihazlarının kesici, öğütücü ve doğrayıcı uçları)",
-    "value": "",
-    "unit": null
+    "value": "25 $/Kg",
+    "unit": "ABD Doları"
    },
    {
     "gtip": "8301.40.11.00.00",
     "description": "Silindirli kapı kilitleri (topuzlu, elektromekanik, elektromanyetik, tam elektronik olanlar hariç)",
-    "value": "",
-    "unit": null
+    "value": "20 $/Kg",
+    "unit": "ABD Doları"
    },
    {
     "gtip": "8301.40.19.00.11",
     "description": "Soğuk hava depolarına mahsus olanlar (topuzlu, elektromekanik, elektromanyetik, tam elektronik olanlar hariç)",
-    "value": "",
-    "unit": null
+    "value": "20 $/Kg",
+    "unit": "ABD Doları"
    },
    {
     "gtip": "8301.40.19.00.19",
     "description": "Diğerleri (topuzlu, elektromekanik, elektromanyetik, tam elektronik olanlar hariç)",
-    "value": "",
-    "unit": null
+    "value": "20 $/Kg",
+    "unit": "ABD Doları"
    },
    {
     "gtip": "8301.60.00.00.11",
     "description": "Kapı kilidi silindirleri (barel)",
-    "value": "",
-    "unit": null
+    "value": "15 $/Kg",
+    "unit": "ABD Doları"
    },
    {
     "gtip": "8301.60.00.00.19",
     "description": "Diğerleri",
-    "value": "",
-    "unit": null
+    "value": "15 $/Kg",
+    "unit": "ABD Doları"
    },
    {
     "gtip": "9105.21.00.00.00",
     "description": "Elektrikle çalışanlar",
-    "value": "",
-    "unit": null
+    "value": "3,5 $/Adet",
+    "unit": "ABD Doları"
    },
    {
     "gtip": "9609.10.10.00.00",
     "description": "\"Kurşunları\" grafitten olanlar",
-    "value": "",
-    "unit": null
+    "value": "30 $/Kg",
+    "unit": "ABD Doları"
    },
    {
     "gtip": "9609.10.90.00.00",
     "description": "Diğerleri",
-    "value": "",
-    "unit": null
+    "value": "30 $/Kg",
+    "unit": "ABD Doları"
    },
    {
     "gtip": "9613.10.00.00.00",
     "description": "Tekrar doldurulamayan gazlı cep çakmakları",
-    "value": "",
-    "unit": null
+    "value": "0,08 $/Adet",
+    "unit": "ABD Doları"
    },
    {
     "gtip": "9613.20.00.00.11",
     "description": "Ateşleme sistemi elektrikli olanlar",
-    "value": "",
-    "unit": null
+    "value": "0,16 $/Adet",
+    "unit": "ABD Doları"
    },
    {
     "gtip": "9613.20.00.00.19",
     "description": "Diğer ateşleme sistemli olan doldurulabilen gazlı cep çakmakları",
-    "value": "",
-    "unit": null
+    "value": "0,08 $/Adet",
+    "unit": "ABD Doları"
    }
   ],
-  "item_count": 13
+  "item_count": 13,
+  "parser_version": 2
  },
  {
   "mevzuat_no": "40841",
@@ -2965,429 +2916,10 @@
     "description": "Diğerleri",
     "value": "6",
     "unit": "ABD Doları/Kg"
-   },
-   {
-    "gtip": "7318.11.00.00.00",
-    "description": "Tirfonlar",
-    "value": "6",
-    "unit": "ABD Doları/Kg"
-   },
-   {
-    "gtip": "7318.12.10.00.00",
-    "description": "Paslanmaz çelikten olanlar",
-    "value": "6,5",
-    "unit": "ABD Doları/Kg"
-   },
-   {
-    "gtip": "7318.12.90.00.00",
-    "description": "Diğerleri",
-    "value": "4,5",
-    "unit": "ABD Doları/Kg"
-   },
-   {
-    "gtip": "7318.13.00.00.00",
-    "description": "Çengelli ve halkalı vidalar",
-    "value": "6",
-    "unit": "ABD Doları/Kg"
-   },
-   {
-    "gtip": "7318.14.10.00.00",
-    "description": "Paslanmaz çelikten olanlar",
-    "value": "6,5",
-    "unit": "ABD Doları/Kg"
-   },
-   {
-    "gtip": "7318.14.91.00.00",
-    "description": "Sac vidaları",
-    "value": "6",
-    "unit": "ABD Doları/Kg"
-   },
-   {
-    "gtip": "7318.14.99.00.00",
-    "description": "Diğerleri",
-    "value": "6",
-    "unit": "ABD Doları/Kg"
-   },
-   {
-    "gtip": "7318.15.20.00.00",
-    "description": "Demiryolu yapım malzemesinin tespitinde kullanılanlar",
-    "value": "6",
-    "unit": "ABD Doları/Kg"
-   },
-   {
-    "gtip": "7318.15.35.00.11",
-    "description": "Vidalar",
-    "value": "6,5",
-    "unit": "ABD Doları/Kg"
-   },
-   {
-    "gtip": "7318.15.35.00.12",
-    "description": "Civatalar",
-    "value": "6,5",
-    "unit": "ABD Doları/Kg"
-   },
-   {
-    "gtip": "7318.15.42.00.11",
-    "description": "Vidalar",
-    "value": "6",
-    "unit": "ABD Doları/Kg"
-   },
-   {
-    "gtip": "7318.15.42.00.12",
-    "description": "Civatalar",
-    "value": "6",
-    "unit": "ABD Doları/Kg"
-   },
-   {
-    "gtip": "7318.15.48.00.11",
-    "description": "Vidalar",
-    "value": "6,5",
-    "unit": "ABD Doları/Kg"
-   },
-   {
-    "gtip": "7318.15.48.00.12",
-    "description": "Civatalar",
-    "value": "6,5",
-    "unit": "ABD Doları/Kg"
-   },
-   {
-    "gtip": "7318.15.52.00.00",
-    "description": "Paslanmaz çelikten",
-    "value": "6,5",
-    "unit": "ABD Doları/Kg"
-   },
-   {
-    "gtip": "7318.15.58.00.00",
-    "description": "Diğerleri",
-    "value": "6",
-    "unit": "ABD Doları/Kg"
-   },
-   {
-    "gtip": "7318.15.62.00.00",
-    "description": "Paslanmaz çelikten",
-    "value": "6,5",
-    "unit": "ABD Doları/Kg"
-   },
-   {
-    "gtip": "7318.15.68.00.00",
-    "description": "Diğerleri",
-    "value": "6",
-    "unit": "ABD Doları/Kg"
-   },
-   {
-    "gtip": "7318.15.75.00.00",
-    "description": "Paslanmaz çelikten",
-    "value": "6,5",
-    "unit": "ABD Doları/Kg"
-   },
-   {
-    "gtip": "7318.15.82.00.00",
-    "description": "Çekme direnci mm2.de 800 N.dan az olanlar",
-    "value": "6",
-    "unit": "ABD Doları/Kg"
-   },
-   {
-    "gtip": "7318.15.88.00.00",
-    "description": "Çekme direnci mm2.de 800 N. veya daha fazla olanlar",
-    "value": "6,5",
-    "unit": "ABD Doları/Kg"
-   },
-   {
-    "gtip": "7318.15.95.00.11",
-    "description": "Vidalar",
-    "value": "4,5",
-    "unit": "ABD Doları/Kg"
-   },
-   {
-    "gtip": "7318.15.95.00.12",
-    "description": "Civatalar",
-    "value": "4,5",
-    "unit": "ABD Doları/Kg"
-   },
-   {
-    "gtip": "7318.16.31.00.00",
-    "description": "Kör perçin somunu",
-    "value": "6,5",
-    "unit": "ABD Doları/Kg"
-   },
-   {
-    "gtip": "7318.16.39.00.00",
-    "description": "Diğerleri",
-    "value": "6,5",
-    "unit": "ABD Doları/Kg"
-   },
-   {
-    "gtip": "7318.16.40.00.00",
-    "description": "Kör perçin somunu",
-    "value": "6",
-    "unit": "ABD Doları/Kg"
-   },
-   {
-    "gtip": "7318.16.60.00.00",
-    "description": "Emniyet Somunları",
-    "value": "8",
-    "unit": "ABD Doları/Kg"
-   },
-   {
-    "gtip": "7318.16.92.00.00",
-    "description": "İç çapı 12 mm.yi geçmeyenler",
-    "value": "6",
-    "unit": "ABD Doları/Kg"
-   },
-   {
-    "gtip": "7318.16.99.00.00",
-    "description": "İç çapı 12 mm'yi geçenler",
-    "value": "6",
-    "unit": "ABD Doları/Kg"
-   },
-   {
-    "gtip": "7318.19.00.00.00",
-    "description": "Diğerleri",
-    "value": "6",
-    "unit": "ABD Doları/Kg"
-   },
-   {
-    "gtip": "7318.21.00.00.00",
-    "description": "Yaylanmayı sağlayıcı rondelalar ve diğer sıkıştırma rondelaları",
-    "value": "6",
-    "unit": "ABD Doları/Kg"
-   },
-   {
-    "gtip": "7318.22.00.00.00",
-    "description": "Diğer rondelalar",
-    "value": "6",
-    "unit": "ABD Doları/Kg"
-   },
-   {
-    "gtip": "7318.23.00.00.00",
-    "description": "Perçin çivileri",
-    "value": "6",
-    "unit": "ABD Doları/Kg"
-   },
-   {
-    "gtip": "7318.24.00.00.00",
-    "description": "Kamalar ve kamalı pimler",
-    "value": "6",
-    "unit": "ABD Doları/Kg"
-   },
-   {
-    "gtip": "7318.29.00.00.00",
-    "description": "Diğerleri",
-    "value": "6",
-    "unit": "ABD Doları/Kg"
-   },
-   {
-    "gtip": "7318.11.00.00.00",
-    "description": "Tirfonlar",
-    "value": "6",
-    "unit": "ABD Doları/Kg"
-   },
-   {
-    "gtip": "7318.12.10.00.00",
-    "description": "Paslanmaz çelikten olanlar",
-    "value": "6,5",
-    "unit": "ABD Doları/Kg"
-   },
-   {
-    "gtip": "7318.12.90.00.00",
-    "description": "Diğerleri",
-    "value": "4,5",
-    "unit": "ABD Doları/Kg"
-   },
-   {
-    "gtip": "7318.13.00.00.00",
-    "description": "Çengelli ve halkalı vidalar",
-    "value": "6",
-    "unit": "ABD Doları/Kg"
-   },
-   {
-    "gtip": "7318.14.10.00.00",
-    "description": "Paslanmaz çelikten olanlar",
-    "value": "6,5",
-    "unit": "ABD Doları/Kg"
-   },
-   {
-    "gtip": "7318.14.91.00.00",
-    "description": "Sac vidaları",
-    "value": "6",
-    "unit": "ABD Doları/Kg"
-   },
-   {
-    "gtip": "7318.14.99.00.00",
-    "description": "Diğerleri",
-    "value": "6",
-    "unit": "ABD Doları/Kg"
-   },
-   {
-    "gtip": "7318.15.20.00.00",
-    "description": "Demiryolu yapım malzemesinin tespitinde kullanılanlar",
-    "value": "6",
-    "unit": "ABD Doları/Kg"
-   },
-   {
-    "gtip": "7318.15.35.00.11",
-    "description": "Vidalar",
-    "value": "6,5",
-    "unit": "ABD Doları/Kg"
-   },
-   {
-    "gtip": "7318.15.35.00.12",
-    "description": "Civatalar",
-    "value": "6,5",
-    "unit": "ABD Doları/Kg"
-   },
-   {
-    "gtip": "7318.15.42.00.11",
-    "description": "Vidalar",
-    "value": "6",
-    "unit": "ABD Doları/Kg"
-   },
-   {
-    "gtip": "7318.15.42.00.12",
-    "description": "Civatalar",
-    "value": "6",
-    "unit": "ABD Doları/Kg"
-   },
-   {
-    "gtip": "7318.15.48.00.11",
-    "description": "Vidalar",
-    "value": "6,5",
-    "unit": "ABD Doları/Kg"
-   },
-   {
-    "gtip": "7318.15.48.00.12",
-    "description": "Civatalar",
-    "value": "6,5",
-    "unit": "ABD Doları/Kg"
-   },
-   {
-    "gtip": "7318.15.52.00.00",
-    "description": "Paslanmaz çelikten",
-    "value": "6,5",
-    "unit": "ABD Doları/Kg"
-   },
-   {
-    "gtip": "7318.15.58.00.00",
-    "description": "Diğerleri",
-    "value": "6",
-    "unit": "ABD Doları/Kg"
-   },
-   {
-    "gtip": "7318.15.62.00.00",
-    "description": "Paslanmaz çelikten",
-    "value": "6,5",
-    "unit": "ABD Doları/Kg"
-   },
-   {
-    "gtip": "7318.15.68.00.00",
-    "description": "Diğerleri",
-    "value": "6",
-    "unit": "ABD Doları/Kg"
-   },
-   {
-    "gtip": "7318.15.75.00.00",
-    "description": "Paslanmaz çelikten",
-    "value": "6,5",
-    "unit": "ABD Doları/Kg"
-   },
-   {
-    "gtip": "7318.15.82.00.00",
-    "description": "Çekme direnci mm2.de 800 N.dan az olanlar",
-    "value": "6",
-    "unit": "ABD Doları/Kg"
-   },
-   {
-    "gtip": "7318.15.88.00.00",
-    "description": "Çekme direnci mm2.de 800 N. veya daha fazla olanlar",
-    "value": "6,5",
-    "unit": "ABD Doları/Kg"
-   },
-   {
-    "gtip": "7318.15.95.00.11",
-    "description": "Vidalar",
-    "value": "4,5",
-    "unit": "ABD Doları/Kg"
-   },
-   {
-    "gtip": "7318.15.95.00.12",
-    "description": "Civatalar",
-    "value": "4,5",
-    "unit": "ABD Doları/Kg"
-   },
-   {
-    "gtip": "7318.16.31.00.00",
-    "description": "Kör perçin somunu",
-    "value": "6,5",
-    "unit": "ABD Doları/Kg"
-   },
-   {
-    "gtip": "7318.16.39.00.00",
-    "description": "Diğerleri",
-    "value": "6,5",
-    "unit": "ABD Doları/Kg"
-   },
-   {
-    "gtip": "7318.16.40.00.00",
-    "description": "Kör perçin somunu",
-    "value": "6",
-    "unit": "ABD Doları/Kg"
-   },
-   {
-    "gtip": "7318.16.60.00.00",
-    "description": "Emniyet Somunları",
-    "value": "8",
-    "unit": "ABD Doları/Kg"
-   },
-   {
-    "gtip": "7318.16.92.00.00",
-    "description": "İç çapı 12 mm.yi geçmeyenler",
-    "value": "6",
-    "unit": "ABD Doları/Kg"
-   },
-   {
-    "gtip": "7318.16.99.00.00",
-    "description": "İç çapı 12 mm'yi geçenler",
-    "value": "6",
-    "unit": "ABD Doları/Kg"
-   },
-   {
-    "gtip": "7318.19.00.00.00",
-    "description": "Diğerleri",
-    "value": "6",
-    "unit": "ABD Doları/Kg"
-   },
-   {
-    "gtip": "7318.21.00.00.00",
-    "description": "Yaylanmayı sağlayıcı rondelalar ve diğer sıkıştırma rondelaları",
-    "value": "6",
-    "unit": "ABD Doları/Kg"
-   },
-   {
-    "gtip": "7318.22.00.00.00",
-    "description": "Diğer rondelalar",
-    "value": "6",
-    "unit": "ABD Doları/Kg"
-   },
-   {
-    "gtip": "7318.23.00.00.00",
-    "description": "Perçin çivileri",
-    "value": "6",
-    "unit": "ABD Doları/Kg"
-   },
-   {
-    "gtip": "7318.24.00.00.00",
-    "description": "Kamalar ve kamalı pimler",
-    "value": "6",
-    "unit": "ABD Doları/Kg"
-   },
-   {
-    "gtip": "7318.29.00.00.00",
-    "description": "Diğerleri",
-    "value": "6",
-    "unit": "ABD Doları/Kg"
    }
   ],
-  "item_count": 105
+  "item_count": 35,
+  "parser_version": 2
  },
  {
   "mevzuat_no": "40840",
@@ -3398,7 +2930,8 @@
   "url": "mevzuat?MevzuatNo=40840&MevzuatTur=9&MevzuatTertip=5",
   "unit": null,
   "items": [],
-  "item_count": 0
+  "item_count": 0,
+  "parser_version": 2
  },
  {
   "mevzuat_no": "40831",
@@ -3414,21 +2947,10 @@
     "description": "Diğerleri",
     "value": "35",
     "unit": "ABD Doları/Adet"
-   },
-   {
-    "gtip": "8517.71.00.00.00",
-    "description": "Her türlü antenler ve anten yansıtıcıları; bunların aksam-parçaları (Yalnızca telefon cihazlarına ait olanlar)",
-    "value": "5",
-    "unit": "ABD Doları/Adet"
-   },
-   {
-    "gtip": "8517.79.00.00.00",
-    "description": "Diğerleri (Yalnızca telefon cihazlarına ait olan ve üzerine en az bir komponent dizilmiş ana kartlar)",
-    "value": "100",
-    "unit": "ABD Doları/Adet"
    }
   ],
-  "item_count": 3
+  "item_count": 1,
+  "parser_version": 2
  },
  {
   "mevzuat_no": "40758",
@@ -3482,7 +3004,8 @@
     "unit": "ABD Doları/Kg"
    }
   ],
-  "item_count": 7
+  "item_count": 7,
+  "parser_version": 2
  },
  {
   "mevzuat_no": "40757",
@@ -3510,45 +3033,10 @@
     "description": "Diğerleri",
     "value": "5,5",
     "unit": "ABD Doları/Kg"
-   },
-   {
-    "gtip": "3926.40.00.00.11",
-    "description": "Kıymetli veya yarı kıymetli taş taklitleri (bir mesnete monteli olsun olmasın)",
-    "value": "15",
-    "unit": "ABD Doları/Kg"
-   },
-   {
-    "gtip": "3926.90.97.90.14",
-    "description": "Kelepçeler",
-    "value": "3",
-    "unit": "ABD Doları/Kg"
-   },
-   {
-    "gtip": "3926.90.97.90.18",
-    "description": "Diğerleri",
-    "value": "5,5",
-    "unit": "ABD Doları/Kg"
-   },
-   {
-    "gtip": "3926.40.00.00.11",
-    "description": "Kıymetli veya yarı kıymetli taş taklitleri (bir mesnete monteli olsun olmasın)",
-    "value": "15",
-    "unit": "ABD Doları/Kg"
-   },
-   {
-    "gtip": "3926.90.97.90.14",
-    "description": "Kelepçeler",
-    "value": "3",
-    "unit": "ABD Doları/Kg"
-   },
-   {
-    "gtip": "3926.90.97.90.18",
-    "description": "Diğerleri",
-    "value": "5,5",
-    "unit": "ABD Doları/Kg"
    }
   ],
-  "item_count": 9
+  "item_count": 3,
+  "parser_version": 2
  },
  {
   "mevzuat_no": "40449",
@@ -3557,22 +3045,23 @@
   "rg_no": "32353",
   "tertip": "5",
   "url": "mevzuat?MevzuatNo=40449&MevzuatTur=9&MevzuatTertip=5",
-  "unit": null,
+  "unit": "ABD Doları/Adet",
   "items": [
    {
     "gtip": "8504.40.83.90.12",
     "description": "Elektrikli araçlar için şarj istasyonları (Yalnız karayolu taşıtları için olanlar*)",
     "value": "20.000",
-    "unit": null
+    "unit": "ABD Doları/Adet"
    },
    {
     "gtip": "8504.40.95.90.12",
     "description": "Elektrikli araçlar için şarj istasyonları",
     "value": "1.000",
-    "unit": null
+    "unit": "ABD Doları/Adet"
    }
   ],
-  "item_count": 2
+  "item_count": 2,
+  "parser_version": 2
  },
  {
   "mevzuat_no": "40238",
@@ -3582,8 +3071,154 @@
   "tertip": "5",
   "url": "mevzuat?MevzuatNo=40238&MevzuatTur=9&MevzuatTertip=5",
   "unit": "ABD Doları/Kg",
-  "items": [],
-  "item_count": 0
+  "items": [
+   {
+    "gtip": "6911.10.00.00.11",
+    "description": "Beyaz olanlar",
+    "value": "4",
+    "unit": "ABD Doları/Kg"
+   },
+   {
+    "gtip": "6911.10.00.00.12",
+    "description": "Tek renkli olanlar",
+    "value": "5,5",
+    "unit": "ABD Doları/Kg"
+   },
+   {
+    "gtip": "6911.10.00.00.19",
+    "description": "Diğerleri",
+    "value": "6",
+    "unit": "ABD Doları/Kg"
+   },
+   {
+    "gtip": "6911.90.00.00.11",
+    "description": "Beyaz olanlar",
+    "value": "8,5",
+    "unit": "ABD Doları/Kg"
+   },
+   {
+    "gtip": "6911.90.00.00.12",
+    "description": "Tek renkli olanlar",
+    "value": "6,5",
+    "unit": "ABD Doları/Kg"
+   },
+   {
+    "gtip": "6911.90.00.00.19",
+    "description": "Diğerleri",
+    "value": "6",
+    "unit": "ABD Doları/Kg"
+   },
+   {
+    "gtip": "6912.00.21.00.00",
+    "description": "Adi topraktan olanlar",
+    "value": "6",
+    "unit": "ABD Doları/Kg"
+   },
+   {
+    "gtip": "6912.00.23.00.00",
+    "description": "Greden olanlar",
+    "value": "4,5",
+    "unit": "ABD Doları/Kg"
+   },
+   {
+    "gtip": "6912.00.25.00.11",
+    "description": "Beyaz olanlar",
+    "value": "3",
+    "unit": "ABD Doları/Kg"
+   },
+   {
+    "gtip": "6912.00.25.00.12",
+    "description": "Tek renkli olanlar",
+    "value": "3,5",
+    "unit": "ABD Doları/Kg"
+   },
+   {
+    "gtip": "6912.00.25.00.19",
+    "description": "Diğerleri",
+    "value": "4,5",
+    "unit": "ABD Doları/Kg"
+   },
+   {
+    "gtip": "6912.00.29.00.00",
+    "description": "Diğerleri",
+    "value": "4,5",
+    "unit": "ABD Doları/Kg"
+   },
+   {
+    "gtip": "6912.00.81.00.00",
+    "description": "Adi topraktan olanlar",
+    "value": "5,5",
+    "unit": "ABD Doları/Kg"
+   },
+   {
+    "gtip": "6912.00.83.00.00",
+    "description": "Greden olanlar",
+    "value": "7,5",
+    "unit": "ABD Doları/Kg"
+   },
+   {
+    "gtip": "6912.00.85.00.00",
+    "description": "Fayanstan veya ince çömlekçi eşyasından olanlar",
+    "value": "4,5",
+    "unit": "ABD Doları/Kg"
+   },
+   {
+    "gtip": "6912.00.89.00.00",
+    "description": "Diğerleri",
+    "value": "5",
+    "unit": "ABD Doları/Kg"
+   },
+   {
+    "gtip": "6913.10.00.00.10",
+    "description": "El yapımı çiniden olanlar",
+    "value": "9",
+    "unit": "ABD Doları/Kg"
+   },
+   {
+    "gtip": "6913.10.00.00.90",
+    "description": "Diğerleri",
+    "value": "7",
+    "unit": "ABD Doları/Kg"
+   },
+   {
+    "gtip": "6913.90.10.00.00",
+    "description": "Adi topraktan olanlar",
+    "value": "4,5",
+    "unit": "ABD Doları/Kg"
+   },
+   {
+    "gtip": "6913.90.93.00.10",
+    "description": "El yapımı çiniden olanlar",
+    "value": "9",
+    "unit": "ABD Doları/Kg"
+   },
+   {
+    "gtip": "6913.90.93.00.90",
+    "description": "Diğerleri",
+    "value": "4,5",
+    "unit": "ABD Doları/Kg"
+   },
+   {
+    "gtip": "6913.90.98.00.00",
+    "description": "Diğerleri",
+    "value": "6",
+    "unit": "ABD Doları/Kg"
+   },
+   {
+    "gtip": "6914.10.00.00.00",
+    "description": "Porselenden olanlar",
+    "value": "5",
+    "unit": "ABD Doları/Kg"
+   },
+   {
+    "gtip": "6914.90.00.00.00",
+    "description": "Diğerleri",
+    "value": "8",
+    "unit": "ABD Doları/Kg"
+   }
+  ],
+  "item_count": 24,
+  "parser_version": 2
  },
  {
   "mevzuat_no": "40162",
@@ -3601,7 +3236,8 @@
     "unit": "ABD Doları/Kg"
    }
   ],
-  "item_count": 1
+  "item_count": 1,
+  "parser_version": 2
  },
  {
   "mevzuat_no": "40161",
@@ -3829,7 +3465,8 @@
     "unit": "ABD Doları/Adet"
    }
   ],
-  "item_count": 36
+  "item_count": 36,
+  "parser_version": 2
  },
  {
   "mevzuat_no": "40094",
@@ -3853,7 +3490,8 @@
     "unit": "ABD Doları/Adet"
    }
   ],
-  "item_count": 2
+  "item_count": 2,
+  "parser_version": 2
  },
  {
   "mevzuat_no": "40120",
@@ -3883,7 +3521,8 @@
     "unit": "ABD Doları/Kg"
    }
   ],
-  "item_count": 3
+  "item_count": 3,
+  "parser_version": 2
  },
  {
   "mevzuat_no": "40052",
@@ -3892,58 +3531,59 @@
   "rg_no": "32087",
   "tertip": "5",
   "url": "mevzuat?MevzuatNo=40052&MevzuatTur=9&MevzuatTertip=5",
-  "unit": null,
+  "unit": "ABD Doları/Kg",
   "items": [
    {
     "gtip": "7019.11.00.00.00",
     "description": "Cam liflerinden uzunluğu 50 mm.yi geçmeyen kırpılmış iplikler",
     "value": "2",
-    "unit": null
+    "unit": "ABD Doları/Kg"
    },
    {
     "gtip": "7019.12.00.00.00",
     "description": "Fitiller",
     "value": "",
-    "unit": null
+    "unit": "ABD Doları/Kg"
    },
    {
     "gtip": "7019.13.00.00.00",
     "description": "Diğer iplikler, şeritler",
     "value": "",
-    "unit": null
+    "unit": "ABD Doları/Kg"
    },
    {
     "gtip": "7019.14.00.00.00",
     "description": "Mekanik olarak bağlanmış takviye tabakaları",
     "value": "",
-    "unit": null
+    "unit": "ABD Doları/Kg"
    },
    {
     "gtip": "7019.15.00.00.00",
     "description": "Kimyasal olarak bağlanmış takviye tabakaları",
     "value": "",
-    "unit": null
+    "unit": "ABD Doları/Kg"
    },
    {
     "gtip": "7019.19.00.00.00",
     "description": "Diğerleri",
     "value": "",
-    "unit": null
+    "unit": "ABD Doları/Kg"
    },
    {
     "gtip": "7019.90.00.10.00",
     "description": "Dokumaya elverişli liflerden",
     "value": "",
-    "unit": null
+    "unit": "ABD Doları/Kg"
    },
    {
     "gtip": "7019.90.00.30.00",
     "description": "Cam liflerden keçe",
     "value": "",
-    "unit": null
+    "unit": "ABD Doları/Kg"
    }
   ],
-  "item_count": 8
+  "item_count": 8,
+  "parser_version": 2
  },
  {
   "mevzuat_no": "40047",
@@ -3961,7 +3601,8 @@
     "unit": "ABD Doları/Kg"
    }
   ],
-  "item_count": 1
+  "item_count": 1,
+  "parser_version": 2
  },
  {
   "mevzuat_no": "40046",
@@ -3970,16 +3611,17 @@
   "rg_no": "32086",
   "tertip": "5",
   "url": "mevzuat?MevzuatNo=40046&MevzuatTur=9&MevzuatTertip=5",
-  "unit": null,
+  "unit": "ABD Doları/Kg",
   "items": [
    {
     "gtip": "8541.42.00.00.00",
     "description": "Bir modül halinde birleştirilmemiş veya panolarda düzenlenmemiş fotovoltaik hücreler",
     "value": "170",
-    "unit": null
+    "unit": "ABD Doları/Kg"
    }
   ],
-  "item_count": 1
+  "item_count": 1,
+  "parser_version": 2
  },
  {
   "mevzuat_no": "40034",
@@ -3988,64 +3630,29 @@
   "rg_no": "32083",
   "tertip": "5",
   "url": "mevzuat?MevzuatNo=40034&MevzuatTur=9&MevzuatTertip=5",
-  "unit": null,
+  "unit": "ABD Doları/Kg",
   "items": [
    {
     "gtip": "1702.90.50.00.19",
     "description": "Diğerleri",
     "value": "1,25",
-    "unit": null
+    "unit": "ABD Doları/Kg"
    },
    {
     "gtip": "2207.20.00.10.01",
     "description": "%99 veya daha yüksek saflıkta olanlar",
     "value": "1,15",
-    "unit": null
+    "unit": "ABD Doları/Kg"
    },
    {
     "gtip": "2207.20.00.10.09",
     "description": "Diğerleri",
     "value": "",
-    "unit": null
-   },
-   {
-    "gtip": "1702.90.50.00.19",
-    "description": "Diğerleri",
-    "value": "1,25",
-    "unit": null
-   },
-   {
-    "gtip": "2207.20.00.10.01",
-    "description": "%99 veya daha yüksek saflıkta olanlar",
-    "value": "1,15",
-    "unit": null
-   },
-   {
-    "gtip": "2207.20.00.10.09",
-    "description": "Diğerleri",
-    "value": "",
-    "unit": null
-   },
-   {
-    "gtip": "1702.90.50.00.19",
-    "description": "Diğerleri",
-    "value": "1,25",
-    "unit": null
-   },
-   {
-    "gtip": "2207.20.00.10.01",
-    "description": "%99 veya daha yüksek saflıkta olanlar",
-    "value": "1,15",
-    "unit": null
-   },
-   {
-    "gtip": "2207.20.00.10.09",
-    "description": "Diğerleri",
-    "value": "",
-    "unit": null
+    "unit": "ABD Doları/Kg"
    }
   ],
-  "item_count": 9
+  "item_count": 3,
+  "parser_version": 2
  },
  {
   "mevzuat_no": "39942",
@@ -4054,46 +3661,23 @@
   "rg_no": "32060 5.Mükerrer",
   "tertip": "5",
   "url": "mevzuat?MevzuatNo=39942&MevzuatTur=9&MevzuatTertip=5",
-  "unit": null,
+  "unit": "ABD Doları/Adet",
   "items": [
    {
     "gtip": "8425.41.00.00.00",
     "description": "Servis istasyonları veya garajlarda kullanılan türdeki sabit kriko sistemleri (Yalnız maksimum kaldırma yüksekliği en az bir metre ve üzeri olanlar)",
     "value": "1.500",
-    "unit": null
+    "unit": "ABD Doları/Adet"
    },
    {
     "gtip": "8479.89.97.90.11",
     "description": "Lastik sökme ve takma makinaları",
     "value": "1.400",
-    "unit": null
-   },
-   {
-    "gtip": "8425.41.00.00.00",
-    "description": "Servis istasyonları veya garajlarda kullanılan türdeki sabit kriko sistemleri (Yalnız maksimum kaldırma yüksekliği en az bir metre ve üzeri olanlar)",
-    "value": "1.500",
-    "unit": null
-   },
-   {
-    "gtip": "8479.89.97.90.11",
-    "description": "Lastik sökme ve takma makinaları",
-    "value": "1.400",
-    "unit": null
-   },
-   {
-    "gtip": "8425.41.00.00.00",
-    "description": "Servis istasyonları veya garajlarda kullanılan türdeki sabit kriko sistemleri (Yalnız maksimum kaldırma yüksekliği en az bir metre ve üzeri olanlar)",
-    "value": "1.500",
-    "unit": null
-   },
-   {
-    "gtip": "8479.89.97.90.11",
-    "description": "Lastik sökme ve takma makinaları",
-    "value": "1.400",
-    "unit": null
+    "unit": "ABD Doları/Adet"
    }
   ],
-  "item_count": 6
+  "item_count": 2,
+  "parser_version": 2
  },
  {
   "mevzuat_no": "39901",
@@ -4229,261 +3813,10 @@
     "description": "Diğerleri",
     "value": "1,25",
     "unit": "ABD Doları/Kg"
-   },
-   {
-    "gtip": "6506.10.10.90.00",
-    "description": "Diğerleri (Yalnız bisiklet ve motosiklet için olanlar)",
-    "value": "8",
-    "unit": "ABD Doları/Kg"
-   },
-   {
-    "gtip": "8301.40.90.00.00",
-    "description": "Diğer kilitler (Yalnız bisiklet ve motosiklet için olanlar)",
-    "value": "2,75",
-    "unit": "ABD Doları/Kg"
-   },
-   {
-    "gtip": "8306.10.00.00.00",
-    "description": "Ziller, çanlar, gonglar ve benzerleri (Yalnız bisiklet için olanlar)",
-    "value": "10",
-    "unit": "ABD Doları/Kg"
-   },
-   {
-    "gtip": "8414.20.20.00.00",
-    "description": "Bisikletler ve motosikletler için el pompaları",
-    "value": "1,75",
-    "unit": "ABD Doları/Kg"
-   },
-   {
-    "gtip": "8512.10.00.00.00",
-    "description": "Bisikletlerde kullanılan türden aydınlatma veya gözle görülebilen işaret cihazları",
-    "value": "8",
-    "unit": "ABD Doları/Kg"
-   },
-   {
-    "gtip": "8714.91.30.00.00",
-    "description": "Furşlar (çatallar)",
-    "value": "1,75",
-    "unit": "ABD Doları/Kg"
-   },
-   {
-    "gtip": "8714.91.90.00.00",
-    "description": "Aksam ve parçalar",
-    "value": "2,5",
-    "unit": "ABD Doları/Kg"
-   },
-   {
-    "gtip": "8714.92.10.00.00",
-    "description": "Jantlar",
-    "value": "3,25",
-    "unit": "ABD Doları/Kg"
-   },
-   {
-    "gtip": "8714.92.90.00.00",
-    "description": "Gergi çubukları",
-    "value": "1,5",
-    "unit": "ABD Doları/Kg"
-   },
-   {
-    "gtip": "8714.93.00.00.00",
-    "description": "Tekerlek poyraları (tekerlek poyrasına dayanan kontrpedallı frenler ve poyra frenleri hariç) ve tekerlekler için zincir dişlileri",
-    "value": "2",
-    "unit": "ABD Doları/Kg"
-   },
-   {
-    "gtip": "8714.94.20.00.00",
-    "description": "Frenler",
-    "value": "2,25",
-    "unit": "ABD Doları/Kg"
-   },
-   {
-    "gtip": "8714.94.90.00.00",
-    "description": "Aksam ve parçalar",
-    "value": "2,25",
-    "unit": "ABD Doları/Kg"
-   },
-   {
-    "gtip": "8714.95.00.00.00",
-    "description": "Seleler",
-    "value": "2,5",
-    "unit": "ABD Doları/Kg"
-   },
-   {
-    "gtip": "8714.96.10.00.00",
-    "description": "Pedallar",
-    "value": "1,5",
-    "unit": "ABD Doları/Kg"
-   },
-   {
-    "gtip": "8714.96.30.00.00",
-    "description": "Krank dişlileri",
-    "value": "1,5",
-    "unit": "ABD Doları/Kg"
-   },
-   {
-    "gtip": "8714.96.90.00.00",
-    "description": "Aksam ve parçalar",
-    "value": "1,5",
-    "unit": "ABD Doları/Kg"
-   },
-   {
-    "gtip": "8714.99.10.00.00",
-    "description": "Gidonlar",
-    "value": "1,25",
-    "unit": "ABD Doları/Kg"
-   },
-   {
-    "gtip": "8714.99.30.00.00",
-    "description": "Bagaj taşıyıcılar",
-    "value": "1,75",
-    "unit": "ABD Doları/Kg"
-   },
-   {
-    "gtip": "8714.99.50.00.00",
-    "description": "Vites değiştirme dişlileri (derayyörler)",
-    "value": "2",
-    "unit": "ABD Doları/Kg"
-   },
-   {
-    "gtip": "8714.99.90.00.11",
-    "description": "Bisiklet tekerleği",
-    "value": "1,25",
-    "unit": "ABD Doları/Kg"
-   },
-   {
-    "gtip": "8714.99.90.00.19",
-    "description": "Diğerleri",
-    "value": "1,25",
-    "unit": "ABD Doları/Kg"
-   },
-   {
-    "gtip": "6506.10.10.90.00",
-    "description": "Diğerleri (Yalnız bisiklet ve motosiklet için olanlar)",
-    "value": "8",
-    "unit": "ABD Doları/Kg"
-   },
-   {
-    "gtip": "8301.40.90.00.00",
-    "description": "Diğer kilitler (Yalnız bisiklet ve motosiklet için olanlar)",
-    "value": "2,75",
-    "unit": "ABD Doları/Kg"
-   },
-   {
-    "gtip": "8306.10.00.00.00",
-    "description": "Ziller, çanlar, gonglar ve benzerleri (Yalnız bisiklet için olanlar)",
-    "value": "10",
-    "unit": "ABD Doları/Kg"
-   },
-   {
-    "gtip": "8414.20.20.00.00",
-    "description": "Bisikletler ve motosikletler için el pompaları",
-    "value": "1,75",
-    "unit": "ABD Doları/Kg"
-   },
-   {
-    "gtip": "8512.10.00.00.00",
-    "description": "Bisikletlerde kullanılan türden aydınlatma veya gözle görülebilen işaret cihazları",
-    "value": "8",
-    "unit": "ABD Doları/Kg"
-   },
-   {
-    "gtip": "8714.91.30.00.00",
-    "description": "Furşlar (çatallar)",
-    "value": "1,75",
-    "unit": "ABD Doları/Kg"
-   },
-   {
-    "gtip": "8714.91.90.00.00",
-    "description": "Aksam ve parçalar",
-    "value": "2,5",
-    "unit": "ABD Doları/Kg"
-   },
-   {
-    "gtip": "8714.92.10.00.00",
-    "description": "Jantlar",
-    "value": "3,25",
-    "unit": "ABD Doları/Kg"
-   },
-   {
-    "gtip": "8714.92.90.00.00",
-    "description": "Gergi çubukları",
-    "value": "1,5",
-    "unit": "ABD Doları/Kg"
-   },
-   {
-    "gtip": "8714.93.00.00.00",
-    "description": "Tekerlek poyraları (tekerlek poyrasına dayanan kontrpedallı frenler ve poyra frenleri hariç) ve tekerlekler için zincir dişlileri",
-    "value": "2",
-    "unit": "ABD Doları/Kg"
-   },
-   {
-    "gtip": "8714.94.20.00.00",
-    "description": "Frenler",
-    "value": "2,25",
-    "unit": "ABD Doları/Kg"
-   },
-   {
-    "gtip": "8714.94.90.00.00",
-    "description": "Aksam ve parçalar",
-    "value": "2,25",
-    "unit": "ABD Doları/Kg"
-   },
-   {
-    "gtip": "8714.95.00.00.00",
-    "description": "Seleler",
-    "value": "2,5",
-    "unit": "ABD Doları/Kg"
-   },
-   {
-    "gtip": "8714.96.10.00.00",
-    "description": "Pedallar",
-    "value": "1,5",
-    "unit": "ABD Doları/Kg"
-   },
-   {
-    "gtip": "8714.96.30.00.00",
-    "description": "Krank dişlileri",
-    "value": "1,5",
-    "unit": "ABD Doları/Kg"
-   },
-   {
-    "gtip": "8714.96.90.00.00",
-    "description": "Aksam ve parçalar",
-    "value": "1,5",
-    "unit": "ABD Doları/Kg"
-   },
-   {
-    "gtip": "8714.99.10.00.00",
-    "description": "Gidonlar",
-    "value": "1,25",
-    "unit": "ABD Doları/Kg"
-   },
-   {
-    "gtip": "8714.99.30.00.00",
-    "description": "Bagaj taşıyıcılar",
-    "value": "1,75",
-    "unit": "ABD Doları/Kg"
-   },
-   {
-    "gtip": "8714.99.50.00.00",
-    "description": "Vites değiştirme dişlileri (derayyörler)",
-    "value": "2",
-    "unit": "ABD Doları/Kg"
-   },
-   {
-    "gtip": "8714.99.90.00.11",
-    "description": "Bisiklet tekerleği",
-    "value": "1,25",
-    "unit": "ABD Doları/Kg"
-   },
-   {
-    "gtip": "8714.99.90.00.19",
-    "description": "Diğerleri",
-    "value": "1,25",
-    "unit": "ABD Doları/Kg"
    }
   ],
-  "item_count": 63
+  "item_count": 21,
+  "parser_version": 2
  },
  {
   "mevzuat_no": "40025",
@@ -4531,7 +3864,8 @@
     "unit": "ABD Doları/Kg"
    }
   ],
-  "item_count": 6
+  "item_count": 6,
+  "parser_version": 2
  },
  {
   "mevzuat_no": "40022",
@@ -4549,7 +3883,8 @@
     "unit": "ABD Doları/Kg"
    }
   ],
-  "item_count": 1
+  "item_count": 1,
+  "parser_version": 2
  },
  {
   "mevzuat_no": "39848",
@@ -4567,7 +3902,8 @@
     "unit": "ABD Doları/Kg"
    }
   ],
-  "item_count": 1
+  "item_count": 1,
+  "parser_version": 2
  },
  {
   "mevzuat_no": "39126",
@@ -4578,7 +3914,8 @@
   "url": "mevzuat?MevzuatNo=39126&MevzuatTur=9&MevzuatTertip=5",
   "unit": null,
   "items": [],
-  "item_count": 0
+  "item_count": 0,
+  "parser_version": 2
  },
  {
   "mevzuat_no": "38831",
@@ -4630,93 +3967,10 @@
     "description": "Diğerleri",
     "value": "",
     "unit": null
-   },
-   {
-    "gtip": "3501.10.90.00.00",
-    "description": "Diğer kazeinler",
-    "value": "",
-    "unit": null
-   },
-   {
-    "gtip": "3501.90.90.00.11",
-    "description": "Sodyum kazeinat",
-    "value": "",
-    "unit": null
-   },
-   {
-    "gtip": "3501.90.90.00.19",
-    "description": "Diğerleri",
-    "value": "",
-    "unit": null
-   },
-   {
-    "gtip": "3502.20.91.00.00",
-    "description": "Kurutulmuş (yaprak, pul, flokon, ve toz halinde)",
-    "value": "",
-    "unit": null
-   },
-   {
-    "gtip": "3502.20.99.00.00",
-    "description": "Diğerleri",
-    "value": "",
-    "unit": null
-   },
-   {
-    "gtip": "3504.00.10.00.00",
-    "description": "Bu faslın 1 no'lu ek notunda belirtilmiş olan konsantre süt proteinleri",
-    "value": "",
-    "unit": null
-   },
-   {
-    "gtip": "3504.00.90.00.19",
-    "description": "Diğerleri",
-    "value": "",
-    "unit": null
-   },
-   {
-    "gtip": "3501.10.90.00.00",
-    "description": "Diğer kazeinler",
-    "value": "",
-    "unit": null
-   },
-   {
-    "gtip": "3501.90.90.00.11",
-    "description": "Sodyum kazeinat",
-    "value": "",
-    "unit": null
-   },
-   {
-    "gtip": "3501.90.90.00.19",
-    "description": "Diğerleri",
-    "value": "",
-    "unit": null
-   },
-   {
-    "gtip": "3502.20.91.00.00",
-    "description": "Kurutulmuş (yaprak, pul, flokon, ve toz halinde)",
-    "value": "",
-    "unit": null
-   },
-   {
-    "gtip": "3502.20.99.00.00",
-    "description": "Diğerleri",
-    "value": "",
-    "unit": null
-   },
-   {
-    "gtip": "3504.00.10.00.00",
-    "description": "Bu faslın 1 no'lu ek notunda belirtilmiş olan konsantre süt proteinleri",
-    "value": "",
-    "unit": null
-   },
-   {
-    "gtip": "3504.00.90.00.19",
-    "description": "Diğerleri",
-    "value": "",
-    "unit": null
    }
   ],
-  "item_count": 21
+  "item_count": 7,
+  "parser_version": 2
  },
  {
   "mevzuat_no": "36094",
@@ -4727,7 +3981,8 @@
   "url": "mevzuat?MevzuatNo=36094&MevzuatTur=9&MevzuatTertip=5",
   "unit": null,
   "items": [],
-  "item_count": 0
+  "item_count": 0,
+  "parser_version": 2
  },
  {
   "mevzuat_no": "34520",
@@ -4743,15 +3998,10 @@
     "description": "Karpuzlar",
     "value": "300",
     "unit": "ABD Doları/Ton"
-   },
-   {
-    "gtip": "0807.11.00.00.00",
-    "description": "Karpuzlar",
-    "value": "300",
-    "unit": "ABD Doları/Ton"
    }
   ],
-  "item_count": 2
+  "item_count": 1,
+  "parser_version": 2
  },
  {
   "mevzuat_no": "34511",
@@ -4767,15 +4017,10 @@
     "description": "Diğerleri",
     "value": "500",
     "unit": "ABD Doları/Ton"
-   },
-   {
-    "gtip": "0701.90",
-    "description": "Diğerleri",
-    "value": "500",
-    "unit": "ABD Doları/Ton"
    }
   ],
-  "item_count": 2
+  "item_count": 1,
+  "parser_version": 2
  },
  {
   "mevzuat_no": "34500",
@@ -4793,7 +4038,8 @@
     "unit": "ABD Doları/Adet"
    }
   ],
-  "item_count": 1
+  "item_count": 1,
+  "parser_version": 2
  },
  {
   "mevzuat_no": "34443",
@@ -4811,7 +4057,8 @@
     "unit": "ABD Doları/Kg"
    }
   ],
-  "item_count": 1
+  "item_count": 1,
+  "parser_version": 2
  },
  {
   "mevzuat_no": "34376",
@@ -4829,7 +4076,8 @@
     "unit": "ABD Doları/Kg"
    }
   ],
-  "item_count": 1
+  "item_count": 1,
+  "parser_version": 2
  },
  {
   "mevzuat_no": "34304",
@@ -4841,15 +4089,33 @@
   "unit": "ABD Doları/Kg",
   "items": [
    {
+    "gtip": "70.05",
+    "description": "Float cam ve yüzeyi taşlanmış veya parlatılmış cam (plakalar halinde) absorblayıcı (emici) veya yansıtıcı ya da yansıtıcı olmayan bir tabakası olsun olmasın, fakat başka şekilde işlenmemiş",
+    "value": "0,6",
+    "unit": "ABD Doları/Kg"
+   },
+   {
     "gtip": "7005.29",
     "description": "Diğerleri",
     "value": "0,5",
     "unit": "ABD Doları/Kg"
    },
    {
+    "gtip": "70.06",
+    "description": "70.03.70.04 veya 70.05 Pozisyonlarındaki camların bombelendirilmiş, kenar işlemeli, aşındırılmış, delinmiş, emaye baskı uygulanmış veya başka şekilde işlenmiş, fakat diğer malzemelerle çerçevelenmemiş veya donatılmamış olanlar",
+    "value": "0,7",
+    "unit": "ABD Doları/Kg"
+   },
+   {
     "gtip": "7006.00.90.00.19",
     "description": "Diğerleri",
     "value": "7",
+    "unit": "ABD Doları/Kg"
+   },
+   {
+    "gtip": "70.07",
+    "description": "Emniyet camları [sertleştirilmiş (temperlenmiş) veya lamine edilmiş camlardan]",
+    "value": "0,7",
     "unit": "ABD Doları/Kg"
    },
    {
@@ -4913,7 +4179,8 @@
     "unit": "ABD Doları/Kg"
    }
   ],
-  "item_count": 12
+  "item_count": 15,
+  "parser_version": 2
  },
  {
   "mevzuat_no": "34284",
@@ -4931,7 +4198,8 @@
     "unit": "ABD Doları/Kg"
    }
   ],
-  "item_count": 1
+  "item_count": 1,
+  "parser_version": 2
  },
  {
   "mevzuat_no": "34072",
@@ -4949,7 +4217,8 @@
     "unit": "ABD Doları/Adet"
    }
   ],
-  "item_count": 1
+  "item_count": 1,
+  "parser_version": 2
  },
  {
   "mevzuat_no": "34056",
@@ -4971,33 +4240,10 @@
     "description": "Tek akslı traktörler",
     "value": "",
     "unit": "ABD Doları/Kg"
-   },
-   {
-    "gtip": "8432.29.90.00.19",
-    "description": "Diğer çapa makineleri",
-    "value": "10",
-    "unit": "ABD Doları/Kg"
-   },
-   {
-    "gtip": "8701.10.00.00.00",
-    "description": "Tek akslı traktörler",
-    "value": "",
-    "unit": "ABD Doları/Kg"
-   },
-   {
-    "gtip": "8432.29.90.00.19",
-    "description": "Diğer çapa makineleri",
-    "value": "10",
-    "unit": "ABD Doları/Kg"
-   },
-   {
-    "gtip": "8701.10.00.00.00",
-    "description": "Tek akslı traktörler",
-    "value": "",
-    "unit": "ABD Doları/Kg"
    }
   ],
-  "item_count": 6
+  "item_count": 2,
+  "parser_version": 2
  },
  {
   "mevzuat_no": "33884",
@@ -5015,7 +4261,8 @@
     "unit": "ABD Doları/kg"
    }
   ],
-  "item_count": 1
+  "item_count": 1,
+  "parser_version": 2
  },
  {
   "mevzuat_no": "33766",
@@ -5165,13 +4412,20 @@
     "unit": "ABD Doları/Ton"
    },
    {
+    "gtip": "95.05",
+    "description": "Bayram, karnaval veya diğer eğlenceler için eşya (sihirbazlık eşyası veya sürpriz eşyası dahil) (9505.10.90.00.00 hariç)",
+    "value": "30.000",
+    "unit": "ABD Doları/Ton"
+   },
+   {
     "gtip": "9505.10.90.00.00",
     "description": "Diğer maddelerden olanlar",
     "value": "50.000",
     "unit": "ABD Doları/Ton"
    }
   ],
-  "item_count": 24
+  "item_count": 25,
+  "parser_version": 2
  },
  {
   "mevzuat_no": "33765",
@@ -5180,28 +4434,29 @@
   "rg_no": "30877",
   "tertip": "5",
   "url": "mevzuat?MevzuatNo=33765&MevzuatTur=9&MevzuatTertip=5",
-  "unit": null,
+  "unit": "ABD Doları/Ton",
   "items": [
    {
     "gtip": "3923.21.00.00.19",
     "description": "Diğerleri",
     "value": "3.200",
-    "unit": null
+    "unit": "ABD Doları/Ton"
    },
    {
     "gtip": "3923.29.10.00.19",
     "description": "Diğerleri",
     "value": "3.200",
-    "unit": null
+    "unit": "ABD Doları/Ton"
    },
    {
     "gtip": "3923.29.90.00.19",
     "description": "Diğerleri",
     "value": "3.200",
-    "unit": null
+    "unit": "ABD Doları/Ton"
    }
   ],
-  "item_count": 3
+  "item_count": 3,
+  "parser_version": 2
  },
  {
   "mevzuat_no": "33764",
@@ -5225,7 +4480,8 @@
     "unit": "ABD Doları/Kg"
    }
   ],
-  "item_count": 2
+  "item_count": 2,
+  "parser_version": 2
  },
  {
   "mevzuat_no": "32600",
@@ -5237,63 +4493,15 @@
   "unit": "ABD Doları/Kg",
   "items": [
    {
-    "gtip": "3919.10.15.00.00",
-    "description": "Polipropilenden olanlar",
-    "value": "4,5",
+    "gtip": "31148",
+    "description": "",
+    "value": "",
     "unit": "ABD Doları/Kg"
    },
    {
-    "gtip": "3919.10.80.20.00",
-    "description": "Katılma polimerizasyonu ürünlerinden olanlar",
-    "value": "4,5",
-    "unit": "ABD Doları/Kg"
-   },
-   {
-    "gtip": "3919.90.80.30.11",
-    "description": "Genişliği 1 metreyi geçen dijital baskı folyoları",
-    "value": "3,5",
-    "unit": "ABD Doları/Kg"
-   },
-   {
-    "gtip": "3919.90.80.30.19",
-    "description": "Diğerleri",
-    "value": "3,5",
-    "unit": "ABD Doları/Kg"
-   },
-   {
-    "gtip": "3919.90.80.90.00",
-    "description": "Diğerleri (Yalnız yapışkan sürülmüş polipropilen mesnetli mamul)",
-    "value": "4",
-    "unit": "ABD Doları/Kg"
-   },
-   {
-    "gtip": "3919.10.15.00.00",
-    "description": "Polipropilenden olanlar",
-    "value": "4,5",
-    "unit": "ABD Doları/Kg"
-   },
-   {
-    "gtip": "3919.10.80.20.00",
-    "description": "Katılma polimerizasyonu ürünlerinden olanlar",
-    "value": "4,5",
-    "unit": "ABD Doları/Kg"
-   },
-   {
-    "gtip": "3919.90.80.30.11",
-    "description": "Genişliği 1 metreyi geçen dijital baskı folyoları",
-    "value": "3,5",
-    "unit": "ABD Doları/Kg"
-   },
-   {
-    "gtip": "3919.90.80.30.19",
-    "description": "Diğerleri",
-    "value": "3,5",
-    "unit": "ABD Doları/Kg"
-   },
-   {
-    "gtip": "3919.90.80.90.00",
-    "description": "Diğerleri (Yalnız yapışkan sürülmüş polipropilen mesnetli mamul)",
-    "value": "4",
+    "gtip": "30802",
+    "description": "",
+    "value": "",
     "unit": "ABD Doları/Kg"
    },
    {
@@ -5327,7 +4535,8 @@
     "unit": "ABD Doları/Kg"
    }
   ],
-  "item_count": 15
+  "item_count": 7,
+  "parser_version": 2
  },
  {
   "mevzuat_no": "31140",
@@ -5361,57 +4570,10 @@
     "description": "Diğerleri",
     "value": "3",
     "unit": "ABD Doları/Kg"
-   },
-   {
-    "gtip": "7311.00.11.10.00",
-    "description": "250 ve daha fazla atmosfer basıncına dayanıklı olanlar",
-    "value": "3",
-    "unit": "ABD Doları/Kg"
-   },
-   {
-    "gtip": "7311.00.11.90.00",
-    "description": "Diğerleri",
-    "value": "3",
-    "unit": "ABD Doları/Kg"
-   },
-   {
-    "gtip": "7311.00.13.10.00",
-    "description": "250 ve daha fazla atmosfer basıncına dayanıklı olanlar",
-    "value": "3",
-    "unit": "ABD Doları/Kg"
-   },
-   {
-    "gtip": "7311.00.13.90.00",
-    "description": "Diğerleri",
-    "value": "3",
-    "unit": "ABD Doları/Kg"
-   },
-   {
-    "gtip": "7311.00.11.10.00",
-    "description": "250 ve daha fazla atmosfer basıncına dayanıklı olanlar",
-    "value": "3",
-    "unit": "ABD Doları/Kg"
-   },
-   {
-    "gtip": "7311.00.11.90.00",
-    "description": "Diğerleri",
-    "value": "3",
-    "unit": "ABD Doları/Kg"
-   },
-   {
-    "gtip": "7311.00.13.10.00",
-    "description": "250 ve daha fazla atmosfer basıncına dayanıklı olanlar",
-    "value": "3",
-    "unit": "ABD Doları/Kg"
-   },
-   {
-    "gtip": "7311.00.13.90.00",
-    "description": "Diğerleri",
-    "value": "3",
-    "unit": "ABD Doları/Kg"
    }
   ],
-  "item_count": 12
+  "item_count": 4,
+  "parser_version": 2
  },
  {
   "mevzuat_no": "24814",
@@ -5423,87 +4585,27 @@
   "unit": "ABD Doları/Kg",
   "items": [
    {
-    "gtip": "8708.93.90.00.11",
-    "description": "Debriyajlar",
-    "value": "10",
-    "unit": "ABD Doları/Kg"
-   },
-   {
-    "gtip": "8708.93.90.00.21",
-    "description": "Baskı komplesi",
-    "value": "9",
-    "unit": "ABD Doları/Kg"
-   },
-   {
-    "gtip": "8708.93.90.00.22",
-    "description": "Disk komplesi (yalnız debriyaj diski)",
+    "gtip": "31148",
+    "description": "",
     "value": "",
     "unit": "ABD Doları/Kg"
    },
    {
-    "gtip": "8708.93.90.00.29",
-    "description": "Diğerleri",
-    "value": "2",
-    "unit": "ABD Doları/Kg"
-   },
-   {
-    "gtip": "8708.93.90.00.31",
-    "description": "Baskı komplesi",
-    "value": "9",
-    "unit": "ABD Doları/Kg"
-   },
-   {
-    "gtip": "8708.93.90.00.32",
-    "description": "Disk komplesi (yalnız debriyaj diski)",
+    "gtip": "31723",
+    "description": "",
     "value": "",
     "unit": "ABD Doları/Kg"
    },
    {
-    "gtip": "8708.93.90.00.39",
-    "description": "Diğerleri",
-    "value": "2",
-    "unit": "ABD Doları/Kg"
-   },
-   {
-    "gtip": "8708.93.90.00.11",
-    "description": "Debriyajlar",
-    "value": "10",
-    "unit": "ABD Doları/Kg"
-   },
-   {
-    "gtip": "8708.93.90.00.21",
-    "description": "Baskı komplesi",
-    "value": "9",
-    "unit": "ABD Doları/Kg"
-   },
-   {
-    "gtip": "8708.93.90.00.22",
-    "description": "Disk komplesi (yalnız debriyaj diski)",
+    "gtip": "33307",
+    "description": "",
     "value": "",
     "unit": "ABD Doları/Kg"
    },
    {
-    "gtip": "8708.93.90.00.29",
-    "description": "Diğerleri",
-    "value": "2",
-    "unit": "ABD Doları/Kg"
-   },
-   {
-    "gtip": "8708.93.90.00.31",
-    "description": "Baskı komplesi",
-    "value": "9",
-    "unit": "ABD Doları/Kg"
-   },
-   {
-    "gtip": "8708.93.90.00.32",
-    "description": "Disk komplesi (yalnız debriyaj diski)",
+    "gtip": "30537",
+    "description": "",
     "value": "",
-    "unit": "ABD Doları/Kg"
-   },
-   {
-    "gtip": "8708.93.90.00.39",
-    "description": "Diğerleri",
-    "value": "2",
     "unit": "ABD Doları/Kg"
    },
    {
@@ -5549,7 +4651,8 @@
     "unit": "ABD Doları/Kg"
    }
   ],
-  "item_count": 21
+  "item_count": 11,
+  "parser_version": 2
  },
  {
   "mevzuat_no": "24758",
@@ -5561,146 +4664,20 @@
   "unit": "ABD Doları/Kg",
   "items": [
    {
-    "gtip": "8201.50.00.00.11",
-    "description": "Bağ ve bahçıvan makasları",
-    "value": "20",
+    "gtip": "30860",
+    "description": "",
+    "value": "",
     "unit": "ABD Doları/Kg"
    },
    {
-    "gtip": "8203.20.00.00.11",
-    "description": "Pensler",
-    "value": "20",
+    "gtip": "31148",
+    "description": "",
+    "value": "",
     "unit": "ABD Doları/Kg"
    },
    {
-    "gtip": "8203.20.00.00.12",
-    "description": "Kerpetenler",
-    "value": "20",
-    "unit": "ABD Doları/Kg"
-   },
-   {
-    "gtip": "8203.30.00.00.00",
-    "description": "Tenekeci makasları ve benzeri aletler",
-    "value": "20",
-    "unit": "ABD Doları/Kg"
-   },
-   {
-    "gtip": "8204.11.00.00.00",
-    "description": "Ağzı sabit olanlar",
-    "value": "20",
-    "unit": "ABD Doları/Kg"
-   },
-   {
-    "gtip": "8204.12.00.00.00",
-    "description": "Ağzı ayarlanabilir olanlar",
-    "value": "20",
-    "unit": "ABD Doları/Kg"
-   },
-   {
-    "gtip": "8204.20.00.00.00",
-    "description": "Değiştirilebilir sıkıştırma soketleri (saplı olsun olmasın)",
-    "value": "10",
-    "unit": "ABD Doları/Kg"
-   },
-   {
-    "gtip": "8205.20.00.00.11",
-    "description": "Çekiçler",
-    "value": "20",
-    "unit": "ABD Doları/Kg"
-   },
-   {
-    "gtip": "8205.30.00.00.00",
-    "description": "Rendeler, keskiler, oluklu keskiler ve ağaç işlemeye mahsus benzeri kesici aletler",
-    "value": "20",
-    "unit": "ABD Doları/Kg"
-   },
-   {
-    "gtip": "8205.40.00.00.00",
-    "description": "Tornavidalar",
-    "value": "20",
-    "unit": "ABD Doları/Kg"
-   },
-   {
-    "gtip": "8205.59.80.00.19",
-    "description": "Diğerleri",
-    "value": "30",
-    "unit": "ABD Doları/Kg"
-   },
-   {
-    "gtip": "8206.00.00.00.00",
-    "description": "82.02 ila 82.05 Pozisyonlarındaki aletlerin iki veya daha fazlasından meydana gelen aletler (perakende satış için hazırlanmış takım halinde)",
-    "value": "20",
-    "unit": "ABD Doları/Kg"
-   },
-   {
-    "gtip": "8201.50.00.00.11",
-    "description": "Bağ ve bahçıvan makasları",
-    "value": "20",
-    "unit": "ABD Doları/Kg"
-   },
-   {
-    "gtip": "8203.20.00.00.11",
-    "description": "Pensler",
-    "value": "20",
-    "unit": "ABD Doları/Kg"
-   },
-   {
-    "gtip": "8203.20.00.00.12",
-    "description": "Kerpetenler",
-    "value": "20",
-    "unit": "ABD Doları/Kg"
-   },
-   {
-    "gtip": "8203.30.00.00.00",
-    "description": "Tenekeci makasları ve benzeri aletler",
-    "value": "20",
-    "unit": "ABD Doları/Kg"
-   },
-   {
-    "gtip": "8204.11.00.00.00",
-    "description": "Ağzı sabit olanlar",
-    "value": "20",
-    "unit": "ABD Doları/Kg"
-   },
-   {
-    "gtip": "8204.12.00.00.00",
-    "description": "Ağzı ayarlanabilir olanlar",
-    "value": "20",
-    "unit": "ABD Doları/Kg"
-   },
-   {
-    "gtip": "8204.20.00.00.00",
-    "description": "Değiştirilebilir sıkıştırma soketleri (saplı olsun olmasın)",
-    "value": "10",
-    "unit": "ABD Doları/Kg"
-   },
-   {
-    "gtip": "8205.20.00.00.11",
-    "description": "Çekiçler",
-    "value": "20",
-    "unit": "ABD Doları/Kg"
-   },
-   {
-    "gtip": "8205.30.00.00.00",
-    "description": "Rendeler, keskiler, oluklu keskiler ve ağaç işlemeye mahsus benzeri kesici aletler",
-    "value": "20",
-    "unit": "ABD Doları/Kg"
-   },
-   {
-    "gtip": "8205.40.00.00.00",
-    "description": "Tornavidalar",
-    "value": "20",
-    "unit": "ABD Doları/Kg"
-   },
-   {
-    "gtip": "8205.59.80.00.19",
-    "description": "Diğerleri",
-    "value": "30",
-    "unit": "ABD Doları/Kg"
-   },
-   {
-    "gtip": "8206.00.00.00.00",
-    "description": "82.02 ila 82.05 Pozisyonlarındaki aletlerin iki veya daha fazlasından meydana gelen aletler (perakende satış için hazırlanmış takım halinde)",
+    "gtip": "82.02",
+    "description": "20",
     "value": "20",
     "unit": "ABD Doları/Kg"
    },
@@ -5777,7 +4754,8 @@
     "unit": "ABD Doları/Kg"
    }
   ],
-  "item_count": 36
+  "item_count": 15,
+  "parser_version": 2
  },
  {
   "mevzuat_no": "24686",
@@ -5790,24 +4768,13 @@
   "items": [
    {
     "gtip": "7307.19",
-    "description": "",
-    "value": "2,5",
-    "unit": "ABD Doları/Kg"
-   },
-   {
-    "gtip": "7307.19",
-    "description": "2,5",
-    "value": "2,5",
-    "unit": "ABD Doları/Kg"
-   },
-   {
-    "gtip": "7307.19",
     "description": "Diğerleri",
     "value": "2,5",
     "unit": "ABD Doları/Kg"
    }
   ],
-  "item_count": 3
+  "item_count": 1,
+  "parser_version": 2
  },
  {
   "mevzuat_no": "24685",
@@ -5829,33 +4796,10 @@
     "description": "Diğerleri",
     "value": "5",
     "unit": "ABD Doları/Kg"
-   },
-   {
-    "gtip": "3918.10.10.00.11",
-    "description": "PVC yer kaplamaları",
-    "value": "5",
-    "unit": "ABD Doları/Kg"
-   },
-   {
-    "gtip": "3918.10.90.00.19",
-    "description": "Diğerleri",
-    "value": "5",
-    "unit": "ABD Doları/Kg"
-   },
-   {
-    "gtip": "3918.10.10.00.11",
-    "description": "PVC yer kaplamaları",
-    "value": "5",
-    "unit": "ABD Doları/Kg"
-   },
-   {
-    "gtip": "3918.10.90.00.19",
-    "description": "Diğerleri",
-    "value": "5",
-    "unit": "ABD Doları/Kg"
    }
   ],
-  "item_count": 6
+  "item_count": 2,
+  "parser_version": 2
  },
  {
   "mevzuat_no": "24677",
@@ -5867,39 +4811,27 @@
   "unit": "ABD Doları/Kg",
   "items": [
    {
-    "gtip": "8431.31.00.00.11",
-    "description": "Boyu 1 metre ve üzeri asansör ışık perdesi (boy fotoseli)",
-    "value": "25",
+    "gtip": "31068",
+    "description": "",
+    "value": "",
     "unit": "ABD Doları/Kg"
    },
    {
-    "gtip": "8431.31.00.00.12",
-    "description": "Asansör kılavuz rayları",
-    "value": "2",
+    "gtip": "31148",
+    "description": "",
+    "value": "",
     "unit": "ABD Doları/Kg"
    },
    {
-    "gtip": "8431.31.00.00.19",
-    "description": "Diğerleri",
-    "value": "8",
+    "gtip": "33307",
+    "description": "",
+    "value": "",
     "unit": "ABD Doları/Kg"
    },
    {
-    "gtip": "8431.31.00.00.11",
-    "description": "Boyu 1 metre ve üzeri asansör ışık perdesi (boy fotoseli)",
-    "value": "25",
-    "unit": "ABD Doları/Kg"
-   },
-   {
-    "gtip": "8431.31.00.00.12",
-    "description": "Asansör kılavuz rayları",
-    "value": "2",
-    "unit": "ABD Doları/Kg"
-   },
-   {
-    "gtip": "8431.31.00.00.19",
-    "description": "Diğerleri",
-    "value": "8",
+    "gtip": "30450",
+    "description": "",
+    "value": "",
     "unit": "ABD Doları/Kg"
    },
    {
@@ -5921,7 +4853,8 @@
     "unit": "ABD Doları/Kg"
    }
   ],
-  "item_count": 9
+  "item_count": 7,
+  "parser_version": 2
  },
  {
   "mevzuat_no": "24675",
@@ -5933,15 +4866,15 @@
   "unit": "ABD Doları/Kg",
   "items": [
    {
-    "gtip": "3207.40.85.00.00",
-    "description": "Diğerleri",
-    "value": "0,8",
+    "gtip": "31148",
+    "description": "",
+    "value": "",
     "unit": "ABD Doları/Kg"
    },
    {
-    "gtip": "3207.40.85.00.00",
-    "description": "Diğerleri",
-    "value": "0,8",
+    "gtip": "30449",
+    "description": "",
+    "value": "",
     "unit": "ABD Doları/Kg"
    },
    {
@@ -5951,7 +4884,8 @@
     "unit": "ABD Doları/Kg"
    }
   ],
-  "item_count": 3
+  "item_count": 3,
+  "parser_version": 2
  },
  {
   "mevzuat_no": "24606",
@@ -5960,100 +4894,53 @@
   "rg_no": "30429",
   "tertip": "5",
   "url": "mevzuat?MevzuatNo=24606&MevzuatTur=9&MevzuatTertip=5",
-  "unit": null,
+  "unit": "ABD Doları/Ton",
   "items": [
    {
-    "gtip": "4010.31.00.00.00",
-    "description": "Dış çevresi 60 cm.yi geçen fakat 180 cm.yi geçmeyen, kesiti trapez şeklinde (V-kolanlar) V-yivli olan sonsuz transmisyon kolanları",
-    "value": "20.000",
-    "unit": null
+    "gtip": "31148",
+    "description": "",
+    "value": "",
+    "unit": "ABD Doları/Ton"
    },
    {
-    "gtip": "4010.32.00.00.00",
-    "description": "Dış çevresi 60 cm.yi geçen fakat 180 cm.yi geçmeyen,kesiti trapez şeklinde (V-kolanlar) olan(V-yivli olanlar hariç) sonsuz transmisyon kolanları",
-    "value": "7.500",
-    "unit": null
-   },
-   {
-    "gtip": "4010.33.00.00.00",
-    "description": "Dış çevresi 180 cm.yi geçen fakat 240 cm.yi geçmeyen, kesiti trapez şeklinde (V-kolanlar), V-yivli olan sonsuz transmisyon kolanları",
-    "value": "20.000",
-    "unit": null
-   },
-   {
-    "gtip": "4010.34.00.00.00",
-    "description": "Dış çevresi 180 cm.yi geçen fakat 240 cm.yi geçmeyen, kesiti trapez şeklinde (V-kolanlar) olan (V-yivli olanlar hariç) sonsuz transmisyon kolanları",
-    "value": "7.500",
-    "unit": null
-   },
-   {
-    "gtip": "4010.39.00.00.00",
-    "description": "Diğerleri",
-    "value": "15.000",
-    "unit": null
+    "gtip": "30429",
+    "description": "",
+    "value": "",
+    "unit": "ABD Doları/Ton"
    },
    {
     "gtip": "4010.31.00.00.00",
     "description": "Dış çevresi 60 cm.yi geçen fakat 180 cm.yi geçmeyen, kesiti trapez şeklinde (V-kolanlar) V-yivli olan sonsuz transmisyon kolanları",
     "value": "20.000",
-    "unit": null
+    "unit": "ABD Doları/Ton"
    },
    {
     "gtip": "4010.32.00.00.00",
     "description": "Dış çevresi 60 cm.yi geçen fakat 180 cm.yi geçmeyen,kesiti trapez şeklinde (V-kolanlar) olan(V-yivli olanlar hariç) sonsuz transmisyon kolanları",
     "value": "7.500",
-    "unit": null
+    "unit": "ABD Doları/Ton"
    },
    {
     "gtip": "4010.33.00.00.00",
     "description": "Dış çevresi 180 cm.yi geçen fakat 240 cm.yi geçmeyen, kesiti trapez şeklinde (V-kolanlar), V-yivli olan sonsuz transmisyon kolanları",
     "value": "20.000",
-    "unit": null
+    "unit": "ABD Doları/Ton"
    },
    {
     "gtip": "4010.34.00.00.00",
     "description": "Dış çevresi 180 cm.yi geçen fakat 240 cm.yi geçmeyen, kesiti trapez şeklinde (V-kolanlar) olan (V-yivli olanlar hariç) sonsuz transmisyon kolanları",
     "value": "7.500",
-    "unit": null
+    "unit": "ABD Doları/Ton"
    },
    {
     "gtip": "4010.39.00.00.00",
     "description": "Diğerleri",
     "value": "15.000",
-    "unit": null
-   },
-   {
-    "gtip": "4010.31.00.00.00",
-    "description": "Dış çevresi 60 cm.yi geçen fakat 180 cm.yi geçmeyen, kesiti trapez şeklinde (V-kolanlar) V-yivli olan sonsuz transmisyon kolanları",
-    "value": "20.000",
-    "unit": null
-   },
-   {
-    "gtip": "4010.32.00.00.00",
-    "description": "Dış çevresi 60 cm.yi geçen fakat 180 cm.yi geçmeyen,kesiti trapez şeklinde (V-kolanlar) olan(V-yivli olanlar hariç) sonsuz transmisyon kolanları",
-    "value": "7.500",
-    "unit": null
-   },
-   {
-    "gtip": "4010.33.00.00.00",
-    "description": "Dış çevresi 180 cm.yi geçen fakat 240 cm.yi geçmeyen, kesiti trapez şeklinde (V-kolanlar), V-yivli olan sonsuz transmisyon kolanları",
-    "value": "20.000",
-    "unit": null
-   },
-   {
-    "gtip": "4010.34.00.00.00",
-    "description": "Dış çevresi 180 cm.yi geçen fakat 240 cm.yi geçmeyen, kesiti trapez şeklinde (V-kolanlar) olan (V-yivli olanlar hariç) sonsuz transmisyon kolanları",
-    "value": "7.500",
-    "unit": null
-   },
-   {
-    "gtip": "4010.39.00.00.00",
-    "description": "Diğerleri",
-    "value": "15.000",
-    "unit": null
+    "unit": "ABD Doları/Ton"
    }
   ],
-  "item_count": 15
+  "item_count": 7,
+  "parser_version": 2
  },
  {
   "mevzuat_no": "24557",
@@ -6062,118 +4949,59 @@
   "rg_no": "30410",
   "tertip": "5",
   "url": "mevzuat?MevzuatNo=24557&MevzuatTur=9&MevzuatTertip=5",
-  "unit": null,
+  "unit": "ABD Doları/Ölçü Birimi",
   "items": [
    {
-    "gtip": "8512.30.90.00.11",
-    "description": "Elektrikli kornalar",
-    "value": "10",
-    "unit": null
-   },
-   {
-    "gtip": "8512.30.90.00.12",
-    "description": "Sirenler",
+    "gtip": "31148",
+    "description": "",
     "value": "",
-    "unit": null
+    "unit": "ABD Doları/Ölçü Birimi"
    },
    {
-    "gtip": "8512.30.90.00.19",
-    "description": "Diğerleri",
-    "value": "40",
-    "unit": null
-   },
-   {
-    "gtip": "8517.69.10.00.00",
-    "description": "Görüntülü telefon cihazları",
-    "value": "100",
-    "unit": null
-   },
-   {
-    "gtip": "8517.69.20.00.00",
-    "description": "Kapalı devre konuşma sistemleri",
+    "gtip": "30410",
+    "description": "",
     "value": "",
-    "unit": null
-   },
-   {
-    "gtip": "8531.10.30.00.19",
-    "description": "Diğerleri",
-    "value": "25",
-    "unit": null
+    "unit": "ABD Doları/Ölçü Birimi"
    },
    {
     "gtip": "8512.30.90.00.11",
     "description": "Elektrikli kornalar",
     "value": "10",
-    "unit": null
+    "unit": "ABD Doları/Ölçü Birimi"
    },
    {
     "gtip": "8512.30.90.00.12",
     "description": "Sirenler",
     "value": "",
-    "unit": null
+    "unit": "ABD Doları/Ölçü Birimi"
    },
    {
     "gtip": "8512.30.90.00.19",
     "description": "Diğerleri",
     "value": "40",
-    "unit": null
+    "unit": "ABD Doları/Ölçü Birimi"
    },
    {
     "gtip": "8517.69.10.00.00",
     "description": "Görüntülü telefon cihazları",
     "value": "100",
-    "unit": null
+    "unit": "ABD Doları/Ölçü Birimi"
    },
    {
     "gtip": "8517.69.20.00.00",
     "description": "Kapalı devre konuşma sistemleri",
     "value": "",
-    "unit": null
+    "unit": "ABD Doları/Ölçü Birimi"
    },
    {
     "gtip": "8531.10.30.00.19",
     "description": "Diğerleri",
     "value": "25",
-    "unit": null
-   },
-   {
-    "gtip": "8512.30.90.00.11",
-    "description": "Elektrikli kornalar",
-    "value": "10",
-    "unit": null
-   },
-   {
-    "gtip": "8512.30.90.00.12",
-    "description": "Sirenler",
-    "value": "",
-    "unit": null
-   },
-   {
-    "gtip": "8512.30.90.00.19",
-    "description": "Diğerleri",
-    "value": "40",
-    "unit": null
-   },
-   {
-    "gtip": "8517.69.10.00.00",
-    "description": "Görüntülü telefon cihazları",
-    "value": "100",
-    "unit": null
-   },
-   {
-    "gtip": "8517.69.20.00.00",
-    "description": "Kapalı devre konuşma sistemleri",
-    "value": "",
-    "unit": null
-   },
-   {
-    "gtip": "8531.10.30.00.19",
-    "description": "Diğerleri",
-    "value": "25",
-    "unit": null
+    "unit": "ABD Doları/Ölçü Birimi"
    }
   ],
-  "item_count": 18
+  "item_count": 8,
+  "parser_version": 2
  },
  {
   "mevzuat_no": "24517",
@@ -6225,93 +5053,10 @@
     "description": "Diğerleri",
     "value": "",
     "unit": "ABD Doları/Ton"
-   },
-   {
-    "gtip": "6907.21.00.00.00",
-    "description": "Ağırlıkça suyu absorbe etme katsayısı % 0,5’i geçmeyenler",
-    "value": "1.000",
-    "unit": "ABD Doları/Ton"
-   },
-   {
-    "gtip": "6907.22.00.00.00",
-    "description": "Ağırlıkça suyu absorbe etme katsayısı % 0,5’i geçen fakat %10’u geçmeyenler",
-    "value": "",
-    "unit": "ABD Doları/Ton"
-   },
-   {
-    "gtip": "6907.23.00.00.00",
-    "description": "Ağırlıkça suyu absorbe etme katsayısı % 10’u geçenler",
-    "value": "",
-    "unit": "ABD Doları/Ton"
-   },
-   {
-    "gtip": "6907.30.00.00.00",
-    "description": "Mozaik küpler ve benzerleri (6907.40 alt pozisyonundakiler hariç)",
-    "value": "1.500",
-    "unit": "ABD Doları/Ton"
-   },
-   {
-    "gtip": "6907.40.00.00.00",
-    "description": "Bitirme seramikleri",
-    "value": "1.000",
-    "unit": "ABD Doları/Ton"
-   },
-   {
-    "gtip": "6910.10.00.00.00",
-    "description": "Porselenden olanlar",
-    "value": "5.500",
-    "unit": "ABD Doları/Ton"
-   },
-   {
-    "gtip": "6910.90.00.00.00",
-    "description": "Diğerleri",
-    "value": "",
-    "unit": "ABD Doları/Ton"
-   },
-   {
-    "gtip": "6907.21.00.00.00",
-    "description": "Ağırlıkça suyu absorbe etme katsayısı % 0,5’i geçmeyenler",
-    "value": "1.000",
-    "unit": "ABD Doları/Ton"
-   },
-   {
-    "gtip": "6907.22.00.00.00",
-    "description": "Ağırlıkça suyu absorbe etme katsayısı % 0,5’i geçen fakat %10’u geçmeyenler",
-    "value": "",
-    "unit": "ABD Doları/Ton"
-   },
-   {
-    "gtip": "6907.23.00.00.00",
-    "description": "Ağırlıkça suyu absorbe etme katsayısı % 10’u geçenler",
-    "value": "",
-    "unit": "ABD Doları/Ton"
-   },
-   {
-    "gtip": "6907.30.00.00.00",
-    "description": "Mozaik küpler ve benzerleri (6907.40 alt pozisyonundakiler hariç)",
-    "value": "1.500",
-    "unit": "ABD Doları/Ton"
-   },
-   {
-    "gtip": "6907.40.00.00.00",
-    "description": "Bitirme seramikleri",
-    "value": "1.000",
-    "unit": "ABD Doları/Ton"
-   },
-   {
-    "gtip": "6910.10.00.00.00",
-    "description": "Porselenden olanlar",
-    "value": "5.500",
-    "unit": "ABD Doları/Ton"
-   },
-   {
-    "gtip": "6910.90.00.00.00",
-    "description": "Diğerleri",
-    "value": "",
-    "unit": "ABD Doları/Ton"
    }
   ],
-  "item_count": 21
+  "item_count": 7,
+  "parser_version": 2
  },
  {
   "mevzuat_no": "24505",
@@ -6320,100 +5065,41 @@
   "rg_no": "30385",
   "tertip": "5",
   "url": "mevzuat?MevzuatNo=24505&MevzuatTur=9&MevzuatTertip=5",
-  "unit": null,
+  "unit": "ABD Doları/m 3",
   "items": [
    {
     "gtip": "4412.10.00.00.00",
     "description": "Bambudan olanlar",
     "value": "900",
-    "unit": null
+    "unit": "ABD Doları/m 3"
    },
    {
     "gtip": "4412.31",
     "description": "En az bir dış yüzü tropikal ağaçlardan olanlar",
     "value": "900",
-    "unit": null
+    "unit": "ABD Doları/m 3"
    },
    {
     "gtip": "4412.33",
     "description": "Diğerleri, en az bir dış yüzü kızılağaç (Alnus spp.), dişbudak (Fraxinus spp.), kayın (Fagus spp.), huş ağacı (Betula spp.), kiraz (Prunus spp.), kestane (Castanea spp.), karaağaç (Ulmus spp.), okaliptüs (Eucalyptus spp.), hikori (Carya spp.), atkestanesi (Aesculus spp.), lime (Tilia spp.), akçaağaç (Acer spp.), meşe (Quercus spp.), çınar (Platanus spp.), kavak ve titrek kavak (Populus spp.), yalancı akasya (Robinia spp.), lale ağacı (Liriodendron spp.) veya ceviz (Juglans spp.) türlerinden olanlar (İğne yapraklı olmayan)",
     "value": "900",
-    "unit": null
+    "unit": "ABD Doları/m 3"
    },
    {
     "gtip": "4412.34.00.00.00",
     "description": "Diğerleri, en az bir dış yüzü 4412.33 alt pozisyonunda belirtilenlerin dışında kalan iğne yapraklı olmayan türlerden olanlar",
     "value": "900",
-    "unit": null
+    "unit": "ABD Doları/m 3"
    },
    {
     "gtip": "4412.39.00.00.00",
     "description": "Diğerleri, her iki dış yüzü de iğne yapraklılardan olanlar",
     "value": "900",
-    "unit": null
-   },
-   {
-    "gtip": "4412.10.00.00.00",
-    "description": "Bambudan olanlar",
-    "value": "900",
-    "unit": null
-   },
-   {
-    "gtip": "4412.31",
-    "description": "En az bir dış yüzü tropikal ağaçlardan olanlar",
-    "value": "900",
-    "unit": null
-   },
-   {
-    "gtip": "4412.33",
-    "description": "Diğerleri, en az bir dış yüzü kızılağaç (Alnus spp.), dişbudak (Fraxinus spp.), kayın (Fagus spp.), huş ağacı (Betula spp.), kiraz (Prunus spp.), kestane (Castanea spp.), karaağaç (Ulmus spp.), okaliptüs (Eucalyptus spp.), hikori (Carya spp.), atkestanesi (Aesculus spp.), lime (Tilia spp.), akçaağaç (Acer spp.), meşe (Quercus spp.), çınar (Platanus spp.), kavak ve titrek kavak (Populus spp.), yalancı akasya (Robinia spp.), lale ağacı (Liriodendron spp.) veya ceviz (Juglans spp.) türlerinden olanlar (İğne yapraklı olmayan)",
-    "value": "900",
-    "unit": null
-   },
-   {
-    "gtip": "4412.34.00.00.00",
-    "description": "Diğerleri, en az bir dış yüzü 4412.33 alt pozisyonunda belirtilenlerin dışında kalan iğne yapraklı olmayan türlerden olanlar",
-    "value": "900",
-    "unit": null
-   },
-   {
-    "gtip": "4412.39.00.00.00",
-    "description": "Diğerleri, her iki dış yüzü de iğne yapraklılardan olanlar",
-    "value": "900",
-    "unit": null
-   },
-   {
-    "gtip": "4412.10.00.00.00",
-    "description": "Bambudan olanlar",
-    "value": "900",
-    "unit": null
-   },
-   {
-    "gtip": "4412.31",
-    "description": "En az bir dış yüzü tropikal ağaçlardan olanlar",
-    "value": "900",
-    "unit": null
-   },
-   {
-    "gtip": "4412.33",
-    "description": "Diğerleri, en az bir dış yüzü kızılağaç (Alnus spp.), dişbudak (Fraxinus spp.), kayın (Fagus spp.), huş ağacı (Betula spp.), kiraz (Prunus spp.), kestane (Castanea spp.), karaağaç (Ulmus spp.), okaliptüs (Eucalyptus spp.), hikori (Carya spp.), atkestanesi (Aesculus spp.), lime (Tilia spp.), akçaağaç (Acer spp.), meşe (Quercus spp.), çınar (Platanus spp.), kavak ve titrek kavak (Populus spp.), yalancı akasya (Robinia spp.), lale ağacı (Liriodendron spp.) veya ceviz (Juglans spp.) türlerinden olanlar (İğne yapraklı olmayan)",
-    "value": "900",
-    "unit": null
-   },
-   {
-    "gtip": "4412.34.00.00.00",
-    "description": "Diğerleri, en az bir dış yüzü 4412.33 alt pozisyonunda belirtilenlerin dışında kalan iğne yapraklı olmayan türlerden olanlar",
-    "value": "900",
-    "unit": null
-   },
-   {
-    "gtip": "4412.39.00.00.00",
-    "description": "Diğerleri, her iki dış yüzü de iğne yapraklılardan olanlar",
-    "value": "900",
-    "unit": null
+    "unit": "ABD Doları/m 3"
    }
   ],
-  "item_count": 15
+  "item_count": 5,
+  "parser_version": 2
  },
  {
   "mevzuat_no": "24442",
@@ -6447,57 +5133,10 @@
     "description": "Diğerleri",
     "value": "2,5",
     "unit": "ABD Doları/Kg"
-   },
-   {
-    "gtip": "3921.12.00.00.00",
-    "description": "Vinilklorür polimerlerinden olanlar",
-    "value": "5",
-    "unit": "ABD Doları/Kg"
-   },
-   {
-    "gtip": "3921.90.41.00.00",
-    "description": "Yüksek basınçla tabaka tabaka tertiplenmiş, bir veya iki yüzü dekore edilmiş olanlar",
-    "value": "2,5",
-    "unit": "ABD Doları/Kg"
-   },
-   {
-    "gtip": "3921.90.43.00.00",
-    "description": "Diğerleri",
-    "value": "2,5",
-    "unit": "ABD Doları/Kg"
-   },
-   {
-    "gtip": "3921.90.90.90.00",
-    "description": "Diğerleri",
-    "value": "2,5",
-    "unit": "ABD Doları/Kg"
-   },
-   {
-    "gtip": "3921.12.00.00.00",
-    "description": "Vinilklorür polimerlerinden olanlar",
-    "value": "5",
-    "unit": "ABD Doları/Kg"
-   },
-   {
-    "gtip": "3921.90.41.00.00",
-    "description": "Yüksek basınçla tabaka tabaka tertiplenmiş, bir veya iki yüzü dekore edilmiş olanlar",
-    "value": "2,5",
-    "unit": "ABD Doları/Kg"
-   },
-   {
-    "gtip": "3921.90.43.00.00",
-    "description": "Diğerleri",
-    "value": "2,5",
-    "unit": "ABD Doları/Kg"
-   },
-   {
-    "gtip": "3921.90.90.90.00",
-    "description": "Diğerleri",
-    "value": "2,5",
-    "unit": "ABD Doları/Kg"
    }
   ],
-  "item_count": 12
+  "item_count": 4,
+  "parser_version": 2
  },
  {
   "mevzuat_no": "24428",
@@ -6527,7 +5166,8 @@
     "unit": "ABD Doları/Adet"
    }
   ],
-  "item_count": 3
+  "item_count": 3,
+  "parser_version": 2
  },
  {
   "mevzuat_no": "24425",
@@ -6536,136 +5176,77 @@
   "rg_no": "30347",
   "tertip": "5",
   "url": "mevzuat?MevzuatNo=24425&MevzuatTur=9&MevzuatTertip=5",
-  "unit": null,
+  "unit": "ABD Doları/Kilogram",
   "items": [
    {
-    "gtip": "8507.10.20.00.11",
-    "description": "Ağırlığı 5 kg.ı geçmeyenler",
-    "value": "4",
-    "unit": null
+    "gtip": "30390",
+    "description": "",
+    "value": "",
+    "unit": "ABD Doları/Kilogram"
    },
    {
-    "gtip": "8507.10.20.00.12",
-    "description": "Ağırlığı 5 kg.ı geçenler",
-    "value": "5",
-    "unit": null
+    "gtip": "30450",
+    "description": "",
+    "value": "",
+    "unit": "ABD Doları/Kilogram"
    },
    {
-    "gtip": "8507.10.80.00.11",
-    "description": "Ağırlığı 5 kg.ı geçmeyenler",
-    "value": "3,25",
-    "unit": null
+    "gtip": "31148",
+    "description": "",
+    "value": "",
+    "unit": "ABD Doları/Kilogram"
    },
    {
-    "gtip": "8507.10.80.00.12",
-    "description": "Ağırlığı 5 kg.ı geçenler",
-    "value": "3,25",
-    "unit": null
-   },
-   {
-    "gtip": "8507.20.20.00.11",
-    "description": "Traksiyoner akümülatörler",
-    "value": "3,25",
-    "unit": null
-   },
-   {
-    "gtip": "8507.20.20.00.19",
-    "description": "Diğerleri",
-    "value": "3,25",
-    "unit": null
-   },
-   {
-    "gtip": "8507.20.80.00.00",
-    "description": "Diğerleri",
-    "value": "3,25",
-    "unit": null
+    "gtip": "30347",
+    "description": "",
+    "value": "",
+    "unit": "ABD Doları/Kilogram"
    },
    {
     "gtip": "8507.10.20.00.11",
     "description": "Ağırlığı 5 kg.ı geçmeyenler",
     "value": "4",
-    "unit": null
+    "unit": "ABD Doları/Kilogram"
    },
    {
     "gtip": "8507.10.20.00.12",
     "description": "Ağırlığı 5 kg.ı geçenler",
     "value": "5",
-    "unit": null
+    "unit": "ABD Doları/Kilogram"
    },
    {
     "gtip": "8507.10.80.00.11",
     "description": "Ağırlığı 5 kg.ı geçmeyenler",
     "value": "3,25",
-    "unit": null
+    "unit": "ABD Doları/Kilogram"
    },
    {
     "gtip": "8507.10.80.00.12",
     "description": "Ağırlığı 5 kg.ı geçenler",
     "value": "3,25",
-    "unit": null
+    "unit": "ABD Doları/Kilogram"
    },
    {
     "gtip": "8507.20.20.00.11",
     "description": "Traksiyoner akümülatörler",
     "value": "3,25",
-    "unit": null
+    "unit": "ABD Doları/Kilogram"
    },
    {
     "gtip": "8507.20.20.00.19",
     "description": "Diğerleri",
     "value": "3,25",
-    "unit": null
+    "unit": "ABD Doları/Kilogram"
    },
    {
     "gtip": "8507.20.80.00.00",
     "description": "Diğerleri",
     "value": "3,25",
-    "unit": null
-   },
-   {
-    "gtip": "8507.10.20.00.11",
-    "description": "Ağırlığı 5 kg.ı geçmeyenler",
-    "value": "4",
-    "unit": null
-   },
-   {
-    "gtip": "8507.10.20.00.12",
-    "description": "Ağırlığı 5 kg.ı geçenler",
-    "value": "5",
-    "unit": null
-   },
-   {
-    "gtip": "8507.10.80.00.11",
-    "description": "Ağırlığı 5 kg.ı geçmeyenler",
-    "value": "3,25",
-    "unit": null
-   },
-   {
-    "gtip": "8507.10.80.00.12",
-    "description": "Ağırlığı 5 kg.ı geçenler",
-    "value": "3,25",
-    "unit": null
-   },
-   {
-    "gtip": "8507.20.20.00.11",
-    "description": "Traksiyoner akümülatörler",
-    "value": "3,25",
-    "unit": null
-   },
-   {
-    "gtip": "8507.20.20.00.19",
-    "description": "Diğerleri",
-    "value": "3,25",
-    "unit": null
-   },
-   {
-    "gtip": "8507.20.80.00.00",
-    "description": "Diğerleri",
-    "value": "3,25",
-    "unit": null
+    "unit": "ABD Doları/Kilogram"
    }
   ],
-  "item_count": 21
+  "item_count": 11,
+  "parser_version": 2
  },
  {
   "mevzuat_no": "24185",
@@ -6689,7 +5270,8 @@
     "unit": "ABD Doları/Adet"
    }
   ],
-  "item_count": 2
+  "item_count": 2,
+  "parser_version": 2
  },
  {
   "mevzuat_no": "23911",
@@ -6711,33 +5293,10 @@
     "description": "Diğerleri",
     "value": "15",
     "unit": "ABD Doları/Kg"
-   },
-   {
-    "gtip": "9617.00.00.00.11",
-    "description": "Hacmi 0,75 litreyi geçenler",
-    "value": "15",
-    "unit": "ABD Doları/Kg"
-   },
-   {
-    "gtip": "9617.00.00.00.19",
-    "description": "Diğerleri",
-    "value": "15",
-    "unit": "ABD Doları/Kg"
-   },
-   {
-    "gtip": "9617.00.00.00.11",
-    "description": "Hacmi 0,75 litreyi geçenler",
-    "value": "15",
-    "unit": "ABD Doları/Kg"
-   },
-   {
-    "gtip": "9617.00.00.00.19",
-    "description": "Diğerleri",
-    "value": "15",
-    "unit": "ABD Doları/Kg"
    }
   ],
-  "item_count": 6
+  "item_count": 2,
+  "parser_version": 2
  },
  {
   "mevzuat_no": "23898",
@@ -6753,21 +5312,10 @@
     "description": "Poli(metil metakrilik)ten olanlar (kalınlığı 10,5 milimetre ve altında olanlar)",
     "value": "10",
     "unit": "ABD Doları/Kg"
-   },
-   {
-    "gtip": "3920.51.00.00.00",
-    "description": "Poli(metil metakrilik)ten olanlar (kalınlığı 10,5 milimetre ve altında olanlar)",
-    "value": "10",
-    "unit": "ABD Doları/Kg"
-   },
-   {
-    "gtip": "3920.51.00.00.00",
-    "description": "Poli(metil metakrilik)ten olanlar (kalınlığı 10,5 milimetre ve altında olanlar)",
-    "value": "10",
-    "unit": "ABD Doları/Kg"
    }
   ],
-  "item_count": 3
+  "item_count": 1,
+  "parser_version": 2
  },
  {
   "mevzuat_no": "23794",
@@ -6776,28 +5324,17 @@
   "rg_no": "30135",
   "tertip": "5",
   "url": "mevzuat?MevzuatNo=23794&MevzuatTur=9&MevzuatTertip=5",
-  "unit": null,
+  "unit": "ABD Doları/Ton",
   "items": [
    {
     "gtip": "3901.10.90.00.11",
     "description": "Alçak yoğunluk polietilen",
     "value": "1.350",
-    "unit": null
-   },
-   {
-    "gtip": "3901.10.90.00.11",
-    "description": "Alçak yoğunluk polietilen",
-    "value": "1.350",
-    "unit": null
-   },
-   {
-    "gtip": "3901.10.90.00.11",
-    "description": "Alçak yoğunluk polietilen",
-    "value": "1.350",
-    "unit": null
+    "unit": "ABD Doları/Ton"
    }
   ],
-  "item_count": 3
+  "item_count": 1,
+  "parser_version": 2
  },
  {
   "mevzuat_no": "23705",
@@ -6923,6 +5460,18 @@
     "unit": "ABD Doları/Ton"
    },
    {
+    "gtip": "10.01",
+    "description": "Buğday ve mahlut",
+    "value": "200",
+    "unit": "ABD Doları/Ton"
+   },
+   {
+    "gtip": "10.03",
+    "description": "Arpa",
+    "value": "200",
+    "unit": "ABD Doları/Ton"
+   },
+   {
     "gtip": "1005.90.00.00.11",
     "description": "Cin mısırı (patlamış mısır-pop corn yapımında kullanılan mısır)",
     "value": "500",
@@ -6935,7 +5484,8 @@
     "unit": "ABD Doları/Ton"
    }
   ],
-  "item_count": 21
+  "item_count": 23,
+  "parser_version": 2
  },
  {
   "mevzuat_no": "23685",
@@ -6947,291 +5497,21 @@
   "unit": "ABD Doları/Ton",
   "items": [
    {
-    "gtip": "7013.10.00.10.00",
-    "description": "Sofra ve mutfak işleri için olanlar",
-    "value": "2.500",
+    "gtip": "31148",
+    "description": "",
+    "value": "",
     "unit": "ABD Doları/Ton"
    },
    {
-    "gtip": "7013.10.00.90.00",
-    "description": "Diğerleri",
-    "value": "2.500",
+    "gtip": "32205",
+    "description": "",
+    "value": "",
     "unit": "ABD Doları/Ton"
    },
    {
-    "gtip": "7013.22.10.00.00",
-    "description": "El imali olanlar",
-    "value": "5.000",
-    "unit": "ABD Doları/Ton"
-   },
-   {
-    "gtip": "7013.22.90.00.00",
-    "description": "Makina imali olanlar",
-    "value": "4.000",
-    "unit": "ABD Doları/Ton"
-   },
-   {
-    "gtip": "7013.28.10.00.00",
-    "description": "El imali olanlar",
-    "value": "2.500",
-    "unit": "ABD Doları/Ton"
-   },
-   {
-    "gtip": "7013.28.90.00.00",
-    "description": "Makina imali olanlar",
-    "value": "2.500",
-    "unit": "ABD Doları/Ton"
-   },
-   {
-    "gtip": "7013.33.11.00.00",
-    "description": "Kesilmiş veya başka şekilde dekorlanmış",
-    "value": "6.500",
-    "unit": "ABD Doları/Ton"
-   },
-   {
-    "gtip": "7013.33.19.00.00",
-    "description": "Diğerleri",
-    "value": "5.000",
-    "unit": "ABD Doları/Ton"
-   },
-   {
-    "gtip": "7013.33.91.00.00",
-    "description": "Kesilmiş veya başka şekilde dekorlanmış",
-    "value": "4.500",
-    "unit": "ABD Doları/Ton"
-   },
-   {
-    "gtip": "7013.33.99.00.00",
-    "description": "Diğerleri",
-    "value": "4.000",
-    "unit": "ABD Doları/Ton"
-   },
-   {
-    "gtip": "7013.37.10.00.00",
-    "description": "Sertleştirilmiş camdan olanlar",
-    "value": "2.500",
-    "unit": "ABD Doları/Ton"
-   },
-   {
-    "gtip": "7013.37.51.00.00",
-    "description": "Kesilmiş veya başka şekilde dekorlanmış",
-    "value": "2.500",
-    "unit": "ABD Doları/Ton"
-   },
-   {
-    "gtip": "7013.37.59.00.00",
-    "description": "Diğerleri",
-    "value": "2.500",
-    "unit": "ABD Doları/Ton"
-   },
-   {
-    "gtip": "7013.37.91.00.00",
-    "description": "Kesilmiş veya başka şekilde dekorlanmış",
-    "value": "2.500",
-    "unit": "ABD Doları/Ton"
-   },
-   {
-    "gtip": "7013.37.99.00.00",
-    "description": "Diğerleri",
-    "value": "2.500",
-    "unit": "ABD Doları/Ton"
-   },
-   {
-    "gtip": "7013.41.10.00.00",
-    "description": "El imali olanlar",
-    "value": "4.500",
-    "unit": "ABD Doları/Ton"
-   },
-   {
-    "gtip": "7013.41.90.00.00",
-    "description": "Makina imali olanlar",
-    "value": "4.000",
-    "unit": "ABD Doları/Ton"
-   },
-   {
-    "gtip": "7013.42.00.00.00",
-    "description": "0° C ile 300° C'ler arasındaki ısıda doğrusal genleşme katsayısı 5x10-6 /Kelvini geçmeyen (ısıya dayanıklı) camdan olanlar",
-    "value": "2.500",
-    "unit": "ABD Doları/Ton"
-   },
-   {
-    "gtip": "7013.49.10.00.00",
-    "description": "Sertleştirilmiş camdan olanlar",
-    "value": "2.500",
-    "unit": "ABD Doları/Ton"
-   },
-   {
-    "gtip": "7013.49.91.00.00",
-    "description": "El imali olanlar",
-    "value": "2.500",
-    "unit": "ABD Doları/Ton"
-   },
-   {
-    "gtip": "7013.49.99.00.00",
-    "description": "Makina imali olanlar",
-    "value": "2.500",
-    "unit": "ABD Doları/Ton"
-   },
-   {
-    "gtip": "7013.91.10.00.00",
-    "description": "El imali olanlar",
-    "value": "5.500",
-    "unit": "ABD Doları/Ton"
-   },
-   {
-    "gtip": "7013.91.90.00.00",
-    "description": "Makina imali olanlar",
-    "value": "4.500",
-    "unit": "ABD Doları/Ton"
-   },
-   {
-    "gtip": "7013.99.00.00.00",
-    "description": "Diğerleri",
-    "value": "2.500",
-    "unit": "ABD Doları/Ton"
-   },
-   {
-    "gtip": "7013.10.00.10.00",
-    "description": "Sofra ve mutfak işleri için olanlar",
-    "value": "2.500",
-    "unit": "ABD Doları/Ton"
-   },
-   {
-    "gtip": "7013.10.00.90.00",
-    "description": "Diğerleri",
-    "value": "2.500",
-    "unit": "ABD Doları/Ton"
-   },
-   {
-    "gtip": "7013.22.10.00.00",
-    "description": "El imali olanlar",
-    "value": "5.000",
-    "unit": "ABD Doları/Ton"
-   },
-   {
-    "gtip": "7013.22.90.00.00",
-    "description": "Makina imali olanlar",
-    "value": "4.000",
-    "unit": "ABD Doları/Ton"
-   },
-   {
-    "gtip": "7013.28.10.00.00",
-    "description": "El imali olanlar",
-    "value": "2.500",
-    "unit": "ABD Doları/Ton"
-   },
-   {
-    "gtip": "7013.28.90.00.00",
-    "description": "Makina imali olanlar",
-    "value": "2.500",
-    "unit": "ABD Doları/Ton"
-   },
-   {
-    "gtip": "7013.33.11.00.00",
-    "description": "Kesilmiş veya başka şekilde dekorlanmış",
-    "value": "6.500",
-    "unit": "ABD Doları/Ton"
-   },
-   {
-    "gtip": "7013.33.19.00.00",
-    "description": "Diğerleri",
-    "value": "5.000",
-    "unit": "ABD Doları/Ton"
-   },
-   {
-    "gtip": "7013.33.91.00.00",
-    "description": "Kesilmiş veya başka şekilde dekorlanmış",
-    "value": "4.500",
-    "unit": "ABD Doları/Ton"
-   },
-   {
-    "gtip": "7013.33.99.00.00",
-    "description": "Diğerleri",
-    "value": "4.000",
-    "unit": "ABD Doları/Ton"
-   },
-   {
-    "gtip": "7013.37.10.00.00",
-    "description": "Sertleştirilmiş camdan olanlar",
-    "value": "2.500",
-    "unit": "ABD Doları/Ton"
-   },
-   {
-    "gtip": "7013.37.51.00.00",
-    "description": "Kesilmiş veya başka şekilde dekorlanmış",
-    "value": "2.500",
-    "unit": "ABD Doları/Ton"
-   },
-   {
-    "gtip": "7013.37.59.00.00",
-    "description": "Diğerleri",
-    "value": "2.500",
-    "unit": "ABD Doları/Ton"
-   },
-   {
-    "gtip": "7013.37.91.00.00",
-    "description": "Kesilmiş veya başka şekilde dekorlanmış",
-    "value": "2.500",
-    "unit": "ABD Doları/Ton"
-   },
-   {
-    "gtip": "7013.37.99.00.00",
-    "description": "Diğerleri",
-    "value": "2.500",
-    "unit": "ABD Doları/Ton"
-   },
-   {
-    "gtip": "7013.41.10.00.00",
-    "description": "El imali olanlar",
-    "value": "4.500",
-    "unit": "ABD Doları/Ton"
-   },
-   {
-    "gtip": "7013.41.90.00.00",
-    "description": "Makina imali olanlar",
-    "value": "4.000",
-    "unit": "ABD Doları/Ton"
-   },
-   {
-    "gtip": "7013.42.00.00.00",
-    "description": "0° C ile 300° C'ler arasındaki ısıda doğrusal genleşme katsayısı 5x10-6 /Kelvini geçmeyen (ısıya dayanıklı) camdan olanlar",
-    "value": "2.500",
-    "unit": "ABD Doları/Ton"
-   },
-   {
-    "gtip": "7013.49.10.00.00",
-    "description": "Sertleştirilmiş camdan olanlar",
-    "value": "2.500",
-    "unit": "ABD Doları/Ton"
-   },
-   {
-    "gtip": "7013.49.91.00.00",
-    "description": "El imali olanlar",
-    "value": "2.500",
-    "unit": "ABD Doları/Ton"
-   },
-   {
-    "gtip": "7013.49.99.00.00",
-    "description": "Makina imali olanlar",
-    "value": "2.500",
-    "unit": "ABD Doları/Ton"
-   },
-   {
-    "gtip": "7013.91.10.00.00",
-    "description": "El imali olanlar",
-    "value": "5.500",
-    "unit": "ABD Doları/Ton"
-   },
-   {
-    "gtip": "7013.91.90.00.00",
-    "description": "Makina imali olanlar",
-    "value": "4.500",
-    "unit": "ABD Doları/Ton"
-   },
-   {
-    "gtip": "7013.99.00.00.00",
-    "description": "Diğerleri",
-    "value": "2.500",
+    "gtip": "30104",
+    "description": "",
+    "value": "",
     "unit": "ABD Doları/Ton"
    },
    {
@@ -7379,7 +5659,8 @@
     "unit": "ABD Doları/Ton"
    }
   ],
-  "item_count": 72
+  "item_count": 27,
+  "parser_version": 2
  },
  {
   "mevzuat_no": "23610",
@@ -7401,33 +5682,10 @@
     "description": "Diğerleri",
     "value": "1.425",
     "unit": "ABD Doları/Ton"
-   },
-   {
-    "gtip": "3903.11.00.00.00",
-    "description": "Genleşebilen",
-    "value": "1.525",
-    "unit": "ABD Doları/Ton"
-   },
-   {
-    "gtip": "3903.19.00.00.00",
-    "description": "Diğerleri",
-    "value": "1.425",
-    "unit": "ABD Doları/Ton"
-   },
-   {
-    "gtip": "3903.11.00.00.00",
-    "description": "Genleşebilen",
-    "value": "1.525",
-    "unit": "ABD Doları/Ton"
-   },
-   {
-    "gtip": "3903.19.00.00.00",
-    "description": "Diğerleri",
-    "value": "1.425",
-    "unit": "ABD Doları/Ton"
    }
   ],
-  "item_count": 6
+  "item_count": 2,
+  "parser_version": 2
  },
  {
   "mevzuat_no": "23603",
@@ -7439,63 +5697,15 @@
   "unit": "ABD Doları/Kg",
   "items": [
    {
-    "gtip": "7315.11.90.00.11",
-    "description": "Transmisyon Zincirleri",
-    "value": "6",
+    "gtip": "31148",
+    "description": "",
+    "value": "",
     "unit": "ABD Doları/Kg"
    },
    {
-    "gtip": "7315.11.90.00.19",
-    "description": "Diğerleri",
-    "value": "5",
-    "unit": "ABD Doları/Kg"
-   },
-   {
-    "gtip": "7315.12.00.00.11",
-    "description": "Transmisyon Zincirleri",
-    "value": "7",
-    "unit": "ABD Doları/Kg"
-   },
-   {
-    "gtip": "7315.12.00.00.19",
-    "description": "Diğerleri",
-    "value": "10",
-    "unit": "ABD Doları/Kg"
-   },
-   {
-    "gtip": "7315.19.00.00.00",
-    "description": "Aksamlar",
-    "value": "5",
-    "unit": "ABD Doları/Kg"
-   },
-   {
-    "gtip": "7315.11.90.00.11",
-    "description": "Transmisyon Zincirleri",
-    "value": "6",
-    "unit": "ABD Doları/Kg"
-   },
-   {
-    "gtip": "7315.11.90.00.19",
-    "description": "Diğerleri",
-    "value": "5",
-    "unit": "ABD Doları/Kg"
-   },
-   {
-    "gtip": "7315.12.00.00.11",
-    "description": "Transmisyon Zincirleri",
-    "value": "7",
-    "unit": "ABD Doları/Kg"
-   },
-   {
-    "gtip": "7315.12.00.00.19",
-    "description": "Diğerleri",
-    "value": "10",
-    "unit": "ABD Doları/Kg"
-   },
-   {
-    "gtip": "7315.19.00.00.00",
-    "description": "Aksamlar",
-    "value": "5",
+    "gtip": "30075",
+    "description": "",
+    "value": "",
     "unit": "ABD Doları/Kg"
    },
    {
@@ -7529,7 +5739,8 @@
     "unit": "ABD Doları/Kg"
    }
   ],
-  "item_count": 15
+  "item_count": 7,
+  "parser_version": 2
  },
  {
   "mevzuat_no": "23502",
@@ -7563,57 +5774,10 @@
     "description": "Dış çapı 100 mm.den daha fazla olanlar",
     "value": "15",
     "unit": "ABD Doları/Kg"
-   },
-   {
-    "gtip": "8482.10.10.00.12",
-    "description": "Dış çapı 9 mm.yi geçen fakat 30 mm.yi geçmeyenler",
-    "value": "15",
-    "unit": "ABD Doları/Kg"
-   },
-   {
-    "gtip": "8482.10.90.00.11",
-    "description": "Dış çapı 30 mm.yi geçen fakat 52 mm.yi geçmeyenler",
-    "value": "15",
-    "unit": "ABD Doları/Kg"
-   },
-   {
-    "gtip": "8482.10.90.00.12",
-    "description": "Dış çapı 52 mm.yi geçen fakat 100 mm.yi geçmeyenler",
-    "value": "15",
-    "unit": "ABD Doları/Kg"
-   },
-   {
-    "gtip": "8482.10.90.00.13",
-    "description": "Dış çapı 100 mm.den daha fazla olanlar",
-    "value": "15",
-    "unit": "ABD Doları/Kg"
-   },
-   {
-    "gtip": "8482.10.10.00.12",
-    "description": "Dış çapı 9 mm.yi geçen fakat 30 mm.yi geçmeyenler",
-    "value": "15",
-    "unit": "ABD Doları/Kg"
-   },
-   {
-    "gtip": "8482.10.90.00.11",
-    "description": "Dış çapı 30 mm.yi geçen fakat 52 mm.yi geçmeyenler",
-    "value": "15",
-    "unit": "ABD Doları/Kg"
-   },
-   {
-    "gtip": "8482.10.90.00.12",
-    "description": "Dış çapı 52 mm.yi geçen fakat 100 mm.yi geçmeyenler",
-    "value": "15",
-    "unit": "ABD Doları/Kg"
-   },
-   {
-    "gtip": "8482.10.90.00.13",
-    "description": "Dış çapı 100 mm.den daha fazla olanlar",
-    "value": "15",
-    "unit": "ABD Doları/Kg"
    }
   ],
-  "item_count": 12
+  "item_count": 4,
+  "parser_version": 2
  },
  {
   "mevzuat_no": "23478",
@@ -7622,22 +5786,23 @@
   "rg_no": "30028",
   "tertip": "5",
   "url": "mevzuat?MevzuatNo=23478&MevzuatTur=9&MevzuatTertip=5",
-  "unit": null,
+  "unit": "ABD doları/ton",
   "items": [
    {
     "gtip": "1209.91.80.00.11",
     "description": "Kabak tohumu",
     "value": "3.000",
-    "unit": null
+    "unit": "ABD doları/ton"
    },
    {
     "gtip": "1212.99.95.00.19",
     "description": "Diğerleri",
     "value": "3.000",
-    "unit": null
+    "unit": "ABD doları/ton"
    }
   ],
-  "item_count": 2
+  "item_count": 2,
+  "parser_version": 2
  },
  {
   "mevzuat_no": "23112",
@@ -7655,7 +5820,8 @@
     "unit": "ABD Doları/Kg"
    }
   ],
-  "item_count": 1
+  "item_count": 1,
+  "parser_version": 2
  },
  {
   "mevzuat_no": "22607",
@@ -7677,33 +5843,10 @@
     "description": "Alüminyumdan silindir kapakları (motosikletlerde kullanılanlar hariç)",
     "value": "20",
     "unit": "ABD Doları/Kg"
-   },
-   {
-    "gtip": "8409.91.00.00.11",
-    "description": "Alüminyumdan silindir kapakları (motosikletlerde kullanılanlar hariç)",
-    "value": "20",
-    "unit": "ABD Doları/Kg"
-   },
-   {
-    "gtip": "8409.99.00.00.11",
-    "description": "Alüminyumdan silindir kapakları (motosikletlerde kullanılanlar hariç)",
-    "value": "20",
-    "unit": "ABD Doları/Kg"
-   },
-   {
-    "gtip": "8409.91.00.00.11",
-    "description": "Alüminyumdan silindir kapakları (motosikletlerde kullanılanlar hariç)",
-    "value": "20",
-    "unit": "ABD Doları/Kg"
-   },
-   {
-    "gtip": "8409.99.00.00.11",
-    "description": "Alüminyumdan silindir kapakları (motosikletlerde kullanılanlar hariç)",
-    "value": "20",
-    "unit": "ABD Doları/Kg"
    }
   ],
-  "item_count": 6
+  "item_count": 2,
+  "parser_version": 2
  },
  {
   "mevzuat_no": "21461",
@@ -7719,15 +5862,10 @@
     "description": "Diğerleri (Yalnız doğal ahşap (masif) panel)",
     "value": "2.500",
     "unit": "ABD Doları/Ton"
-   },
-   {
-    "gtip": "4418.99.00.00.19",
-    "description": "Diğerleri (Yalnız doğal ahşap (masif) panel)",
-    "value": "2.500",
-    "unit": "ABD Doları/Ton"
    }
   ],
-  "item_count": 2
+  "item_count": 1,
+  "parser_version": 2
  },
  {
   "mevzuat_no": "21237",
@@ -7757,7 +5895,8 @@
     "unit": "ABD Doları/Ton"
    }
   ],
-  "item_count": 3
+  "item_count": 3,
+  "parser_version": 2
  },
  {
   "mevzuat_no": "21085",
@@ -7799,7 +5938,8 @@
     "unit": "ABD Doları/Ton"
    }
   ],
-  "item_count": 5
+  "item_count": 5,
+  "parser_version": 2
  },
  {
   "mevzuat_no": "33983",
@@ -7817,7 +5957,8 @@
     "unit": "ABD Doları/Kg"
    }
   ],
-  "item_count": 1
+  "item_count": 1,
+  "parser_version": 2
  },
  {
   "mevzuat_no": "20268",
@@ -7835,7 +5976,8 @@
     "unit": "ABD Doları/Adet"
    }
   ],
-  "item_count": 1
+  "item_count": 1,
+  "parser_version": 2
  },
  {
   "mevzuat_no": "20073",
@@ -7844,16 +5986,17 @@
   "rg_no": "29131",
   "tertip": "5",
   "url": "mevzuat?MevzuatNo=20073&MevzuatTur=9&MevzuatTertip=5",
-  "unit": "ABD Doları/Kg",
+  "unit": "CIF",
   "items": [
    {
     "gtip": "7321.19.00.00.00",
     "description": "Diğerleri (Katı yakıtlı cihazlar dahil)",
     "value": "7",
-    "unit": "ABD Doları/Kg"
+    "unit": "CIF"
    }
   ],
-  "item_count": 1
+  "item_count": 1,
+  "parser_version": 2
  },
  {
   "mevzuat_no": "19554",
@@ -7862,16 +6005,17 @@
   "rg_no": "28963",
   "tertip": "5",
   "url": "mevzuat?MevzuatNo=19554&MevzuatTur=9&MevzuatTertip=5",
-  "unit": null,
+  "unit": "ABD Doları/Brüt kg",
   "items": [
    {
     "gtip": "2809.20.00.00.16",
     "description": "Gıda sanayiinde kullanılanlar",
     "value": "1,6",
-    "unit": null
+    "unit": "ABD Doları/Brüt kg"
    }
   ],
-  "item_count": 1
+  "item_count": 1,
+  "parser_version": 2
  },
  {
   "mevzuat_no": "18721",
@@ -7889,7 +6033,8 @@
     "unit": "ABD Doları/Kg"
    }
   ],
-  "item_count": 1
+  "item_count": 1,
+  "parser_version": 2
  },
  {
   "mevzuat_no": "18311",
@@ -7905,9 +6050,16 @@
     "description": "Pompalara ait olanlar [ Yalnız akaryakıt ve lpg pompalarında kullanılan brodimetre, debimetre, akışölçer ve benzeri metreler ]",
     "value": "",
     "unit": null
+   },
+   {
+    "gtip": "90.26",
+    "description": "Sıvı ve gazların akış, seviye basınç veya değişebilir diğer özelliklerini ölçmeye veya muayenesine mahsus alet ve cihazlar (debimetreler, seviye göstergeleri, manometreler, kalorimetreler gibi) (90.14, 90.15, 90.28 veya 90.32 pozisyonlarındaki alet ve cihazlar hariç) [ Yalnız akaryakıt ve lpg pompalarında kullanılan brodimetre, debimetre, akışölçer ve benzeri metreler ]",
+    "value": "",
+    "unit": null
    }
   ],
-  "item_count": 1
+  "item_count": 2,
+  "parser_version": 2
  },
  {
   "mevzuat_no": "17286",
@@ -7916,7 +6068,7 @@
   "rg_no": "28617",
   "tertip": "5",
   "url": "mevzuat?MevzuatNo=17286&MevzuatTur=9&MevzuatTertip=5",
-  "unit": "ABD Doları/Kg",
+  "unit": "Kg",
   "items": [
    {
     "gtip": "6810.19.00.00.00",
@@ -7925,7 +6077,8 @@
     "unit": "ABD Doları/Kg"
    }
   ],
-  "item_count": 1
+  "item_count": 1,
+  "parser_version": 2
  },
  {
   "mevzuat_no": "17210",
@@ -7934,7 +6087,7 @@
   "rg_no": "28589",
   "tertip": "5",
   "url": "mevzuat?MevzuatNo=17210&MevzuatTur=9&MevzuatTertip=5",
-  "unit": "ABD Doları/Kg",
+  "unit": "Kg",
   "items": [
    {
     "gtip": "4418.21.10.00.11",
@@ -7961,7 +6114,8 @@
     "unit": "ABD Doları/Kg"
    }
   ],
-  "item_count": 4
+  "item_count": 4,
+  "parser_version": 2
  },
  {
   "mevzuat_no": "16766",
@@ -7979,7 +6133,8 @@
     "unit": "ABD Doları/Kg"
    }
   ],
-  "item_count": 1
+  "item_count": 1,
+  "parser_version": 2
  },
  {
   "mevzuat_no": "16640",
@@ -7997,7 +6152,8 @@
     "unit": "ABD Doları/Kg"
    }
   ],
-  "item_count": 1
+  "item_count": 1,
+  "parser_version": 2
  },
  {
   "mevzuat_no": "16331",
@@ -8007,8 +6163,16 @@
   "tertip": "5",
   "url": "mevzuat?MevzuatNo=16331&MevzuatTur=9&MevzuatTertip=5",
   "unit": "ABD Doları/m2",
-  "items": [],
-  "item_count": 0
+  "items": [
+   {
+    "gtip": "68.09",
+    "description": "Yalnız alçı ve alçı esaslı bileşiklerden levhalar, plakalar, panolar, karolar ve benzerleri",
+    "value": "5",
+    "unit": "ABD Doları/m2"
+   }
+  ],
+  "item_count": 1,
+  "parser_version": 2
  },
  {
   "mevzuat_no": "15779",
@@ -8018,8 +6182,34 @@
   "tertip": "5",
   "url": "mevzuat?MevzuatNo=15779&MevzuatTur=9&MevzuatTertip=5",
   "unit": "ABD Doları/Kg",
-  "items": [],
-  "item_count": 0
+  "items": [
+   {
+    "gtip": "8302.10.00.00.11",
+    "description": "Soğuk hava depolarına mahsus olanlar",
+    "value": "5",
+    "unit": "ABD Doları/Kg"
+   },
+   {
+    "gtip": "8302.10.00.00.19",
+    "description": "Diğerleri",
+    "value": "6,5",
+    "unit": "ABD Doları/Kg"
+   },
+   {
+    "gtip": "8302.42.00.00.00",
+    "description": "Diğerleri, mobilyalar için olanlar (Koltuk amortisörleri hariç)",
+    "value": "5",
+    "unit": "ABD Doları/Kg"
+   },
+   {
+    "gtip": "8302.50.00.00.00",
+    "description": "Sabit askılıklar, şapka askıları, dirsekler, benzeri eşya",
+    "value": "5",
+    "unit": "ABD Doları/Kg"
+   }
+  ],
+  "item_count": 4,
+  "parser_version": 2
  },
  {
   "mevzuat_no": "15407",
@@ -8028,34 +6218,35 @@
   "rg_no": "28089",
   "tertip": "5",
   "url": "mevzuat?MevzuatNo=15407&MevzuatTur=9&MevzuatTertip=5",
-  "unit": null,
+  "unit": "ABD Doları/Kg.",
   "items": [
    {
     "gtip": "8201.10.00.00.11",
     "description": "Beller",
     "value": "8",
-    "unit": null
+    "unit": "ABD Doları/Kg."
    },
    {
     "gtip": "8201.10.00.00.12",
     "description": "Kürekler",
     "value": "8",
-    "unit": null
+    "unit": "ABD Doları/Kg."
    },
    {
     "gtip": "8201.30.00.00.12",
     "description": "Tırmıklar",
     "value": "7",
-    "unit": null
+    "unit": "ABD Doları/Kg."
    },
    {
     "gtip": "8201.90.00.90.12",
     "description": "Yabalar",
     "value": "7",
-    "unit": null
+    "unit": "ABD Doları/Kg."
    }
   ],
-  "item_count": 4
+  "item_count": 4,
+  "parser_version": 2
  },
  {
   "mevzuat_no": "15291",
@@ -8065,8 +6256,46 @@
   "tertip": "5",
   "url": "mevzuat?MevzuatNo=15291&MevzuatTur=9&MevzuatTertip=5",
   "unit": "ABD Doları/Kg",
-  "items": [],
-  "item_count": 0
+  "items": [
+   {
+    "gtip": "7326.90.92.00.00",
+    "description": "Açık kalıpta dövülmüş (Yalnız motor gergi rayları)",
+    "value": "6,5",
+    "unit": "ABD Doları/Kg"
+   },
+   {
+    "gtip": "7326.90.94.00.00",
+    "description": "Kapalı kalıpta dövülmüş (Yalnız motor gergi rayları)",
+    "value": "6,5",
+    "unit": "ABD Doları/Kg"
+   },
+   {
+    "gtip": "7326.90.96.00.00",
+    "description": "Sinterlenmiş (Yalnız motor gergi rayları)",
+    "value": "6,5",
+    "unit": "ABD Doları/Kg"
+   },
+   {
+    "gtip": "7326.90.98.00.11",
+    "description": "Kelepçeler (Yalnız motor gergi rayları)",
+    "value": "6,5",
+    "unit": "ABD Doları/Kg"
+   },
+   {
+    "gtip": "7326.90.98.00.19",
+    "description": "Diğerleri (Yalnız motor gergi rayları)",
+    "value": "6,5",
+    "unit": "ABD Doları/Kg"
+   },
+   {
+    "gtip": "8503.00.99.90.19",
+    "description": "Diğerleri (Yalnız motor gergi rayları)",
+    "value": "6,5",
+    "unit": "ABD Doları/Kg"
+   }
+  ],
+  "item_count": 6,
+  "parser_version": 2
  },
  {
   "mevzuat_no": "15125",
@@ -8102,7 +6331,8 @@
     "unit": "ABD Doları/Adet"
    }
   ],
-  "item_count": 4
+  "item_count": 4,
+  "parser_version": 2
  },
  {
   "mevzuat_no": "14977",
@@ -8126,7 +6356,8 @@
     "unit": "ABD Doları/Kg"
    }
   ],
-  "item_count": 2
+  "item_count": 2,
+  "parser_version": 2
  },
  {
   "mevzuat_no": "13971",
@@ -8180,7 +6411,8 @@
     "unit": "ABD Doları/Kg"
    }
   ],
-  "item_count": 7
+  "item_count": 7,
+  "parser_version": 2
  },
  {
   "mevzuat_no": "13584",
@@ -8189,16 +6421,17 @@
   "rg_no": "27424",
   "tertip": "5",
   "url": "mevzuat?MevzuatNo=13584&MevzuatTur=9&MevzuatTertip=5",
-  "unit": null,
+  "unit": "ABD Doları/Kg.",
   "items": [
    {
     "gtip": "9021.39.90.00.11",
     "description": "İnter - okiler lensler",
     "value": "300",
-    "unit": null
+    "unit": "ABD Doları/Kg."
    }
   ],
-  "item_count": 1
+  "item_count": 1,
+  "parser_version": 2
  },
  {
   "mevzuat_no": "12811",
@@ -8207,22 +6440,23 @@
   "rg_no": "27118",
   "tertip": "5",
   "url": "mevzuat?MevzuatNo=12811&MevzuatTur=9&MevzuatTertip=5",
-  "unit": null,
+  "unit": "ABD Doları/Kg.",
   "items": [
    {
     "gtip": "6806.20.90.00.12",
     "description": "Genleştirilmiş perlitten blok ürünler",
     "value": "4",
-    "unit": null
+    "unit": "ABD Doları/Kg."
    },
    {
     "gtip": "6806.20.90.00.13",
     "description": "Genleştirilmiş perlitten harçlar",
     "value": "4",
-    "unit": null
+    "unit": "ABD Doları/Kg."
    }
   ],
-  "item_count": 2
+  "item_count": 2,
+  "parser_version": 2
  },
  {
   "mevzuat_no": "12810",
@@ -8246,7 +6480,8 @@
     "unit": "ABD Doları/Kg"
    }
   ],
-  "item_count": 2
+  "item_count": 2,
+  "parser_version": 2
  },
  {
   "mevzuat_no": "12387",
@@ -8256,8 +6491,64 @@
   "tertip": "5",
   "url": "mevzuat?MevzuatNo=12387&MevzuatTur=9&MevzuatTertip=5",
   "unit": "ABD Doları/Kg",
-  "items": [],
-  "item_count": 0
+  "items": [
+   {
+    "gtip": "8211.10.00.00.11",
+    "description": "Sofra ve mutfak bıçakları",
+    "value": "12",
+    "unit": "ABD Doları/Kg"
+   },
+   {
+    "gtip": "8211.10.00.00.12",
+    "description": "Maket bıçakları",
+    "value": "12",
+    "unit": "ABD Doları/Kg"
+   },
+   {
+    "gtip": "8211.10.00.00.19",
+    "description": "Diğerleri",
+    "value": "12",
+    "unit": "ABD Doları/Kg"
+   },
+   {
+    "gtip": "8211.91.00.00.00",
+    "description": "Sabit ağızlı sofra bıçakları",
+    "value": "12",
+    "unit": "ABD Doları/Kg"
+   },
+   {
+    "gtip": "8211.92.00.00.00",
+    "description": "Sabit ağızlı diğer bıçaklar",
+    "value": "12",
+    "unit": "ABD Doları/Kg"
+   },
+   {
+    "gtip": "8211.93.00.00.10",
+    "description": "Maket bıçakları",
+    "value": "12",
+    "unit": "ABD Doları/Kg"
+   },
+   {
+    "gtip": "8211.93.00.00.90",
+    "description": "Diğerleri",
+    "value": "12",
+    "unit": "ABD Doları/Kg"
+   },
+   {
+    "gtip": "8211.94.00.00.00",
+    "description": "Bıçak ağızları",
+    "value": "12",
+    "unit": "ABD Doları/Kg"
+   },
+   {
+    "gtip": "8211.95.00.00.00",
+    "description": "Adi metallerden saplar",
+    "value": "12",
+    "unit": "ABD Doları/Kg"
+   }
+  ],
+  "item_count": 9,
+  "parser_version": 2
  },
  {
   "mevzuat_no": "12229",
@@ -8266,7 +6557,7 @@
   "rg_no": "26920",
   "tertip": "5",
   "url": "mevzuat?MevzuatNo=12229&MevzuatTur=9&MevzuatTertip=5",
-  "unit": "ABD Doları/Kg",
+  "unit": "CIF",
   "items": [
    {
     "gtip": "8708.91.35.00.00",
@@ -8275,7 +6566,8 @@
     "unit": "ABD Doları/Kg"
    }
   ],
-  "item_count": 1
+  "item_count": 1,
+  "parser_version": 2
  },
  {
   "mevzuat_no": "12228",
@@ -8284,7 +6576,7 @@
   "rg_no": "26920",
   "tertip": "5",
   "url": "mevzuat?MevzuatNo=12228&MevzuatTur=9&MevzuatTertip=5",
-  "unit": "ABD Doları/Kg",
+  "unit": "CIF",
   "items": [
    {
     "gtip": "8708.80.35.00.00",
@@ -8293,7 +6585,8 @@
     "unit": "ABD Doları/Kg"
    }
   ],
-  "item_count": 1
+  "item_count": 1,
+  "parser_version": 2
  },
  {
   "mevzuat_no": "12227",
@@ -8302,22 +6595,23 @@
   "rg_no": "26920",
   "tertip": "5",
   "url": "mevzuat?MevzuatNo=12227&MevzuatTur=9&MevzuatTertip=5",
-  "unit": null,
+  "unit": "CIF",
   "items": [
    {
     "gtip": "8708.70.50.00.13",
     "description": "Jantlar",
     "value": "8",
-    "unit": null
+    "unit": "ABD Doları/Kg"
    },
    {
     "gtip": "8708.70.99.00.13",
     "description": "Jantlar",
     "value": "6",
-    "unit": null
+    "unit": "ABD Doları/Kg"
    }
   ],
-  "item_count": 2
+  "item_count": 2,
+  "parser_version": 2
  },
  {
   "mevzuat_no": "12212",
@@ -8326,16 +6620,17 @@
   "rg_no": "26912",
   "tertip": "5",
   "url": "mevzuat?MevzuatNo=12212&MevzuatTur=9&MevzuatTertip=5",
-  "unit": null,
+  "unit": "ABD Doları/adet",
   "items": [
    {
     "gtip": "9105.11.00.00.00",
     "description": "Elektrikle çalışanlar",
     "value": "5",
-    "unit": null
+    "unit": "ABD Doları/adet"
    }
   ],
-  "item_count": 1
+  "item_count": 1,
+  "parser_version": 2
  },
  {
   "mevzuat_no": "12113",
@@ -8365,7 +6660,8 @@
     "unit": "ABD Doları/Kg"
    }
   ],
-  "item_count": 3
+  "item_count": 3,
+  "parser_version": 2
  },
  {
   "mevzuat_no": "12100",
@@ -8374,22 +6670,23 @@
   "rg_no": "26859",
   "tertip": "5",
   "url": "mevzuat?MevzuatNo=12100&MevzuatTur=9&MevzuatTertip=5",
-  "unit": null,
+  "unit": "ABD Doları/Kg",
   "items": [
    {
     "gtip": "8536.20.10.00.11",
     "description": "Ev tipi minyatür devre kesiciler (otomatlar)",
     "value": "11",
-    "unit": null
+    "unit": "ABD Doları/Kg"
    },
    {
     "gtip": "8536.20.10.00.19",
     "description": "Diğerleri",
     "value": "23",
-    "unit": null
+    "unit": "ABD Doları/Kg"
    }
   ],
-  "item_count": 2
+  "item_count": 2,
+  "parser_version": 2
  },
  {
   "mevzuat_no": "12074",
@@ -8419,7 +6716,8 @@
     "unit": null
    }
   ],
-  "item_count": 3
+  "item_count": 3,
+  "parser_version": 2
  },
  {
   "mevzuat_no": "12041",
@@ -8428,7 +6726,7 @@
   "rg_no": "26821",
   "tertip": "5",
   "url": "mevzuat?MevzuatNo=12041&MevzuatTur=9&MevzuatTertip=5",
-  "unit": "ABD Doları/Ton",
+  "unit": "ABD Doları",
   "items": [
    {
     "gtip": "0806.20",
@@ -8437,7 +6735,8 @@
     "unit": "ABD Doları/Ton"
    }
   ],
-  "item_count": 1
+  "item_count": 1,
+  "parser_version": 2
  },
  {
   "mevzuat_no": "11939",
@@ -8455,7 +6754,8 @@
     "unit": null
    }
   ],
-  "item_count": 1
+  "item_count": 1,
+  "parser_version": 2
  },
  {
   "mevzuat_no": "11938",
@@ -8491,7 +6791,8 @@
     "unit": null
    }
   ],
-  "item_count": 4
+  "item_count": 4,
+  "parser_version": 2
  },
  {
   "mevzuat_no": "11919",
@@ -8500,16 +6801,17 @@
   "rg_no": "26764",
   "tertip": "5",
   "url": "mevzuat?MevzuatNo=11919&MevzuatTur=9&MevzuatTertip=5",
-  "unit": null,
+  "unit": "ABD Doları/adet.",
   "items": [
    {
     "gtip": "8531.10.30.00.11",
     "description": "Gaz alarm cihazları",
     "value": "15",
-    "unit": null
+    "unit": "ABD Doları/adet."
    }
   ],
-  "item_count": 1
+  "item_count": 1,
+  "parser_version": 2
  },
  {
   "mevzuat_no": "11696",
@@ -8518,28 +6820,29 @@
   "rg_no": "26688",
   "tertip": "5",
   "url": "mevzuat?MevzuatNo=11696&MevzuatTur=9&MevzuatTertip=5",
-  "unit": null,
+  "unit": "ABD Doları/Kg.",
   "items": [
    {
     "gtip": "9615.11.00.00.00",
     "description": "Sertleştirilmiş kauçuktan veya plastik maddelerden olanlar",
     "value": "15",
-    "unit": null
+    "unit": "ABD Doları/Kg."
    },
    {
     "gtip": "9615.19.00.00.00",
     "description": "Diğerleri",
     "value": "15",
-    "unit": null
+    "unit": "ABD Doları/Kg."
    },
    {
     "gtip": "9615.90",
     "description": "Diğerleri",
     "value": "15",
-    "unit": null
+    "unit": "ABD Doları/Kg."
    }
   ],
-  "item_count": 3
+  "item_count": 3,
+  "parser_version": 2
  },
  {
   "mevzuat_no": "11482",
@@ -8548,58 +6851,59 @@
   "rg_no": "26601",
   "tertip": "5",
   "url": "mevzuat?MevzuatNo=11482&MevzuatTur=9&MevzuatTertip=5",
-  "unit": null,
+  "unit": "ABD Doları/Kg.",
   "items": [
    {
     "gtip": "6601.10.00.00.00",
     "description": "Bahçe şemsiyeleri ve benzeri şemsiyeler",
     "value": "30",
-    "unit": null
+    "unit": "ABD Doları/Kg."
    },
    {
     "gtip": "6601.91.00.00.00",
     "description": "İç içe girebilen milleri olanlar",
     "value": "6",
-    "unit": null
+    "unit": "ABD Doları/Kg."
    },
    {
     "gtip": "6601.99",
     "description": "Diğerleri",
     "value": "12",
-    "unit": null
+    "unit": "ABD Doları/Kg."
    },
    {
     "gtip": "6602.00.00.00.00",
     "description": "Bastonlar, iskemle bastonlar, kamçılar, kırbaçlar ve benzerleri",
     "value": "8",
-    "unit": null
+    "unit": "ABD Doları/Kg."
    },
    {
     "gtip": "6603.20.00.00.00",
     "description": "Şemsiyelerin bir araya getirilmiş tel mesnetleri (mil üzerine monte edilenler dahil)",
     "value": "15",
-    "unit": null
+    "unit": "ABD Doları/Kg."
    },
    {
     "gtip": "6603.90.10.00.00",
     "description": "Saplar ve uçlar",
     "value": "6",
-    "unit": null
+    "unit": "ABD Doları/Kg."
    },
    {
     "gtip": "6603.90.90.10.00",
     "description": "66.01 Pozisyonuna giren eşyanın aksamı",
     "value": "15",
-    "unit": null
+    "unit": "ABD Doları/Kg."
    },
    {
     "gtip": "6603.90.90.90.00",
     "description": "Diğerleri",
     "value": "15",
-    "unit": null
+    "unit": "ABD Doları/Kg."
    }
   ],
-  "item_count": 8
+  "item_count": 8,
+  "parser_version": 2
  },
  {
   "mevzuat_no": "11481",
@@ -8617,7 +6921,8 @@
     "unit": "ABD Doları/Ton"
    }
   ],
-  "item_count": 1
+  "item_count": 1,
+  "parser_version": 2
  },
  {
   "mevzuat_no": "11266",
@@ -8626,16 +6931,17 @@
   "rg_no": "26498",
   "tertip": "5",
   "url": "mevzuat?MevzuatNo=11266&MevzuatTur=9&MevzuatTertip=5",
-  "unit": null,
+  "unit": "ABD Doları/Ton",
   "items": [
    {
     "gtip": "3920.43.10.00.00",
     "description": "Kalınlığı 1 mm. yi geçmeyenler",
     "value": "3.300",
-    "unit": null
+    "unit": "ABD Doları/Ton"
    }
   ],
-  "item_count": 1
+  "item_count": 1,
+  "parser_version": 2
  },
  {
   "mevzuat_no": "11185",
@@ -8646,7 +6952,8 @@
   "url": "mevzuat?MevzuatNo=11185&MevzuatTur=9&MevzuatTertip=5",
   "unit": "ABD Doları/Ton",
   "items": [],
-  "item_count": 0
+  "item_count": 0,
+  "parser_version": 2
  },
  {
   "mevzuat_no": "11184",
@@ -8664,7 +6971,8 @@
     "unit": "ABD Doları/Ton"
    }
   ],
-  "item_count": 1
+  "item_count": 1,
+  "parser_version": 2
  },
  {
   "mevzuat_no": "11183",
@@ -8682,7 +6990,8 @@
     "unit": "ABD Doları/Ton"
    }
   ],
-  "item_count": 1
+  "item_count": 1,
+  "parser_version": 2
  },
  {
   "mevzuat_no": "11147",
@@ -8691,22 +7000,23 @@
   "rg_no": "26449",
   "tertip": "5",
   "url": "mevzuat?MevzuatNo=11147&MevzuatTur=9&MevzuatTertip=5",
-  "unit": null,
+  "unit": "ABD Doları",
   "items": [
    {
     "gtip": "1207.40.90.00.11",
     "description": "Ham",
     "value": "1.200",
-    "unit": null
+    "unit": "ABD Doları/Ton"
    },
    {
     "gtip": "1207.40.90.00.12",
     "description": "Soyulmuş",
     "value": "1.600",
-    "unit": null
+    "unit": "ABD Doları/Ton"
    }
   ],
-  "item_count": 2
+  "item_count": 2,
+  "parser_version": 2
  },
  {
   "mevzuat_no": "11002",
@@ -8722,15 +7032,10 @@
     "description": "Şırıngalar (iğneli olsun olmasın)",
     "value": "7.000",
     "unit": "ABD Doları/Ton"
-   },
-   {
-    "gtip": "9018.31",
-    "description": "Şırıngalar (iğneli olsun olmasın)",
-    "value": "7.000",
-    "unit": "ABD Doları/Ton"
    }
   ],
-  "item_count": 2
+  "item_count": 1,
+  "parser_version": 2
  },
  {
   "mevzuat_no": "11001",
@@ -8760,7 +7065,8 @@
     "unit": "ABD Doları/Kg"
    }
   ],
-  "item_count": 3
+  "item_count": 3,
+  "parser_version": 2
  },
  {
   "mevzuat_no": "10998",
@@ -8796,7 +7102,8 @@
     "unit": "ABD Doları/Ton"
    }
   ],
-  "item_count": 4
+  "item_count": 4,
+  "parser_version": 2
  },
  {
   "mevzuat_no": "10995",
@@ -8807,7 +7114,8 @@
   "url": "mevzuat?MevzuatNo=10995&MevzuatTur=9&MevzuatTertip=5",
   "unit": null,
   "items": [],
-  "item_count": 0
+  "item_count": 0,
+  "parser_version": 2
  },
  {
   "mevzuat_no": "10878",
@@ -8818,7 +7126,8 @@
   "url": "mevzuat?MevzuatNo=10878&MevzuatTur=9&MevzuatTertip=5",
   "unit": null,
   "items": [],
-  "item_count": 0
+  "item_count": 0,
+  "parser_version": 2
  },
  {
   "mevzuat_no": "10813",
@@ -8827,16 +7136,17 @@
   "rg_no": "26361",
   "tertip": "5",
   "url": "mevzuat?MevzuatNo=10813&MevzuatTur=9&MevzuatTertip=5",
-  "unit": null,
+  "unit": "ABD Doları/Ton",
   "items": [
    {
     "gtip": "4820.10.30.00.00",
     "description": "Not defterleri, mektupluk bloknotlar, hatıra defterleri",
     "value": "4.000",
-    "unit": null
+    "unit": "ABD Doları/Ton"
    }
   ],
-  "item_count": 1
+  "item_count": 1,
+  "parser_version": 2
  },
  {
   "mevzuat_no": "10812",
@@ -8854,7 +7164,8 @@
     "unit": "ABD Doları/Ton"
    }
   ],
-  "item_count": 1
+  "item_count": 1,
+  "parser_version": 2
  },
  {
   "mevzuat_no": "10811",
@@ -8863,16 +7174,17 @@
   "rg_no": "26361",
   "tertip": "5",
   "url": "mevzuat?MevzuatNo=10811&MevzuatTur=9&MevzuatTertip=5",
-  "unit": null,
+  "unit": "ABD Doları/Ton",
   "items": [
    {
     "gtip": "3926.10.00.00.00",
     "description": "Okul ve büro malzemeleri",
     "value": "4.000",
-    "unit": null
+    "unit": "ABD Doları/Ton"
    }
   ],
-  "item_count": 1
+  "item_count": 1,
+  "parser_version": 2
  },
  {
   "mevzuat_no": "10322",
@@ -8998,7 +7310,8 @@
     "unit": "ABD Doları/Kg"
    }
   ],
-  "item_count": 19
+  "item_count": 19,
+  "parser_version": 2
  },
  {
   "mevzuat_no": "9891",
@@ -9052,7 +7365,8 @@
     "unit": "ABD Doları/Ton"
    }
   ],
-  "item_count": 7
+  "item_count": 7,
+  "parser_version": 2
  },
  {
   "mevzuat_no": "9387",
@@ -9070,7 +7384,8 @@
     "unit": "ABD Doları/Kg"
    }
   ],
-  "item_count": 1
+  "item_count": 1,
+  "parser_version": 2
  },
  {
   "mevzuat_no": "9507",
@@ -9079,16 +7394,17 @@
   "rg_no": "25890",
   "tertip": "5",
   "url": "mevzuat?MevzuatNo=9507&MevzuatTur=9&MevzuatTertip=5",
-  "unit": null,
+  "unit": "ABD Doları/Ton",
   "items": [
    {
     "gtip": "7009.91",
     "description": "Çerçevesiz",
     "value": "500",
-    "unit": null
+    "unit": "ABD Doları/Ton"
    }
   ],
-  "item_count": 1
+  "item_count": 1,
+  "parser_version": 2
  },
  {
   "mevzuat_no": "9026",
@@ -9130,7 +7446,8 @@
     "unit": "ABD Doları/Kg"
    }
   ],
-  "item_count": 5
+  "item_count": 5,
+  "parser_version": 2
  },
  {
   "mevzuat_no": "8950",
@@ -9139,46 +7456,47 @@
   "rg_no": "25847",
   "tertip": "5",
   "url": "mevzuat?MevzuatNo=8950&MevzuatTur=9&MevzuatTertip=5",
-  "unit": null,
+  "unit": "ABD Doları/Brüt Kg",
   "items": [
    {
     "gtip": "8546.20.00.00.11",
     "description": "Anma gerilimi 36 kV.yı geçmeyenler",
     "value": "5",
-    "unit": null
+    "unit": "ABD Doları/Brüt Kg"
    },
    {
     "gtip": "8546.20.00.00.12",
     "description": "Anma gerilimi 36 kV.yı geçen fakat 170 kV.yı geçmeyenler",
     "value": "5",
-    "unit": null
+    "unit": "ABD Doları/Brüt Kg"
    },
    {
     "gtip": "8546.20.00.00.13",
     "description": "Anma gerilimi 170 kV.yı geçenler",
     "value": "5",
-    "unit": null
+    "unit": "ABD Doları/Brüt Kg"
    },
    {
     "gtip": "8546.90.10.10.11",
     "description": "Anma gerilimi 36 kV.yı geçmeyenler",
     "value": "10",
-    "unit": null
+    "unit": "ABD Doları/Brüt Kg"
    },
    {
     "gtip": "8546.90.10.10.12",
     "description": "Anma gerilimi 36 kV.yı geçen fakat 154 kV.yı geçmeyenler",
     "value": "10",
-    "unit": null
+    "unit": "ABD Doları/Brüt Kg"
    },
    {
     "gtip": "8546.90.10.10.13",
     "description": "Anma gerilimi 154 kV.yı geçenler",
     "value": "10",
-    "unit": null
+    "unit": "ABD Doları/Brüt Kg"
    }
   ],
-  "item_count": 6
+  "item_count": 6,
+  "parser_version": 2
  },
  {
   "mevzuat_no": "8814",
@@ -9187,9 +7505,17 @@
   "rg_no": "25711",
   "tertip": "5",
   "url": "mevzuat?MevzuatNo=8814&MevzuatTur=9&MevzuatTertip=5",
-  "unit": "ABD Doları/Ton",
-  "items": [],
-  "item_count": 0
+  "unit": "ABD Doları",
+  "items": [
+   {
+    "gtip": "36.04",
+    "description": "Şenlik fişekleri, işaret fişekleri, yağmur fişekleri, sis işaretleri ve diğer pirotekni eşyası",
+    "value": "20.000",
+    "unit": "ABD Doları/Ton"
+   }
+  ],
+  "item_count": 1,
+  "parser_version": 2
  },
  {
   "mevzuat_no": "8602",
@@ -9198,16 +7524,17 @@
   "rg_no": "25646",
   "tertip": "5",
   "url": "mevzuat?MevzuatNo=8602&MevzuatTur=9&MevzuatTertip=5",
-  "unit": null,
+  "unit": "ABD Doları/Kg",
   "items": [
    {
     "gtip": "9017.80.10.90.19",
     "description": "Diğer şerit metreler",
     "value": "8",
-    "unit": null
+    "unit": "ABD Doları/Kg"
    }
   ],
-  "item_count": 1
+  "item_count": 1,
+  "parser_version": 2
  },
  {
   "mevzuat_no": "8942",
@@ -9218,7 +7545,8 @@
   "url": "mevzuat?MevzuatNo=8942&MevzuatTur=9&MevzuatTertip=5",
   "unit": null,
   "items": [],
-  "item_count": 0
+  "item_count": 0,
+  "parser_version": 2
  },
  {
   "mevzuat_no": "8624",
@@ -9248,7 +7576,8 @@
     "unit": null
    }
   ],
-  "item_count": 3
+  "item_count": 3,
+  "parser_version": 2
  },
  {
   "mevzuat_no": "8786",
@@ -9259,7 +7588,8 @@
   "url": "mevzuat?MevzuatNo=8786&MevzuatTur=9&MevzuatTertip=5",
   "unit": null,
   "items": [],
-  "item_count": 0
+  "item_count": 0,
+  "parser_version": 2
  },
  {
   "mevzuat_no": "8826",
@@ -9270,7 +7600,8 @@
   "url": "mevzuat?MevzuatNo=8826&MevzuatTur=9&MevzuatTertip=5",
   "unit": null,
   "items": [],
-  "item_count": 0
+  "item_count": 0,
+  "parser_version": 2
  },
  {
   "mevzuat_no": "8824",
@@ -9281,7 +7612,8 @@
   "url": "mevzuat?MevzuatNo=8824&MevzuatTur=9&MevzuatTertip=5",
   "unit": null,
   "items": [],
-  "item_count": 0
+  "item_count": 0,
+  "parser_version": 2
  },
  {
   "mevzuat_no": "8823",
@@ -9299,6 +7631,7 @@
     "unit": "ABD Doları/Kg"
    }
   ],
-  "item_count": 1
+  "item_count": 1,
+  "parser_version": 2
  }
 ]

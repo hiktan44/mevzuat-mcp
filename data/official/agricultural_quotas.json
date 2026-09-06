@@ -1,0 +1,2464 @@
+[
+ {
+  "title": "Avrupa Birliği Menşeli Bazı Tarım Ürünleri İthalatında Tarife Kontenjanı Uygulanması Hakkında Karar",
+  "url": "https://ticaret.gov.tr/data/5ba234df13b87610d0a0331d/AB Karar.docx",
+  "filename": "AB Karar.docx",
+  "origin": "Avrupa Birliği",
+  "items": [
+   {
+    "gtip": "0102.29.29.00.00",
+    "description": "Diğerleri",
+    "quantity": "2.260 ton",
+    "period": "01.01-31.12",
+    "duty_rate": "0"
+   },
+   {
+    "gtip": "0102.39.10.00.00",
+    "description": "Evcil türler (Yalnızca ağırlığı 80 kg.ı geçen fakat 160 kg.ı geçmeyen ve kesimlik olmayanlar)"
+   },
+   {
+    "gtip": "0102.90.91.00.00",
+    "description": "Evcil türler (Yalnızca ağırlığı 80 kg.ı geçen fakat 160 kg.ı geçmeyen ve kesimlik olmayanlar)"
+   },
+   {
+    "gtip": "02.10",
+    "description": "Et ve yenilen sakatat (tuzlanmış, salamura edilmiş, kurutulmuş veya tütsülenmiş); et veya sakatatın yenilen un ve kaba unları",
+    "quantity": "250 ton",
+    "period": "01.01-31.12",
+    "duty_rate": "52"
+   },
+   {
+    "gtip": "04.04",
+    "description": "Peyniraltı suyu (konsantre edilmiş olsun olmasın veya ilave şeker veya diğer tatlandırıcı maddeleri içersin içermesin); tarifenin başka yerinde belirtilmeyen veya yer almayan, tabii süt bileşenlerinden ibaret olan ürünler (ilave şeker veya diğer tatlandırıcı maddeleri içersin içermesin)",
+    "quantity": "700 ton",
+    "period": "01.01-31.12",
+    "duty_rate": "30"
+   },
+   {
+    "gtip": "0405.10",
+    "description": "Tereyağı",
+    "quantity": "3.700 ton",
+    "period": "01.01-31.12",
+    "duty_rate": "0"
+   },
+   {
+    "gtip": "0405.20.90.00.00",
+    "description": "İçerdiği katı yağ oranı ağırlık itibariyle %75'den fazla fakat %80'den az olanlar"
+   },
+   {
+    "gtip": "0405.90",
+    "description": "Diğerleri"
+   },
+   {
+    "gtip": "0406.30",
+    "description": "Eritme peynirler (rendelenmemiş veya toz haline getirilmemiş)",
+    "quantity": "300 ton",
+    "period": "01.01-31.12",
+    "duty_rate": "0"
+   },
+   {
+    "gtip": "0406.90",
+    "description": "Diğer peynirler",
+    "quantity": "2.000 ton",
+    "period": "01.01-31.12",
+    "duty_rate": "0"
+   },
+   {
+    "gtip": "0408.11.80.00.00",
+    "description": "Diğerleri",
+    "quantity": "75 ton",
+    "period": "01.01-31.12",
+    "duty_rate": "24"
+   },
+   {
+    "gtip": "06.01",
+    "description": "Çiçek soğanları, yumrular, yumrulu kökler, küçük soğanlar, sürgün başları ve rizomlar (dinlenme halinde sürgün vermiş veya çiçeklenmiş); hindiba bitkisi ve kökleri (12.12 pozisyonundaki kökler hariç)",
+    "quantity": "200 ton",
+    "period": "01.01-31.12",
+    "duty_rate": "0"
+   },
+   {
+    "gtip": "0603.11.00.00.00",
+    "description": "Güller",
+    "quantity": "100 ton",
+    "period": "01.01-31.12",
+    "duty_rate": "0"
+   },
+   {
+    "gtip": "0603.12.00.00.00",
+    "description": "Karanfiller"
+   },
+   {
+    "gtip": "0603.13.00.00.00",
+    "description": "Orkideler"
+   },
+   {
+    "gtip": "0603.14.00.00.00",
+    "description": "Krizantemler"
+   },
+   {
+    "gtip": "0603.15.00.00.00",
+    "description": "Zambaklar ( Lilium spp .)"
+   },
+   {
+    "gtip": "0603.19",
+    "description": "Diğerleri"
+   },
+   {
+    "gtip": "06.04",
+    "description": "Buket yapmaya elverişli veya süs amacına uygun cinsten bitki yaprakları, bitki dalları ve bitkilerin diğer kısımları (çiçeksiz veya tomurcuksuz ) ve otlar, yosunlar ve likenler (taze, kurutulmuş, boyanmış, ağartılmış, emprenye edilmiş veya başka şekilde hazırlanmış)",
+    "quantity": "100 ton",
+    "period": "01.01-31.12",
+    "duty_rate": "0"
+   },
+   {
+    "gtip": "0701.10.00.00.00",
+    "description": "Tohumluk",
+    "quantity": "6.000 ton",
+    "period": "01.01-31.12",
+    "duty_rate": "0"
+   },
+   {
+    "gtip": "0709.51.00.00.00",
+    "description": "Agaricus cinsi mantarlar",
+    "quantity": "100 ton",
+    "period": "01.01-31.12",
+    "duty_rate": "7"
+   },
+   {
+    "gtip": "0710.22.00.00.00",
+    "description": "Fasulye ( Phaseolus spp ., Vigna spp .)",
+    "quantity": "100 ton",
+    "period": "01.01-31.12",
+    "duty_rate": "11,5"
+   },
+   {
+    "gtip": "0808.30",
+    "description": "Armut",
+    "quantity": "500 ton",
+    "period": "01.01-31.12",
+    "duty_rate": "30"
+   },
+   {
+    "gtip": "0808.40.00.00.00",
+    "description": "Ayva"
+   },
+   {
+    "gtip": "0809.30",
+    "description": "Şeftali ( nektarin dahil)",
+    "quantity": "1.000 ton",
+    "period": "15.07-31.12",
+    "duty_rate": "0"
+   },
+   {
+    "gtip": "0810.90.20.00.11",
+    "description": "Demirhindi, mahun elması, “ lychees ”, ekmek ağacı meyvesi, sapodillo meyvesi",
+    "quantity": "1.000 ton",
+    "period": "01.01-31.12",
+    "duty_rate": "0"
+   },
+   {
+    "gtip": "0810.90.20.00.12",
+    "description": "Çarkıfelek meyvesi, karambola ve pitahaya",
+    "quantity": "500 ton",
+    "period": "01.01-31.12",
+    "duty_rate": "0"
+   },
+   {
+    "gtip": "0810.70.00.00.00",
+    "description": "Persimmon (Trabzon hurması)",
+    "quantity": "500 ton",
+    "period": "01.01-31.12",
+    "duty_rate": "0"
+   },
+   {
+    "gtip": "0810.90.75.00.11",
+    "description": "Nar"
+   },
+   {
+    "gtip": "0810.90.75.00.12",
+    "description": "Muşmula"
+   },
+   {
+    "gtip": "0810.90.75.00.13",
+    "description": "Kuşburnu"
+   },
+   {
+    "gtip": "0810.90.75.00.17",
+    "description": "Diğerleri"
+   },
+   {
+    "gtip": "0811.10",
+    "description": "Çilek",
+    "quantity": "100 ton",
+    "period": "01.01-31.12",
+    "duty_rate": "20"
+   },
+   {
+    "gtip": "09.02",
+    "description": "Çay ( aromalandırılmış olsun olmasın)",
+    "quantity": "200 ton",
+    "period": "01.01-31.12",
+    "duty_rate": "45"
+   },
+   {
+    "gtip": "10.01",
+    "description": "Buğday ve mahlut",
+    "quantity": "30.000 ton",
+    "period": "01.09-31.05",
+    "duty_rate": "0"
+   },
+   {
+    "gtip": "1001.11.00.00.00",
+    "description": "Tohumluk",
+    "quantity": "100.000 ton",
+    "period": "01.09-31.05",
+    "duty_rate": "0"
+   },
+   {
+    "gtip": "1001.19.00.00.00",
+    "description": "Diğerleri"
+   },
+   {
+    "gtip": "1001.91",
+    "description": "Tohumluk",
+    "quantity": "200.000 ton",
+    "period": "01.09-31.05",
+    "duty_rate": "0"
+   },
+   {
+    "gtip": "1001.99.00.00.11",
+    "description": "Adi buğday"
+   },
+   {
+    "gtip": "1001.99.00.00.12",
+    "description": "Mahlut"
+   },
+   {
+    "gtip": "1001.99.00.00.13",
+    "description": "Kaplıca (kızıl) buğday"
+   },
+   {
+    "gtip": "10.02",
+    "description": "Çavdar",
+    "quantity": "22.500 ton",
+    "period": "01.09-31.05",
+    "duty_rate": "0"
+   },
+   {
+    "gtip": "1003.90.00.00.12",
+    "description": "Maltlık arpa",
+    "quantity": "49.500 ton",
+    "period": "01.09-31.05",
+    "duty_rate": "0"
+   },
+   {
+    "gtip": "1004.00",
+    "description": "Yulaf",
+    "quantity": "5.000 ton",
+    "period": "01.09-31.05",
+    "duty_rate": "i"
+   },
+   {
+    "gtip": "1005.90",
+    "description": "Diğerleri",
+    "quantity": "53.640 ton",
+    "period": "01.09-31.05",
+    "duty_rate": "0"
+   },
+   {
+    "gtip": "1005.90",
+    "description": "Diğerleri",
+    "quantity": "52.000 ton",
+    "period": "01.12-31.05",
+    "duty_rate": "0"
+   },
+   {
+    "gtip": "1006.30",
+    "description": "Yarı veya tam olarak değirmenden geçirilmiş pirinç (parlatılmış veya perdahlanmış olsun olmasın)",
+    "quantity": "28.000 ton",
+    "period": "01.01-31.12",
+    "duty_rate": "0"
+   },
+   {
+    "gtip": "1104.12.90.00.00",
+    "description": "Flokon halindeki taneler",
+    "quantity": "100 ton",
+    "period": "01.01-31.12",
+    "duty_rate": "i"
+   },
+   {
+    "gtip": "11.07",
+    "description": "Malt (kavrulmuş olsun olmasın)",
+    "quantity": "500 ton",
+    "period": "01.01-31.12",
+    "duty_rate": "0"
+   },
+   {
+    "gtip": "1207.29.00.00.00",
+    "description": "Diğerleri",
+    "quantity": "1.500 ton",
+    "period": "01.01-31.12",
+    "duty_rate": "0"
+   },
+   {
+    "gtip": "1207.70.00.00.00",
+    "description": "Kavun, Karpuz tohumu",
+    "quantity": "1.050 ton",
+    "period": "01.01-31.12",
+    "duty_rate": "0"
+   },
+   {
+    "gtip": "1209.10.00.00.00",
+    "description": "Şeker pancarı tohumları",
+    "quantity": "300 ton",
+    "period": "01.01-31.12",
+    "duty_rate": "0"
+   },
+   {
+    "gtip": "15.02",
+    "description": "Sığır, koyun veya keçi yağları (15.03 pozisyonundakiler hariç)",
+    "quantity": "3.000 ton",
+    "period": "01.01-31.12",
+    "duty_rate": "0"
+   },
+   {
+    "gtip": "1507.10",
+    "description": "Ham yağ (sakızı ayrılmış olsun olmasın)",
+    "quantity": "60.000 ton",
+    "period": "01.01-31.08",
+    "duty_rate": "0"
+   },
+   {
+    "gtip": "1507.90",
+    "description": "Diğerleri",
+    "quantity": "2.000 ton",
+    "period": "01.01-31.08",
+    "duty_rate": "i"
+   },
+   {
+    "gtip": "1512.11",
+    "description": "Ham yağlar",
+    "quantity": "18.400 ton",
+    "period": "01.01-31.08",
+    "duty_rate": "0"
+   },
+   {
+    "gtip": "1514.11",
+    "description": "Ham yağlar",
+    "quantity": "10.600 ton",
+    "period": "01.01-31.08",
+    "duty_rate": "0"
+   },
+   {
+    "gtip": "1514.91",
+    "description": "Ham yağlar"
+   },
+   {
+    "gtip": "1602.10.00.00.00",
+    "description": "Homojenize müstahzarlar",
+    "quantity": "400 ton",
+    "period": "01.01-31.12",
+    "duty_rate": "30"
+   },
+   {
+    "gtip": "1701.99",
+    "description": "Diğerleri",
+    "quantity": "80.000 ton",
+    "period": "01.01-31.12",
+    "duty_rate": "iv"
+   },
+   {
+    "gtip": "2001.90.50.00.00",
+    "description": "Mantarlar",
+    "quantity": "325 ton",
+    "period": "01.01-31.12",
+    "duty_rate": "i"
+   },
+   {
+    "gtip": "2001.90.97.00.11",
+    "description": "Salata pancarı (Beta vulgaris var.candiva )"
+   },
+   {
+    "gtip": "2001.90.97.00.12",
+    "description": "Kırmızı lahana"
+   },
+   {
+    "gtip": "2001.90.97.00.13",
+    "description": "Diğer meyvalar ve sert kabuklu meyvalar"
+   },
+   {
+    "gtip": "2001.90.97.00.18",
+    "description": "Diğer sebzeler ve yenilen diğer bitki parçaları"
+   },
+   {
+    "gtip": "2002.90",
+    "description": "Diğerleri",
+    "quantity": "1.500 ton",
+    "period": "01.01-31.12",
+    "duty_rate": "0"
+   },
+   {
+    "gtip": "20.03",
+    "description": "Mantarlar ve domalan (sirke veya asetik asitten başka usullerle hazırlanmış veya konserve edilmiş)",
+    "quantity": "50 ton",
+    "period": "01.01-31.12",
+    "duty_rate": "13"
+   },
+   {
+    "gtip": "2005.10.00.00.00",
+    "description": "Homojenize sebzeler",
+    "quantity": "300 ton",
+    "period": "01.01-31.12",
+    "duty_rate": "15"
+   },
+   {
+    "gtip": "2005.40",
+    "description": "Bezelye ( Pisum sativum )",
+    "quantity": "300 ton",
+    "period": "01.01-31.12",
+    "duty_rate": "0"
+   },
+   {
+    "gtip": "2007.10",
+    "description": "Homojenize müstahzarlar",
+    "quantity": "450 ton",
+    "period": "01.01-31.12",
+    "duty_rate": "25"
+   },
+   {
+    "gtip": "2007.99.10.00.00",
+    "description": "Sınai işlemler için net muhtevası 100 kg.ı geçen hazır ambalajlarda erik püresi ve pastları",
+    "quantity": "1.000 ton",
+    "period": "01.01-31.12",
+    "duty_rate": "20"
+   },
+   {
+    "gtip": "2007.99.33.00.00",
+    "description": "Çilekden olanlar"
+   },
+   {
+    "gtip": "2007.99.39.00.11",
+    "description": "Pekmezler"
+   },
+   {
+    "gtip": "2007.99.39.00.19",
+    "description": "Diğerleri [Fındık püresi hariç]"
+   },
+   {
+    "gtip": "2007.99.50.00.19",
+    "description": "Diğerleri (fındık püresi hariç)"
+   },
+   {
+    "gtip": "2007.99.97.00.13",
+    "description": "Diabetik olanlar [Fındık püresi hariç]"
+   },
+   {
+    "gtip": "2007.99.97.00.16",
+    "description": "Kayısı püresi"
+   },
+   {
+    "gtip": "2007.99.97.00.17",
+    "description": "Erik püresi"
+   },
+   {
+    "gtip": "2007.99.97.00.18",
+    "description": "Diğerleri [Fındık püresi hariç]"
+   },
+   {
+    "gtip": "2009.11",
+    "description": "Dondurulmuş",
+    "quantity": "1.000 ton",
+    "period": "01.01-31.12",
+    "duty_rate": "15"
+   },
+   {
+    "gtip": "2009.12.00.00.00",
+    "description": "Dondurulmamış, Brix değeri 20'yi geçmeyenler"
+   },
+   {
+    "gtip": "2009.19",
+    "description": "Diğerleri"
+   },
+   {
+    "gtip": "2009.61",
+    "description": "Brix değeri 30'u geçmeyenler"
+   },
+   {
+    "gtip": "2009.71",
+    "description": "Brix değeri 20'yi geçmeyenler"
+   },
+   {
+    "gtip": "2009.79",
+    "description": "Diğerleri"
+   },
+   {
+    "gtip": "2009.89.89.00.00",
+    "description": "Diğerleri"
+   },
+   {
+    "gtip": "2009.81.59.00.00",
+    "description": "Ağırlık itibariyle ilave şeker oranı % 30' u geçmeyenler"
+   },
+   {
+    "gtip": "2009.89.96.00.00",
+    "description": "Kiraz suyu"
+   },
+   {
+    "gtip": "2009.90.11.00.00",
+    "description": "Net 100 kg ağırlık başına kıymeti 22 Euro'yu geçmeyenler"
+   },
+   {
+    "gtip": "2009.90.19.00.00",
+    "description": "Diğerleri"
+   },
+   {
+    "gtip": "2009.90.21.00.00",
+    "description": "Net 100 kg ağırlık başına kıymeti 30 Euro'yu geçmeyenler"
+   },
+   {
+    "gtip": "2009.90.29.00.00",
+    "description": "Diğerleri"
+   },
+   {
+    "gtip": "2009.90.31.00.00",
+    "description": "Net 100 kg ağırlık başına kıymeti 18 Euro'yu geçmeyen ve ağırlık itibariyle ilave şeker oranı % 30' u geçenler"
+   },
+   {
+    "gtip": "2009.90.39.00.00",
+    "description": "Diğerleri"
+   },
+   {
+    "gtip": "2204.10",
+    "description": "Köpüklü şaraplar",
+    "quantity": "750 hl",
+    "period": "01.01-31.12",
+    "duty_rate": "35"
+   },
+   {
+    "gtip": "2209.00",
+    "description": "Sirkeler ve asetik asitten elde edilen sirke yerine geçen maddeler",
+    "quantity": "2.500 ton",
+    "period": "01.01-31.12",
+    "duty_rate": "0"
+   },
+   {
+    "gtip": "2309.10",
+    "description": "Kedi veya köpek maması (perakende satılacak hale getirilmiş)",
+    "quantity": "1.400 ton",
+    "period": "01.01-31.12",
+    "duty_rate": "0"
+   },
+   {
+    "gtip": "2309.90",
+    "description": "Diğerleri",
+    "quantity": "6.700 ton",
+    "period": "01.01-31.12",
+    "duty_rate": "0"
+   }
+  ],
+  "item_count": 98,
+  "parser_version": 3,
+  "mevzuat_no": "quota:https://ticaret.gov.tr/data/5ba234df13b87610d0a0331d/AB Karar.docx"
+ },
+ {
+  "title": "Azerbaycan Cumhuriyeti Menşeli Bazı Ürünlerin İthalatında Tarife Kontenjanı Uygulanması Hakkında Karar",
+  "url": "https://ticaret.gov.tr/data/5ba234df13b87610d0a0331d/Azerbaycan Karar.docx",
+  "filename": "Azerbaycan Karar.docx",
+  "origin": "Azerbaycan Cumhuriyeti",
+  "items": [
+   {
+    "gtip": "0406.90.99.00.11",
+    "description": "",
+    "quantity": "100 ton"
+   },
+   {
+    "gtip": "0406.90.99.00.12",
+    "description": ""
+   },
+   {
+    "gtip": "0406.90.99.00.19",
+    "description": ""
+   },
+   {
+    "gtip": "0806.10.10",
+    "description": "",
+    "quantity": "3.500 ton"
+   },
+   {
+    "gtip": "0808.10.80",
+    "description": "",
+    "quantity": "3.000 ton"
+   },
+   {
+    "gtip": "0809.40",
+    "description": "",
+    "quantity": "3.000 ton"
+   },
+   {
+    "gtip": "0810.70",
+    "description": "",
+    "quantity": "30.000 ton"
+   },
+   {
+    "gtip": "0902.30",
+    "description": "",
+    "quantity": "300 ton"
+   },
+   {
+    "gtip": "1512.19.90",
+    "description": "",
+    "quantity": "5.000 ton"
+   },
+   {
+    "gtip": "1516.20.98",
+    "description": "",
+    "quantity": "2.500 ton"
+   },
+   {
+    "gtip": "1701.99.10",
+    "description": "",
+    "quantity": "5.000 ton"
+   },
+   {
+    "gtip": "1806.90.19",
+    "description": "",
+    "quantity": "1.250 ton"
+   },
+   {
+    "gtip": "2001.10",
+    "description": "",
+    "quantity": "500 ton"
+   },
+   {
+    "gtip": "2002.90.80.00.00",
+    "description": ""
+   },
+   {
+    "gtip": "2007.99.97.00.13",
+    "description": "",
+    "quantity": "3.000 ton"
+   },
+   {
+    "gtip": "2007.99.97.00.14",
+    "description": ""
+   },
+   {
+    "gtip": "2007.99.97.00.15",
+    "description": ""
+   },
+   {
+    "gtip": "2007.99.97.00.16",
+    "description": ""
+   },
+   {
+    "gtip": "2007.99.97.00.17",
+    "description": ""
+   },
+   {
+    "gtip": "2007.99.97.00.18",
+    "description": ""
+   },
+   {
+    "gtip": "2009.79.19",
+    "description": "",
+    "quantity": "2.000 ton"
+   },
+   {
+    "gtip": "2204.21.96",
+    "description": "",
+    "quantity": "9.000 hl"
+   },
+   {
+    "gtip": "2204.21.93.00.00",
+    "description": ""
+   },
+   {
+    "gtip": "2204.21.94.00.00",
+    "description": ""
+   },
+   {
+    "gtip": "2204.21.95.00.00",
+    "description": ""
+   },
+   {
+    "gtip": "2204.21.97.00.00",
+    "description": "",
+    "quantity": "15.000 hl"
+   },
+   {
+    "gtip": "2204.21.98.00.00",
+    "description": ""
+   },
+   {
+    "gtip": "2206.00.59.00.00",
+    "description": ""
+   }
+  ],
+  "item_count": 28,
+  "parser_version": 3,
+  "mevzuat_no": "quota:https://ticaret.gov.tr/data/5ba234df13b87610d0a0331d/Azerbaycan Karar.docx"
+ },
+ {
+  "title": "Birleşik Arap Emirlikleri Menşeli Bazı Tarım Ürünleri İthalatında Tarife Kontenjanı Uygulanması Hakkında Karar",
+  "url": "https://ticaret.gov.tr/data/5ba234df13b87610d0a0331d/Birleşik Arap Emirlikleri Karar.docx",
+  "filename": "Birleşik Arap Emirlikleri Karar.docx",
+  "origin": "Birleşik Arap Emirlikleri",
+  "items": [
+   {
+    "gtip": "0804.10",
+    "description": "Hurma",
+    "quantity": "5.000",
+    "duty_rate": "0"
+   },
+   {
+    "gtip": "1517.10.10.00.00",
+    "description": "Ağırlık itibariyle içindeki katı süt yağı oranı %10 'u geçen fakat %15'i geçmeyenler",
+    "duty_rate": "i"
+   }
+  ],
+  "item_count": 2,
+  "parser_version": 3,
+  "mevzuat_no": "quota:https://ticaret.gov.tr/data/5ba234df13b87610d0a0331d/Birleşik Arap Emirlikleri Karar.docx"
+ },
+ {
+  "title": "Bolivarcı Venezuela Cumhuriyeti Menşeli Bazı Tarım Ürünleri İthalatında Tarife Kontenjanı Uygulanması Hakkında Karar",
+  "url": "https://ticaret.gov.tr/data/5ba234df13b87610d0a0331d/Venezuela Karar.docx",
+  "filename": "Venezuela Karar.docx",
+  "origin": "Bolivarcı Venezuela Cumhuriyeti",
+  "items": [
+   {
+    "gtip": "0403.90",
+    "description": "Diğerleri",
+    "quantity": "1.000 ton"
+   },
+   {
+    "gtip": "0406.10",
+    "description": "Taze peynir (olgunlaştırılmamış veya preslenmemiş) ( peyniraltı suyundan yapılmış peynirler dahil) ve pıhtılaştırılmış ürünler",
+    "quantity": "500 ton"
+   },
+   {
+    "gtip": "0406.30",
+    "description": "Eritme peynirler (rendelenmemiş veya toz haline getirilmemiş)",
+    "quantity": "500 ton"
+   },
+   {
+    "gtip": "0406.90",
+    "description": "Diğer peynirler",
+    "quantity": "500 ton"
+   },
+   {
+    "gtip": "1104.12",
+    "description": "Yulaf",
+    "quantity": "2.000 ton"
+   },
+   {
+    "gtip": "1206.00",
+    "description": "Ayçiçeği tohumu (kırılmış olsun olmasın)",
+    "quantity": "5.000 ton"
+   },
+   {
+    "gtip": "1207.29",
+    "description": "Diğerleri",
+    "quantity": "2.000 ton"
+   },
+   {
+    "gtip": "1207.30",
+    "description": "Hint yağı tohumu"
+   },
+   {
+    "gtip": "1207.40",
+    "description": "Susam tohumu"
+   },
+   {
+    "gtip": "1207.60",
+    "description": "Aspir ( Carthamus tinctorius ) tohumu"
+   },
+   {
+    "gtip": "1207.99",
+    "description": "Diğerleri"
+   },
+   {
+    "gtip": "1704.90",
+    "description": "Diğerleri",
+    "quantity": "1.000 ton"
+   }
+  ],
+  "item_count": 12,
+  "parser_version": 3,
+  "mevzuat_no": "quota:https://ticaret.gov.tr/data/5ba234df13b87610d0a0331d/Venezuela Karar.docx"
+ },
+ {
+  "title": "Bosna ve Hersek Menşeli Bazı Tarım ve İşlenmiş Tarım Ürünleri İthalatında Tarife Kontenjanı Uygulanması Hakkında Karar",
+  "url": "https://ticaret.gov.tr/data/5ba234df13b87610d0a0331d/Bosna-Hersek Karar..docx",
+  "filename": "Bosna-Hersek Karar..docx",
+  "origin": "Bosna ve Hersek",
+  "items": [
+   {
+    "gtip": "01.02",
+    "description": "",
+    "quantity": "8.000 ton"
+   },
+   {
+    "gtip": "02.01",
+    "description": ""
+   },
+   {
+    "gtip": "02.02",
+    "description": ""
+   },
+   {
+    "gtip": "01.04",
+    "description": "",
+    "quantity": "2.000 ton"
+   },
+   {
+    "gtip": "02.04",
+    "description": ""
+   },
+   {
+    "gtip": "02.06",
+    "description": "",
+    "quantity": "2.000 ton"
+   },
+   {
+    "gtip": "0105.11",
+    "description": "",
+    "quantity": "1.000 ton"
+   },
+   {
+    "gtip": "0105.94",
+    "description": ""
+   },
+   {
+    "gtip": "0207.11",
+    "description": ""
+   },
+   {
+    "gtip": "0207.12",
+    "description": ""
+   },
+   {
+    "gtip": "0207.13",
+    "description": ""
+   },
+   {
+    "gtip": "0207.14",
+    "description": ""
+   },
+   {
+    "gtip": "0303.14",
+    "description": "",
+    "quantity": "100 ton"
+   },
+   {
+    "gtip": "0303.25.00.00.00",
+    "description": "",
+    "quantity": "100 ton"
+   },
+   {
+    "gtip": "0711.90.30.00.00",
+    "description": "",
+    "quantity": "300 ton"
+   },
+   {
+    "gtip": "1101.00",
+    "description": "",
+    "quantity": "85.000 ton"
+   },
+   {
+    "gtip": "15.12",
+    "description": "",
+    "quantity": "75.000 ton"
+   },
+   {
+    "gtip": "17.02",
+    "description": "",
+    "quantity": "20.000 ton"
+   },
+   {
+    "gtip": "18.06",
+    "description": "",
+    "quantity": "500 ton"
+   },
+   {
+    "gtip": "19.04",
+    "description": "",
+    "quantity": "500 ton"
+   },
+   {
+    "gtip": "19.05",
+    "description": "",
+    "quantity": "2.500 ton"
+   },
+   {
+    "gtip": "2202.99.91.00.00",
+    "description": "",
+    "quantity": "5.000 hl"
+   },
+   {
+    "gtip": "2202.99.95.00.00",
+    "description": ""
+   },
+   {
+    "gtip": "2202.99.99.00.00",
+    "description": ""
+   }
+  ],
+  "item_count": 24,
+  "parser_version": 3,
+  "mevzuat_no": "quota:https://ticaret.gov.tr/data/5ba234df13b87610d0a0331d/Bosna-Hersek Karar..docx"
+ },
+ {
+  "title": "Bosna ve Hersek Menşeli Bazı Tarım ve İşlenmiş Tarım Ürünleri İthalatında Tarife Kontenjanı Uygulanmasına İlişkin Tebliğ",
+  "url": "https://ticaret.gov.tr/data/5ba234df13b87610d0a0331d/15-Bosna Hersek-.docx",
+  "filename": "15-Bosna Hersek-.docx",
+  "origin": "Bosna ve Hersek",
+  "items": [
+   {
+    "gtip": "0303.14",
+    "description": "",
+    "quota_code": "BH001",
+    "period": "01.01-31.12"
+   },
+   {
+    "gtip": "0303.25.00.00.00",
+    "description": "",
+    "quota_code": "BH002",
+    "period": "01.01-31.12"
+   },
+   {
+    "gtip": "0711.90.30.00.00",
+    "description": "",
+    "quota_code": "BH003",
+    "period": "01.01-31.12"
+   },
+   {
+    "gtip": "18.06",
+    "description": "",
+    "quota_code": "BH004",
+    "period": "01.01-31.12"
+   },
+   {
+    "gtip": "19.04",
+    "description": "",
+    "quota_code": "BH005",
+    "period": "01.01-31.12"
+   },
+   {
+    "gtip": "19.05",
+    "description": "",
+    "quota_code": "BH006",
+    "period": "01.01-31.12"
+   },
+   {
+    "gtip": "2202.99.91.00.00",
+    "description": "",
+    "quota_code": "BH007",
+    "period": "01.01-31.12"
+   },
+   {
+    "gtip": "2202.99.95.00.00",
+    "description": ""
+   },
+   {
+    "gtip": "2202.99.99.00.00",
+    "description": ""
+   },
+   {
+    "gtip": "01.02",
+    "description": "",
+    "quota_code": "BH008",
+    "period": "01.01-31.12"
+   },
+   {
+    "gtip": "02.01",
+    "description": ""
+   },
+   {
+    "gtip": "02.02",
+    "description": ""
+   },
+   {
+    "gtip": "01.04",
+    "description": "",
+    "quota_code": "BH009",
+    "period": "01.01-31.12"
+   },
+   {
+    "gtip": "02.04",
+    "description": ""
+   },
+   {
+    "gtip": "02.06",
+    "description": "",
+    "quota_code": "BH010",
+    "period": "01.01-31.12"
+   },
+   {
+    "gtip": "0105.11",
+    "description": "",
+    "quota_code": "BH011",
+    "period": "01.01-31.12"
+   },
+   {
+    "gtip": "0105.94",
+    "description": ""
+   },
+   {
+    "gtip": "0207.11",
+    "description": ""
+   },
+   {
+    "gtip": "0207.12",
+    "description": ""
+   },
+   {
+    "gtip": "0207.13",
+    "description": ""
+   },
+   {
+    "gtip": "0207.14",
+    "description": ""
+   },
+   {
+    "gtip": "1101.00",
+    "description": "",
+    "quota_code": "BH012",
+    "period": "01.01-31.12"
+   },
+   {
+    "gtip": "15.12",
+    "description": "",
+    "quota_code": "BH013",
+    "period": "01.01-31.12"
+   },
+   {
+    "gtip": "17.02",
+    "description": "",
+    "quota_code": "BH014 (*)",
+    "period": "01.01-31.12"
+   }
+  ],
+  "item_count": 24,
+  "parser_version": 3,
+  "mevzuat_no": "quota:https://ticaret.gov.tr/data/5ba234df13b87610d0a0331d/15-Bosna Hersek-.docx"
+ },
+ {
+  "title": "Büyük Britanya ve Kuzey İrlanda Birleşik Krallığı Menşeli Bazı Ürünlerin İthalatında Tarife Kontenjanı Uygulanmasına İlişkin Tebliğ",
+  "url": "https://ticaret.gov.tr/data/5ba234df13b87610d0a0331d/20-Birleşik Krallık-.docx",
+  "filename": "20-Birleşik Krallık-.docx",
+  "origin": "Büyük Britanya ve Kuzey İrlanda Birleşik Krallığı",
+  "items": [
+   {
+    "gtip": "0102.90.99.00.00",
+    "description": ""
+   },
+   {
+    "gtip": "0102.29.29.00.00",
+    "description": "",
+    "quota_code": "BK002",
+    "period": "01.01-31.12"
+   },
+   {
+    "gtip": "0102.39.10.00.00",
+    "description": ""
+   },
+   {
+    "gtip": "0102.90.91.00.00",
+    "description": ""
+   },
+   {
+    "gtip": "0201.20",
+    "description": "",
+    "quota_code": "BK003 (1)",
+    "period": "01.01-31.12"
+   },
+   {
+    "gtip": "0202.20",
+    "description": ""
+   },
+   {
+    "gtip": "0201.20",
+    "description": "",
+    "quota_code": "BK004 (2)",
+    "period": "01.01-31.12"
+   },
+   {
+    "gtip": "0202.20",
+    "description": ""
+   },
+   {
+    "gtip": "02.10",
+    "description": "",
+    "quota_code": "BK005",
+    "period": "01.01-31.12"
+   },
+   {
+    "gtip": "04.04",
+    "description": "",
+    "quota_code": "BK006",
+    "period": "01.01-31.12"
+   },
+   {
+    "gtip": "0405.10",
+    "description": "",
+    "quota_code": "BK007",
+    "period": "01.01-31.12"
+   },
+   {
+    "gtip": "0405.20.90.00.00",
+    "description": ""
+   },
+   {
+    "gtip": "0405.90",
+    "description": ""
+   },
+   {
+    "gtip": "0406.30",
+    "description": "",
+    "quota_code": "BK008",
+    "period": "01.01-31.12"
+   },
+   {
+    "gtip": "0406.90",
+    "description": "",
+    "quota_code": "BK009",
+    "period": "01.01-31.12"
+   },
+   {
+    "gtip": "0408.11.80.00.00",
+    "description": "",
+    "quota_code": "BK011",
+    "period": "01.01-31.12"
+   },
+   {
+    "gtip": "06.01",
+    "description": "",
+    "quota_code": "BK012",
+    "period": "01.01-31.12"
+   },
+   {
+    "gtip": "06.04",
+    "description": "",
+    "quota_code": "BK015",
+    "period": "01.01-31.12"
+   },
+   {
+    "gtip": "0701.10.00.00.00",
+    "description": "",
+    "quota_code": "BK016",
+    "period": "01.01-31.12"
+   },
+   {
+    "gtip": "0709.51.00.00.00",
+    "description": "",
+    "quota_code": "BK017",
+    "period": "01.01-31.12"
+   },
+   {
+    "gtip": "0710.22.00.00.00",
+    "description": "",
+    "quota_code": "BK018",
+    "period": "01.01-31.12"
+   },
+   {
+    "gtip": "0808.10.10.00.00",
+    "description": "",
+    "quota_code": "BK019",
+    "period": "01.01-31.12"
+   },
+   {
+    "gtip": "0808.10.80.00.19",
+    "description": ""
+   },
+   {
+    "gtip": "0808.30",
+    "description": "",
+    "quota_code": "BK020",
+    "period": "01.01-31.12"
+   },
+   {
+    "gtip": "0808.40.00.00.00",
+    "description": ""
+   },
+   {
+    "gtip": "0809.30",
+    "description": "",
+    "quota_code": "BK021",
+    "period": "15.07-31.12"
+   },
+   {
+    "gtip": "0810.90.20.00.11",
+    "description": "",
+    "quota_code": "BK022",
+    "period": "01.01-31.12"
+   },
+   {
+    "gtip": "0810.90.20.00.12",
+    "description": "",
+    "quota_code": "BK023",
+    "period": "01.01-31.12"
+   },
+   {
+    "gtip": "0810.70.00.00.00",
+    "description": "",
+    "quota_code": "BK024",
+    "period": "01.01-31.12"
+   },
+   {
+    "gtip": "0810.90.75",
+    "description": ""
+   },
+   {
+    "gtip": "0811.10",
+    "description": "",
+    "quota_code": "BK025",
+    "period": "01.01-31.12"
+   },
+   {
+    "gtip": "09.02",
+    "description": "",
+    "quota_code": "BK026",
+    "period": "01.01-31.12"
+   },
+   {
+    "gtip": "10.01",
+    "description": "",
+    "quota_code": "BK027",
+    "period": "01.09-31.05"
+   },
+   {
+    "gtip": "1001.11.00.00.00",
+    "description": "",
+    "quota_code": "BK028",
+    "period": "01.09-31.05"
+   },
+   {
+    "gtip": "1001.19.00.00.00",
+    "description": ""
+   },
+   {
+    "gtip": "1001.91",
+    "description": "",
+    "quota_code": "BK029",
+    "period": "01.09-31.05"
+   },
+   {
+    "gtip": "1001.99",
+    "description": ""
+   },
+   {
+    "gtip": "10.02",
+    "description": "",
+    "quota_code": "BK030",
+    "period": "01.09-31.05"
+   },
+   {
+    "gtip": "1003.90.00.00.12",
+    "description": "",
+    "quota_code": "BK031",
+    "period": "01.09-31.05"
+   },
+   {
+    "gtip": "10.04",
+    "description": "",
+    "quota_code": "BK032",
+    "period": "01.09-31.05"
+   },
+   {
+    "gtip": "1005.90",
+    "description": "",
+    "quota_code": "BK033",
+    "period": "01.09-31.05"
+   },
+   {
+    "gtip": "1005.90",
+    "description": "",
+    "quota_code": "BK034",
+    "period": "01.12-31.05"
+   },
+   {
+    "gtip": "1006.30",
+    "description": "",
+    "quota_code": "BK035",
+    "period": "01.01-31.12"
+   },
+   {
+    "gtip": "1104.12.90.00.00",
+    "description": "",
+    "quota_code": "BK036",
+    "period": "01.01-31.12"
+   },
+   {
+    "gtip": "11.07",
+    "description": "",
+    "quota_code": "BK037",
+    "period": "01.01-31.12"
+   },
+   {
+    "gtip": "1207.29.00.00.00",
+    "description": "",
+    "quota_code": "BK039",
+    "period": "01.01-31.12"
+   },
+   {
+    "gtip": "1207.70.00.00.00",
+    "description": "",
+    "quota_code": "BK040",
+    "period": "01.01-31.12"
+   },
+   {
+    "gtip": "1209.10.00.00.00",
+    "description": "",
+    "quota_code": "BK041",
+    "period": "01.01-31.12"
+   },
+   {
+    "gtip": "15.02",
+    "description": "",
+    "quota_code": "BK042",
+    "period": "01.01-31.12"
+   },
+   {
+    "gtip": "1507.10",
+    "description": "",
+    "quota_code": "BK043",
+    "period": "01.01-31.08"
+   },
+   {
+    "gtip": "1507.90",
+    "description": "",
+    "quota_code": "BK044",
+    "period": "01.01-31.08"
+   },
+   {
+    "gtip": "1512.11",
+    "description": "",
+    "quota_code": "BK045",
+    "period": "01.01-31.08"
+   },
+   {
+    "gtip": "1514.11",
+    "description": "",
+    "quota_code": "BK046",
+    "period": "01.01-31.08"
+   },
+   {
+    "gtip": "1514.91",
+    "description": ""
+   },
+   {
+    "gtip": "1602.10.00.00.00",
+    "description": "",
+    "quota_code": "BK047",
+    "period": "01.01-31.12"
+   },
+   {
+    "gtip": "1701.99",
+    "description": "",
+    "quota_code": "BK048",
+    "period": "01.01-31.12"
+   },
+   {
+    "gtip": "1704.10",
+    "description": "",
+    "quota_code": "BK049",
+    "period": "01.01-31.12"
+   },
+   {
+    "gtip": "1901.10",
+    "description": "",
+    "quota_code": "BK052",
+    "period": "01.01-31.12"
+   },
+   {
+    "gtip": "1901.20",
+    "description": "",
+    "quota_code": "BK053",
+    "period": "01.01-31.12"
+   },
+   {
+    "gtip": "1904.10",
+    "description": "",
+    "quota_code": "BK056",
+    "period": "01.01-31.12"
+   },
+   {
+    "gtip": "1904.20",
+    "description": "",
+    "quota_code": "BK057",
+    "period": "01.01-31.12"
+   },
+   {
+    "gtip": "1904.90",
+    "description": "",
+    "quota_code": "BK058",
+    "period": "01.01-31.12"
+   },
+   {
+    "gtip": "1905.31",
+    "description": "",
+    "quota_code": "BK059",
+    "period": "01.01-31.12"
+   },
+   {
+    "gtip": "1905.32",
+    "description": "",
+    "quota_code": "BK060",
+    "period": "01.01-31.12"
+   },
+   {
+    "gtip": "1905.40",
+    "description": "",
+    "quota_code": "BK061",
+    "period": "01.01-31.12"
+   },
+   {
+    "gtip": "1905.90",
+    "description": "",
+    "quota_code": "BK062",
+    "period": "01.01-31.12"
+   },
+   {
+    "gtip": "2001.90.50.00.00",
+    "description": "",
+    "quota_code": "BK063",
+    "period": "01.01-31.12"
+   },
+   {
+    "gtip": "2001.90.97.00.11",
+    "description": ""
+   },
+   {
+    "gtip": "2001.90.97.00.12",
+    "description": ""
+   },
+   {
+    "gtip": "2001.90.97.00.13",
+    "description": ""
+   },
+   {
+    "gtip": "2001.90.97.00.18",
+    "description": ""
+   },
+   {
+    "gtip": "2002.90",
+    "description": "",
+    "quota_code": "BK064",
+    "period": "01.01-31.12"
+   },
+   {
+    "gtip": "20.03",
+    "description": "",
+    "quota_code": "BK065",
+    "period": "01.01-31.12"
+   },
+   {
+    "gtip": "2005.10.00.00.00",
+    "description": "",
+    "quota_code": "BK066",
+    "period": "01.01-31.12"
+   },
+   {
+    "gtip": "2005.40",
+    "description": "",
+    "quota_code": "BK067",
+    "period": "01.01-31.12"
+   },
+   {
+    "gtip": "2007.10",
+    "description": "",
+    "quota_code": "BK068",
+    "period": "01.01-31.12"
+   },
+   {
+    "gtip": "2007.99.10.00.00",
+    "description": "",
+    "quota_code": "BK069",
+    "period": "01.01-31.12"
+   },
+   {
+    "gtip": "2007.99.33.00.00",
+    "description": ""
+   },
+   {
+    "gtip": "2007.99.35.00.00",
+    "description": ""
+   },
+   {
+    "gtip": "2007.99.39.00.11",
+    "description": ""
+   },
+   {
+    "gtip": "2007.99.97.00.16",
+    "description": ""
+   },
+   {
+    "gtip": "2007.99.97.00.17",
+    "description": ""
+   },
+   {
+    "gtip": "2009.11",
+    "description": "",
+    "quota_code": "BK070",
+    "period": "01.01-31.12"
+   },
+   {
+    "gtip": "2009.12.00.00.00",
+    "description": ""
+   },
+   {
+    "gtip": "2009.19",
+    "description": ""
+   },
+   {
+    "gtip": "2009.61",
+    "description": ""
+   },
+   {
+    "gtip": "2009.71",
+    "description": ""
+   },
+   {
+    "gtip": "2009.79",
+    "description": ""
+   },
+   {
+    "gtip": "2009.89.89.00.00",
+    "description": ""
+   },
+   {
+    "gtip": "2009.81.59.00.00",
+    "description": ""
+   },
+   {
+    "gtip": "2009.89.96.00.00",
+    "description": ""
+   },
+   {
+    "gtip": "2009.90.11.00.00",
+    "description": ""
+   },
+   {
+    "gtip": "2009.90.19.00.00",
+    "description": ""
+   },
+   {
+    "gtip": "2009.90.21.00.00",
+    "description": ""
+   },
+   {
+    "gtip": "2009.90.29.00.00",
+    "description": ""
+   },
+   {
+    "gtip": "2009.90.31.00.00",
+    "description": ""
+   },
+   {
+    "gtip": "2009.90.39.00.00",
+    "description": ""
+   },
+   {
+    "gtip": "21.05",
+    "description": "",
+    "quota_code": "BK071",
+    "period": "01.01-31.12"
+   },
+   {
+    "gtip": "2106.10.80",
+    "description": "",
+    "quota_code": "BK072",
+    "period": "01.01-31.12",
+    "quantity": "20 ton"
+   },
+   {
+    "gtip": "2106.90.98",
+    "description": ""
+   },
+   {
+    "gtip": "2204.10",
+    "description": "",
+    "quota_code": "BK073",
+    "period": "01.01-31.12"
+   },
+   {
+    "gtip": "2209.00",
+    "description": "",
+    "quota_code": "BK074",
+    "period": "01.01-31.12"
+   },
+   {
+    "gtip": "2309.10",
+    "description": "",
+    "quota_code": "BK075",
+    "period": "01.01-31.12"
+   },
+   {
+    "gtip": "2309.90",
+    "description": "",
+    "quota_code": "BK076",
+    "period": "01.01-31.12"
+   }
+  ],
+  "item_count": 104,
+  "parser_version": 3,
+  "mevzuat_no": "quota:https://ticaret.gov.tr/data/5ba234df13b87610d0a0331d/20-Birleşik Krallık-.docx"
+ },
+ {
+  "title": "Gürcistan Menşeli Bazı Tarım ve İşlenmiş Tarım Ürünleri İthalatında Tarife Kontenjanı Uygulanması Hakkında Karar 2",
+  "url": "https://ticaret.gov.tr/data/5ba234df13b87610d0a0331d/Gurcistan Karar2.docx",
+  "filename": "Gurcistan Karar2.docx",
+  "origin": "Gürcistan",
+  "items": [
+   {
+    "gtip": "1208.90",
+    "description": "Diğerleri",
+    "quantity": "15.000",
+    "duty_rate": "0"
+   }
+  ],
+  "item_count": 1,
+  "parser_version": 3,
+  "mevzuat_no": "quota:https://ticaret.gov.tr/data/5ba234df13b87610d0a0331d/Gurcistan Karar2.docx"
+ },
+ {
+  "title": "İsrail Devleti Menşeli Bazı Tarım ve İşlenmiş Tarım Ürünleri İthalatında Tarife Kontenjanı Uygulanması Hakkında Karar 2",
+  "url": "https://ticaret.gov.tr/data/5ba234df13b87610d0a0331d/İsrail Karar2.docx",
+  "filename": "İsrail Karar2.docx",
+  "origin": "İsrail Devleti",
+  "items": [
+   {
+    "gtip": "1905.90.10.00.00",
+    "description": "Mayasız ekmek (matzos)",
+    "quantity": "30 ton"
+   }
+  ],
+  "item_count": 1,
+  "parser_version": 3,
+  "mevzuat_no": "quota:https://ticaret.gov.tr/data/5ba234df13b87610d0a0331d/İsrail Karar2.docx"
+ },
+ {
+  "title": "İsviçre Konfederasyonu veya Lihtenştayn Prensliği Menşeli Bazı Ürünlerin İthalatında Tarife Kontenjanı Uygulanması Hakkında Karar",
+  "url": "https://ticaret.gov.tr/data/5ba234df13b87610d0a0331d/İsviçre Karar.docx",
+  "filename": "İsviçre Karar.docx",
+  "origin": "İsviçre Konfederasyonu veya Lihtenştayn Prensliği",
+  "items": [
+   {
+    "gtip": "0404",
+    "description": "Peyniraltı suyu ( konsantre edilmiş olsun olmasın veya ilave şeker veya diğer tatlandırıcı maddeleri içersin içermesin); tarifenin başka yerinde belirtilmeyen veya yer almayan tabii süt bileşenlerinden ibaret olan ürünler (ilave şeker veya diğer tatlandırıcı maddeleri içersin içermesin)",
+    "quantity": "100 ton",
+    "duty_rate": "i"
+   },
+   {
+    "gtip": "0405",
+    "description": "Sütten elde edilen tereyağı ve diğer katı ve sıvı yağIar ; sürülerek yenilen süt ürünleri",
+    "quantity": "250 ton",
+    "duty_rate": "0"
+   },
+   {
+    "gtip": "0704.10",
+    "description": "Karnabaharlar ve başlı brokoli",
+    "quantity": "50 ton",
+    "duty_rate": "i"
+   },
+   {
+    "gtip": "0705",
+    "description": "Marul ( Lactuca sativa ) ve hindiba ( Cichorium spp .) (taze veya soğutulmuş)",
+    "quantity": "50 ton",
+    "duty_rate": "i"
+   },
+   {
+    "gtip": "0706",
+    "description": "Havuçlar, şalgamlar, kırmızı pancar, teke sakalı ( salsifis ), kök kerevizi, turplar ve benzeri yenilen kökler (taze veya soğutulmuş)",
+    "quantity": "50 ton",
+    "duty_rate": "i"
+   },
+   {
+    "gtip": "0710",
+    "description": "Sebzeler (pişirilmemiş veya buharda veya suda kaynatılarak pişirilmiş) (dondurulmuş)",
+    "quantity": "50 ton",
+    "duty_rate": "i"
+   },
+   {
+    "gtip": "0712",
+    "description": "Kurutulmuş sebzeler (bütün halde, kesilmiş, dilimlenmiş, kırılmış veya toz halinde, fakat başka şekilde hazırlanmamış)",
+    "quantity": "50 ton",
+    "duty_rate": "i"
+   },
+   {
+    "gtip": "0712.39",
+    "description": "Diğerleri",
+    "quantity": "50 ton",
+    "duty_rate": "i"
+   },
+   {
+    "gtip": "0811.90",
+    "description": "Diğerleri",
+    "quantity": "100 ton",
+    "duty_rate": "i"
+   },
+   {
+    "gtip": "1601",
+    "description": "Etten yapılmış sosisler",
+    "quantity": "200 ton",
+    "duty_rate": "i"
+   },
+   {
+    "gtip": "1602",
+    "description": "Hazırlanmış veya konserve edilmiş etler [Domuz etinden olanlar hariç]",
+    "quantity": "200 ton",
+    "duty_rate": "i"
+   },
+   {
+    "gtip": "2204.21",
+    "description": "Muhtevası 2 litre veya daha az kaplarda olanlar",
+    "quantity": "30.000 lt",
+    "duty_rate": "i"
+   },
+   {
+    "gtip": "2204.29",
+    "description": "Diğerleri",
+    "quantity": "30.000 lt",
+    "duty_rate": "i"
+   },
+   {
+    "gtip": "2206",
+    "description": "Fermente edilmiş diğer içecekler (elma şarabı, armut şarabı, bal şarabı, sake gibi), tarifenin başka yerinde belirtilmeyen veya yer almayan fermente edilmiş içeceklerin karışımları ve fermente edilmiş içeceklerle alkolsüz içeceklerin karışımları",
+    "quantity": "30.000 lt",
+    "duty_rate": "i"
+   },
+   {
+    "gtip": "2207.10",
+    "description": "Alkol derecesi hacim itibariyle % 80 veya daha fazla olan tağyir ( denatüre ) edilmemiş etil alkol",
+    "quantity": "30.000 lt",
+    "duty_rate": "i"
+   },
+   {
+    "gtip": "2309",
+    "description": "Hayvan gıdası olarak kullanılan müstahzarlar",
+    "quantity": "200 ton",
+    "duty_rate": "0"
+   }
+  ],
+  "item_count": 16,
+  "parser_version": 3,
+  "mevzuat_no": "quota:https://ticaret.gov.tr/data/5ba234df13b87610d0a0331d/İsviçre Karar.docx"
+ },
+ {
+  "title": "İsviçre Konfederasyonu veya Lihtenştayn Prensliği Menşeli Bazı Ürünlerin İthalatında Tarife Kontenjanı Uygulanması Hakkında Tebliğ",
+  "url": "https://ticaret.gov.tr/data/5ba234df13b87610d0a0331d/21-İsviçre-.docx",
+  "filename": "21-İsviçre-.docx",
+  "origin": "İsviçre Konfederasyonu veya Lihtenştayn Prensliği",
+  "items": [
+   {
+    "gtip": "0404",
+    "description": "Peyniraltı suyu (konsantre edilmiş olsun olmasın veya ilave şeker veya diğer tatlandırıcı maddeleri içersin içermesin); tarifenin başka yerinde belirtilmeyen veya yer almayan tabii süt bileşenlerinden ibaret olan ürünler (ilave şeker veya diğer tatlandırıcı maddeleri içersin içermesin)",
+    "quota_code": "ISL001",
+    "period": "01.01-31.12"
+   },
+   {
+    "gtip": "0405",
+    "description": "Sütten elde edilen tereyağı ve diğer katı ve sıvı yağIar ; sürülerek yenilen süt ürünleri",
+    "quota_code": "ISL002",
+    "period": "01.01-31.12"
+   },
+   {
+    "gtip": "0704.10",
+    "description": "Karnabaharlar ve başlı brokoli",
+    "quota_code": "ISL004",
+    "period": "01.01-31.12"
+   },
+   {
+    "gtip": "0705",
+    "description": "Marul ( Lactuca sativa ) ve hindiba ( Cichorium spp .) ( taze veya soğutulmuş)",
+    "quota_code": "ISL005",
+    "period": "01.01-31.12"
+   },
+   {
+    "gtip": "0706",
+    "description": "Havuçlar, şalgamlar, kırmızı pancar, teke sakalı ( salsifis ), kök kerevizi, turplar ve benzeri yenilen kökler (taze veya soğutulmuş)",
+    "quota_code": "ISL006",
+    "period": "01.01-31.12"
+   },
+   {
+    "gtip": "0710",
+    "description": "Sebzeler (pişirilmemiş veya buharda veya suda kaynatılarak pişirilmiş) (dondurulmuş)",
+    "quota_code": "ISL008",
+    "period": "01.01-31.12"
+   },
+   {
+    "gtip": "0712",
+    "description": "Kurutulmuş sebzeler (bütün halde, kesilmiş, dilimlenmiş, kırılmış veya toz halinde, fakat başka şekilde hazırlanmamış)",
+    "quota_code": "ISL009",
+    "period": "01.01-31.12"
+   },
+   {
+    "gtip": "0712.39",
+    "description": "Diğerleri",
+    "quota_code": "ISL010",
+    "period": "01.01-31.12"
+   },
+   {
+    "gtip": "0811.90",
+    "description": "Diğerleri",
+    "quota_code": "ISL012",
+    "period": "01.01-31.12"
+   },
+   {
+    "gtip": "1601",
+    "description": "Etten yapılmış sosisler",
+    "quota_code": "ISL013",
+    "period": "01.01-31.12"
+   },
+   {
+    "gtip": "1602",
+    "description": "Hazırlanmış veya konserve edilmiş etler [Domuz etinden olanlar hariç]",
+    "quota_code": "ISL014",
+    "period": "01.01-31.12"
+   },
+   {
+    "gtip": "2204.21",
+    "description": "Muhtevası 2 litre veya daha az kaplarda olanlar",
+    "quota_code": "ISL016",
+    "period": "01.01-31.12"
+   },
+   {
+    "gtip": "2204.29",
+    "description": "Diğerleri",
+    "quota_code": "ISL017",
+    "period": "01.01-31.12"
+   },
+   {
+    "gtip": "2206",
+    "description": "Fermente edilmiş diğer içecekler (elma şarabı, armut şarabı, bal şarabı, sake gibi), tarifenin başka yerinde belirtilmeyen veya yer almayan fermente edilmiş içeceklerin karışımları ve fermente edilmiş içeceklerle alkolsüz içeceklerin karışımları",
+    "quota_code": "ISL018",
+    "period": "01.01-31.12"
+   },
+   {
+    "gtip": "2207.10",
+    "description": "Alkol derecesi hacim itibariyle % 80 veya daha fazla olan tağyir ( denatüre ) edilmemiş etil alkol",
+    "quota_code": "ISL019",
+    "period": "01.01-31.12"
+   },
+   {
+    "gtip": "2309",
+    "description": "Hayvan gıdası olarak kullanılan müstahzarlar",
+    "quota_code": "ISL020",
+    "period": "01.01-31.12"
+   }
+  ],
+  "item_count": 16,
+  "parser_version": 3,
+  "mevzuat_no": "quota:https://ticaret.gov.tr/data/5ba234df13b87610d0a0331d/21-İsviçre-.docx"
+ },
+ {
+  "title": "Moldova Cumhuriyeti Menşeli Bazı Tarım Ürünleri İthalatında Tarife Kontenjanı Uygulanması Hakkında Karar",
+  "url": "https://ticaret.gov.tr/data/5ba234df13b87610d0a0331d/Moldova Karar.docx",
+  "filename": "Moldova Karar.docx",
+  "origin": "Moldova Cumhuriyeti",
+  "items": [
+   {
+    "gtip": "02.03",
+    "description": "Domuz eti (taze, soğutulmuş veya dondurulmuş)",
+    "period": "01.01-31.12",
+    "quantity": "500 Ton",
+    "duty_rate": "0"
+   },
+   {
+    "gtip": "04.03",
+    "description": "YayıkaItı , pıhtılaştırılmış süt ve krema, yoğurt, kefir ve diğer fermente ediImiş veya asitIiği artırıImış süt ve krema (konsantre edilmiş veya iIave şeker veya diğer tatlandırıcı maddeIer katılmış oIsun olmasın veya aroma veya ilave meyva , sert kabukIu meyva veya kakao içersin içermesin)",
+    "period": "01.01-31.12",
+    "quantity": "100 Ton",
+    "duty_rate": "0"
+   },
+   {
+    "gtip": "04.05",
+    "description": "Sütten elde ediIen tereyağı ve diğer katı ve sıvı yağIar ; sürülerek yenilen süt ürünleri",
+    "period": "01.01-31.12",
+    "quantity": "500 Ton",
+    "duty_rate": "0"
+   },
+   {
+    "gtip": "04.06",
+    "description": "Peynir ve pıhtılaştırılmış ürünler",
+    "period": "01.01-31.12",
+    "quantity": "300 Ton",
+    "duty_rate": "0"
+   },
+   {
+    "gtip": "0802.31.00.00.00",
+    "description": "Kabuklu",
+    "period": "01.01-31.12",
+    "quantity": "800 Ton",
+    "duty_rate": "0"
+   },
+   {
+    "gtip": "0802.32.00.00.00",
+    "description": "Kabuksuz"
+   },
+   {
+    "gtip": "0809.40",
+    "description": "Erik ve Çakal Eriği",
+    "period": "01.01-31.12",
+    "quantity": "250 Ton",
+    "duty_rate": "i"
+   },
+   {
+    "gtip": "0813.20",
+    "description": "Erik",
+    "period": "01.01-31.12",
+    "quantity": "200 Ton",
+    "duty_rate": "0"
+   },
+   {
+    "gtip": "10.03",
+    "description": "Arpa",
+    "period": "01.01-31.05",
+    "quantity": "10.000 Ton",
+    "duty_rate": "0"
+   },
+   {
+    "gtip": "1005.90",
+    "description": "Diğerleri",
+    "period": "01.01-31.05",
+    "quantity": "8.000 Ton",
+    "duty_rate": "0"
+   },
+   {
+    "gtip": "12.01",
+    "description": "Soya fasulyesi (kırılmış olsun olmasın)",
+    "period": "01.01-31.12",
+    "quantity": "10.000 Ton",
+    "duty_rate": "0"
+   },
+   {
+    "gtip": "1205.10",
+    "description": "Düşük erusik asitli rep veya kolza tohumları",
+    "period": "01.01-31.12",
+    "quantity": "2.000 Ton",
+    "duty_rate": "i"
+   },
+   {
+    "gtip": "12.06",
+    "description": "Ayçiçeği tohumu (kırılmış olsun olmasın)",
+    "period": "01.01-31.05",
+    "quantity": "5.000 Ton",
+    "duty_rate": "i"
+   },
+   {
+    "gtip": "1507.10",
+    "description": "Ham yağ (sakızı ayrılmış olsun olmasın)",
+    "period": "01.01-31.05",
+    "quantity": "2.500 Ton",
+    "duty_rate": "ii"
+   },
+   {
+    "gtip": "15.12",
+    "description": "Ayçiçeği tohumu, aspir veya pamuk tohumu yağları ve bunların fraksiyonları (rafine edilmiş olsun olmasın, fakat kimyasal olarak değiştirilmemiş)",
+    "period": "01.01-31.05",
+    "quantity": "1.500 Ton",
+    "duty_rate": "0"
+   },
+   {
+    "gtip": "17.04",
+    "description": "Kakao içermeyen şeker mamulleri (beyaz çikolata dahil)",
+    "period": "01.01-31.12",
+    "quantity": "250 Ton",
+    "duty_rate": "0"
+   },
+   {
+    "gtip": "18.06",
+    "description": "Çikolata ve kakao içeren diğer gıda müstahzarları",
+    "period": "01.01-31.12",
+    "quantity": "250 Ton",
+    "duty_rate": "0"
+   },
+   {
+    "gtip": "19.05",
+    "description": "Ekmek, pasta, kek, bisküvi ve diğer ekmekçilik mamulleri (kakao içersin içermesin); hosti , eczacılıkta kullanılan boş ilaç kapsülleri, mühür güllacı, pirinç kağıdı ve benzeri ürünler",
+    "period": "01.01-31.12",
+    "quantity": "250 Ton",
+    "duty_rate": "0"
+   },
+   {
+    "gtip": "20.07",
+    "description": "Reçeller, jöleler, marmelatlar, meyva veya sert kabuklu meyva püresi, meyva veya sert kabuklu meyva pastları (pişirilerek hazırlanmış) (ilave şeker veya diğer tatlandırıcı maddeleri içersin içermesin)",
+    "period": "01.01-31.12",
+    "quantity": "250 Ton",
+    "duty_rate": "0"
+   },
+   {
+    "gtip": "20.09",
+    "description": "Meyva suları (üzüm şırası dahil) ve sebze suları (fermente edilmemiş ve alkol katılmamış), ilave şeker veya diğer tatlandırıcı maddeler katılmış olsun olmasın",
+    "period": "01.01-31.12",
+    "quantity": "500 Ton",
+    "duty_rate": "0"
+   },
+   {
+    "gtip": "21.03",
+    "description": "Soslar ve müstahzarları; çeşni ve lezzet verici karışımlar; hardal unu ve kaba unu ve hazır hardal",
+    "period": "01.01-31.12",
+    "quantity": "500 Ton",
+    "duty_rate": "0"
+   },
+   {
+    "gtip": "2105.00",
+    "description": "Dondurma ve yenilen diğer buzlar (kakao içersin içermesin)",
+    "period": "01.01-31.12",
+    "quantity": "500 Ton",
+    "duty_rate": "0"
+   },
+   {
+    "gtip": "22.02",
+    "description": "Sular (mineral sular ve gazlı sular dahil) (ilave şeker veya diğer tatlandırıcı maddeler katılmış veya aromalandırılmış ) ve alkolsüz diğer içecekler (20.09 pozisyonundaki meyve ve sebze suları hariç)",
+    "period": "01.01-31.12",
+    "quantity": "100.000 litre",
+    "duty_rate": "0"
+   },
+   {
+    "gtip": "2204.10",
+    "description": "Köpüklü şaraplar",
+    "period": "01.01-31.12",
+    "quantity": "8.000 hl",
+    "duty_rate": "0"
+   },
+   {
+    "gtip": "2204.21",
+    "description": "Muhtevası 2 litre veya daha az kaplarda olanlar"
+   },
+   {
+    "gtip": "2204.22",
+    "description": "Muhtevası 2 litreden fazla fakat 10 litreden fazla olmayan kaplarda olanlar"
+   },
+   {
+    "gtip": "2204.29",
+    "description": "Diğerleri"
+   },
+   {
+    "gtip": "23.06",
+    "description": "Bitkisel katı veya sıvı yağların ekstraksiyonundan ( özütleme ) (23.04 ve 23.05 pozisyonundakiler hariç) arta kalan küspe ve diğer katı artıklar (öğütülmüş veya \" pellet \" halinde olsun olmasın)",
+    "period": "01.01-31.12",
+    "quantity": "5.000 Ton",
+    "duty_rate": "0"
+   }
+  ],
+  "item_count": 28,
+  "parser_version": 3,
+  "mevzuat_no": "quota:https://ticaret.gov.tr/data/5ba234df13b87610d0a0331d/Moldova Karar.docx"
+ },
+ {
+  "title": "Sırbistan Cumhuriyeti Menşeli Bazı Tarım ve İşlenmiş Tarım Ürünleri İthalatında Tarife Kontenjanı Uygulanmasına İlişkin Tebliğ",
+  "url": "https://ticaret.gov.tr/data/5ba234df13b87610d0a0331d/5-Sırbistan-.docx",
+  "filename": "5-Sırbistan-.docx",
+  "origin": "Sırbistan Cumhuriyeti",
+  "items": [
+   {
+    "gtip": "0602.40.00.00.00",
+    "description": "Güller (aşılı veya aşısız)",
+    "quota_code": "SRB002",
+    "period": "01.01-31.12"
+   },
+   {
+    "gtip": "0602.90.41.00.11",
+    "description": "Çelikler",
+    "quota_code": "SRB003",
+    "period": "01.01-31.12"
+   },
+   {
+    "gtip": "0602.90.41.00.12",
+    "description": "Fidanlar"
+   },
+   {
+    "gtip": "0602.90.41.00.29",
+    "description": "Diğerleri"
+   },
+   {
+    "gtip": "0602.90.46.00.00",
+    "description": "Çıplak kökleriyle birlikte olan lar",
+    "quota_code": "SRB004",
+    "period": "01.01-31.12"
+   },
+   {
+    "gtip": "0602.90.47.00.00",
+    "description": "Kozalaklı ve yaprak dökmeyen ağaçlar"
+   },
+   {
+    "gtip": "0602.90.48.00.00",
+    "description": "Diğerleri"
+   },
+   {
+    "gtip": "0701.10.00.00.00",
+    "description": "Tohumluk",
+    "quota_code": "SRB006",
+    "period": "01.01-31.12"
+   },
+   {
+    "gtip": "0702.00.00.00.00",
+    "description": "Domates (taze veya soğutulmuş)",
+    "quota_code": "SRB007",
+    "period": "01.06-30.09"
+   },
+   {
+    "gtip": "0703.90",
+    "description": "Pırasa ve diğer soğanımsı sebzeler",
+    "quota_code": "SRB008",
+    "period": "01.01-31.12"
+   },
+   {
+    "gtip": "0704.90.10.00.11",
+    "description": "Beyaz lahana",
+    "quota_code": "SRB009",
+    "period": "01.01-31.12"
+   },
+   {
+    "gtip": "0704.90.10.00.12",
+    "description": "Kırmızı lahana"
+   },
+   {
+    "gtip": "0706.10",
+    "description": "Havuçlar ve şalgamlar",
+    "quota_code": "SRB010",
+    "period": "01.01-31.12"
+   },
+   {
+    "gtip": "0708.10",
+    "description": "Bezelye ( Pisum sativum )",
+    "quota_code": "SRB011",
+    "period": "01.01-31.12"
+   },
+   {
+    "gtip": "0708.90",
+    "description": "Diğer baklagiller",
+    "quota_code": "SRB012",
+    "period": "01.01-31.12"
+   },
+   {
+    "gtip": "0709.60",
+    "description": "Capsicum veya Pimenta cinsi meyveler",
+    "quota_code": "SRB013",
+    "period": "01.07-30.09"
+   },
+   {
+    "gtip": "0710.21.00.00.00",
+    "description": "Bezelye ( Pisum sativum )",
+    "quota_code": "SRB014",
+    "period": "01.01-31.12"
+   },
+   {
+    "gtip": "0710.22.00.00.00",
+    "description": "Fasulye ( Phaseolus spp ., Vigna spp .)",
+    "quota_code": "SRB015",
+    "period": "01.01-31.12"
+   },
+   {
+    "gtip": "0710.40.00.00.00",
+    "description": "Tatlı mısır",
+    "quota_code": "SRB016",
+    "period": "01.01-31.12"
+   },
+   {
+    "gtip": "0713.90",
+    "description": "Diğerleri",
+    "quota_code": "SRB017",
+    "period": "01.01-31.12"
+   },
+   {
+    "gtip": "0811.10",
+    "description": "Çilek",
+    "quota_code": "SRB018",
+    "period": "01.01-31.12"
+   },
+   {
+    "gtip": "0811.20",
+    "description": "Ahududu, böğürtlen, dut, loganberrier (bir çeşit böğürtlen), siyah, beyaz ve kırmızı Frenk üzümü ve Bektaşi üzümü",
+    "quota_code": "SRB019",
+    "period": "01.01-31.12"
+   },
+   {
+    "gtip": "0811.90.75.00.00",
+    "description": "Vişne (Prunus cerasus )",
+    "quota_code": "SRB020",
+    "period": "01.01-31.12"
+   },
+   {
+    "gtip": "0813.20.00.00.00",
+    "description": "Erik",
+    "quota_code": "SRB021",
+    "period": "01.01-31.12"
+   },
+   {
+    "gtip": "0909.61.00.00.00",
+    "description": "Ezilmemiş ve öğütülmemiş [Yalnızca rezene tohumları ve ardıç meyveleri]",
+    "quota_code": "SRB022",
+    "period": "01.01-31.12"
+   },
+   {
+    "gtip": "0909.62.00.00.00",
+    "description": "Ezilmiş veya öğütülmüş [Yalnızca rezene tohumları ve ardıç meyveleri]"
+   },
+   {
+    "gtip": "0910.99",
+    "description": "Diğerleri",
+    "quota_code": "SRB023",
+    "period": "01.01-31.12"
+   },
+   {
+    "gtip": "1001.99.00.00.11",
+    "description": "Adi buğday",
+    "quota_code": "SRB024",
+    "period": "01.01-31.12"
+   },
+   {
+    "gtip": "1001.99.00.00.12",
+    "description": "Mahlut"
+   },
+   {
+    "gtip": "1001.99.00.00.13",
+    "description": "Kaplıca (kızıl) buğday"
+   },
+   {
+    "gtip": "1005.90",
+    "description": "Diğerleri",
+    "quota_code": "SRB025",
+    "period": "01.01-31.12"
+   },
+   {
+    "gtip": "1008.30.00.00.00",
+    "description": "Kuş yemi",
+    "quota_code": "SRB026",
+    "period": "01.01-31.12"
+   },
+   {
+    "gtip": "1201.90.00.00.00",
+    "description": "Diğerleri",
+    "quota_code": "SRB027",
+    "period": "01.01-31.12"
+   },
+   {
+    "gtip": "1208.10",
+    "description": "Soya fasulyesinin unu ve kaba unları",
+    "quota_code": "SRB029",
+    "period": "01.01-31.12"
+   },
+   {
+    "gtip": "1209.10.00.00.00",
+    "description": "Şeker pancarı tohumları",
+    "quota_code": "SRB030",
+    "period": "01.01-31.12"
+   },
+   {
+    "gtip": "1209.21.00.00.00",
+    "description": "Yonca tohumu",
+    "quota_code": "SRB031",
+    "period": "01.01-31.12"
+   },
+   {
+    "gtip": "1209.29.45.00.11",
+    "description": "Vicia sativa L. T ürü fiğ",
+    "quota_code": "SRB032",
+    "period": "01.01-31.12"
+   },
+   {
+    "gtip": "1209.29.45.00.12",
+    "description": "Diğer tür fiğ"
+   },
+   {
+    "gtip": "1209.29.45.00.13",
+    "description": "Poa palustris L., Poa trivialis L. C insi tohumlar"
+   },
+   {
+    "gtip": "1209.29.45.00.14",
+    "description": "Domuz ayrığı tohumu ( Dactylis glomerata L.)"
+   },
+   {
+    "gtip": "1209.29.45.00.15",
+    "description": "Tavus otları ( Agrosties ) tohumu"
+   },
+   {
+    "gtip": "1209.29.80.00.11",
+    "description": "Melez çim ( Lolium X hybridum Hausskn .)",
+    "quota_code": "SRB033",
+    "period": "01.01-31.12"
+   },
+   {
+    "gtip": "1209.29.80.00.12",
+    "description": "Orman salkım otu ( Poa nemoralis L.) tohumları"
+   },
+   {
+    "gtip": "1209.29.80.00.13",
+    "description": "Yüksek çayır yulafı ( Arrhenatherum elatius ( L.)J veC presl .)tohumları"
+   },
+   {
+    "gtip": "1209.29.80.00.14",
+    "description": "Korunga ( Onobrychis sativa L.)"
+   },
+   {
+    "gtip": "1209.29.80.00.15",
+    "description": "Burçak ( Vicia ervilia Willd .)"
+   },
+   {
+    "gtip": "1209.29.80.00.16",
+    "description": "Sorgum tohumu"
+   },
+   {
+    "gtip": "1209.29.80.00.17",
+    "description": "Yem şalgamı tohumu"
+   },
+   {
+    "gtip": "1209.29.80.00.18",
+    "description": "Diğerleri"
+   },
+   {
+    "gtip": "1209.99.10.00.00",
+    "description": "Orman ağaçlarının tohumları",
+    "quota_code": "SRB035",
+    "period": "01.01-31.12"
+   },
+   {
+    "gtip": "1211.90.86",
+    "description": "Diğerleri",
+    "quota_code": "SRB036",
+    "period": "01.01-31.12"
+   },
+   {
+    "gtip": "1512.11.91.00.00",
+    "description": "Ayçiçeği tohumu yağı",
+    "quota_code": "SRB037",
+    "period": "01.01-31.12"
+   },
+   {
+    "gtip": "1512.19.90.00.11",
+    "description": "Ayçiçeği tohumu yağı",
+    "quota_code": "SRB038",
+    "period": "01.01-31.12"
+   },
+   {
+    "gtip": "15.17",
+    "description": "Margarin; bu fasılda yer alan hayvansal veya bitkisel katı ve sıvı yağların veya farklı katı veya sıvı yağ fraksiyonlarının yenilen karışımları veya müstahzarları (15.16 pozisyonundaki yenilen katı veya sıvı yağlar ve bunların fraksiyonları hariç)",
+    "quota_code": "SRB039",
+    "period": "01.01-31.12"
+   },
+   {
+    "gtip": "1518.00.31.00.00",
+    "description": "Ham olanlar",
+    "quota_code": "SRB040",
+    "period": "01.01-31.12"
+   },
+   {
+    "gtip": "16.04",
+    "description": "Hazırlanmış veya konserve edilmiş balıklar; havyar ve balık yumurtalarından elde edilen havyar yerine kullanılan ürünler",
+    "quota_code": "SRB041",
+    "period": "01.01-31.12"
+   },
+   {
+    "gtip": "17.04",
+    "description": "Kakao içermeyen şeker mamulleri (beyaz çikolata dahil)",
+    "quota_code": "SRB042",
+    "period": "01.01-31.12"
+   },
+   {
+    "gtip": "18.06",
+    "description": "Çikolata ve kakao içeren diğer gıda müstahzarları",
+    "quota_code": "SRB043",
+    "period": "01.01-31.12"
+   },
+   {
+    "gtip": "1901.10",
+    "description": "Bebek veya küçük çocukların beslenmesinde kullanılan müstahzarlar (perakende satılacak hale getirilmiş)",
+    "quota_code": "SRB044",
+    "period": "01.01-31.12"
+   },
+   {
+    "gtip": "19.02",
+    "description": "Makarnalar (pişirilmiş veya et ile veya diğer maddelerle doldurulmuş veya başka şekilde hazırlanmış olsun olmasın) (spagetti, makaroni , şehriye, lazanya, gnocchi , ravioli , canelloni gibi); kuskus (hazırlanmış olsun olmasın)",
+    "quota_code": "SRB045",
+    "period": "01.01-31.12"
+   },
+   {
+    "gtip": "1902.20.30",
+    "description": "Ağırlık itibariyle %20 ’ den fazla sosis ve benzerlerini, her cins et ve sakatatı içerenler (her türlü katı yağ dahil ) [ yalnızca Yenipazar Mantısı]",
+    "quota_code": "SRB046",
+    "period": "01.01-31.12"
+   },
+   {
+    "gtip": "19.05",
+    "description": "Ekmek, pasta, kek, bisküvi ve diğer ekmekçilik mamulleri (kakao içersin içermesin); hosti , eczacılıkta kullanılan boş ilaç kapsülleri, mühür güllacı, pirinç kağıdı ve benzeri ürünler",
+    "quota_code": "SRB047",
+    "period": "01.01-31.12"
+   },
+   {
+    "gtip": "2001.10.00.00.00",
+    "description": "Hıyarlar ve kornişonlar",
+    "quota_code": "SRB048",
+    "period": "01.01-31.12"
+   },
+   {
+    "gtip": "2001.90.30.00.00",
+    "description": "Tatlı mısır ( Zea mays var. Saccharata )",
+    "quota_code": "SRB049",
+    "period": "01.01-31.12"
+   },
+   {
+    "gtip": "2004.90.50.00.11",
+    "description": "Bezelye",
+    "quota_code": "SRB050",
+    "period": "01.01-31.12"
+   },
+   {
+    "gtip": "2004.90.50.00.12",
+    "description": "Taze fasulyeler"
+   },
+   {
+    "gtip": "21.04",
+    "description": "Çorbalar, et suları ve müstahzarları; karışım halindeki homojenize gıda müstahzarları",
+    "quota_code": "SRB053",
+    "period": "01.01-31.12"
+   },
+   {
+    "gtip": "2105.00",
+    "description": "Dondurma ve yenilen diğer buzlar (kakao içersin içermesin)",
+    "quota_code": "SRB054",
+    "period": "01.01-31.12"
+   },
+   {
+    "gtip": "2106.10.20.00.11",
+    "description": "Diyet mamaları",
+    "quota_code": "SRB055",
+    "period": "01.01-31.12"
+   },
+   {
+    "gtip": "2106.10.20.00.19",
+    "description": "Diğerleri"
+   },
+   {
+    "gtip": "2106.90",
+    "description": "Diğerleri",
+    "quota_code": "SRB056",
+    "period": "01.01-31.12"
+   },
+   {
+    "gtip": "22.04",
+    "description": "Taze üzüm şarabı (kuvvetlendirilmiş şaraplar dahil); üzüm şırası (20.09 pozisyonunda yer alanlar hariç)",
+    "quota_code": "SRB057",
+    "period": "01.01-31.12"
+   },
+   {
+    "gtip": "2309.10",
+    "description": "Kedi veya köpek maması (perakende satılacak hale getirilmiş)",
+    "quota_code": "SRB058",
+    "period": "01.01-31.12"
+   },
+   {
+    "gtip": "2309.90",
+    "description": "Diğerleri",
+    "quota_code": "SRB059",
+    "period": "01.01-31.12"
+   }
+  ],
+  "item_count": 74,
+  "parser_version": 3,
+  "mevzuat_no": "quota:https://ticaret.gov.tr/data/5ba234df13b87610d0a0331d/5-Sırbistan-.docx"
+ }
+]
