@@ -20,6 +20,7 @@ import json
 import logging
 import os
 import re
+import sys
 from pathlib import Path
 from typing import Any
 
@@ -117,7 +118,15 @@ def _default_data_dir() -> Path:
     override = os.environ.get("OFFICIAL_DATA_DIR")
     if override:
         return Path(override)
-    return Path(__file__).resolve().parent / "data" / "official"
+    candidates = [
+        Path(__file__).resolve().parent / "data" / "official",
+        Path(sys.prefix) / "data" / "official",
+        Path.cwd() / "data" / "official",
+    ]
+    for candidate in candidates:
+        if (candidate / DATA_FILE).exists():
+            return candidate
+    return candidates[0]
 
 
 def list_label(list_name: str, cetvel: str | None) -> str:

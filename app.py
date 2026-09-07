@@ -2371,41 +2371,53 @@ class McpRateLimitMiddleware:
         self.asgi_app = asgi_app
 
     async def __call__(self, scope: dict[str, Any], receive: Any, send: Any) -> None:
-        if scope.get("type") == "http" and str(scope.get("path", "")).startswith("/mcp"):
-            try:
-                headers = {
-                    key.decode("latin-1").lower(): value.decode("latin-1")
-                    for key, value in scope.get("headers", [])
-                }
-                forwarded = headers.get("x-forwarded-for", "").split(",", 1)[0].strip()
-                client = scope.get("client") or ("unknown", 0)
-                client_ip = forwarded or str(client[0])
-                allowed, retry_after = rate_limiter.check(
-                    f"mcp:{client_ip}", limit=20, window_seconds=60
-                )
-                if not allowed:
-                    payload = json.dumps(
-                        {
-                            "error": "Çok hızlı MCP isteği gönderiyorsunuz. Lütfen kısa bir süre sonra yeniden deneyin.",
-                            "retry_after": retry_after,
-                        },
-                        ensure_ascii=False,
-                    ).encode("utf-8")
-                    await send(
-                        {
-                            "type": "http.response.start",
-                            "status": 429,
-                            "headers": [
-                                (b"content-type", b"application/json; charset=utf-8"),
-                                (b"retry-after", str(retry_after).encode("ascii")),
-                                (b"content-length", str(len(payload)).encode("ascii")),
-                            ],
-                        }
+        if scope.get("type") == "http":
+            for key, value in scope.get("headers", []):
+                if key.lower() == b"x-forwarded-proto" and value.lower() == b"https":
+                    scope["scheme"] = "https"
+                    break
+            path = str(scope.get("path", ""))
+            if path == "/mcp/":
+                scope["path"] = "/mcp"
+                if "raw_path" in scope:
+                    scope["raw_path"] = b"/mcp"
+                path = "/mcp"
+
+            if path.startswith("/mcp"):
+                try:
+                    headers = {
+                        key.decode("latin-1").lower(): value.decode("latin-1")
+                        for key, value in scope.get("headers", [])
+                    }
+                    forwarded = headers.get("x-forwarded-for", "").split(",", 1)[0].strip()
+                    client = scope.get("client") or ("unknown", 0)
+                    client_ip = forwarded or str(client[0])
+                    allowed, retry_after = rate_limiter.check(
+                        f"mcp:{client_ip}", limit=20, window_seconds=60
                     )
-                    await send({"type": "http.response.body", "body": payload})
-                    return
-            except Exception:
-                logger.exception("MCP rate limiter failed open")
+                    if not allowed:
+                        payload = json.dumps(
+                            {
+                                "error": "Çok hızlı MCP isteği gönderiyorsunuz. Lütfen kısa bir süre sonra yeniden deneyin.",
+                                "retry_after": retry_after,
+                            },
+                            ensure_ascii=False,
+                        ).encode("utf-8")
+                        await send(
+                            {
+                                "type": "http.response.start",
+                                "status": 429,
+                                "headers": [
+                                    (b"content-type", b"application/json; charset=utf-8"),
+                                    (b"retry-after", str(retry_after).encode("ascii")),
+                                    (b"content-length", str(len(payload)).encode("ascii")),
+                                ],
+                            }
+                        )
+                        await send({"type": "http.response.body", "body": payload})
+                        return
+                except Exception:
+                    logger.exception("MCP rate limiter failed open")
         await self.asgi_app(scope, receive, send)
 
 

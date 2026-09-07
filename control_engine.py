@@ -21,6 +21,7 @@ import json
 import os
 import re
 import sqlite3
+import sys
 import time
 import unicodedata
 import zipfile
@@ -459,7 +460,13 @@ def infer_process(text: str, title: str) -> dict[str, Any]:
 
 class ImportControlEngine:
     def __init__(self, config_path: str | Path | None = None, data_dir: str | Path | None = None) -> None:
-        config_file = Path(config_path or Path(__file__).with_name("control_sources.json"))
+        candidate = Path(config_path or Path(__file__).with_name("control_sources.json"))
+        if not candidate.exists():
+            for p in (Path(sys.prefix) / "control_sources.json", Path.cwd() / "control_sources.json"):
+                if p.exists():
+                    candidate = p
+                    break
+        config_file = candidate
         config = json.loads(config_file.read_text(encoding="utf-8"))
         self.rules_config = list(config.get("rules", []))
         configured_year = str(config.get("valid_from", ""))[:4]

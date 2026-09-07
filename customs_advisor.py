@@ -14,6 +14,7 @@ import json
 import logging
 import os
 import re
+import sys
 import time
 import unicodedata
 from datetime import datetime
@@ -395,7 +396,13 @@ class CustomsEvidencePack(BaseModel):
 
 class OfficialSourceRegistry:
     def __init__(self, path: str | Path | None = None) -> None:
-        config_path = Path(path or Path(__file__).with_name("customs_sources.json"))
+        candidate = Path(path or Path(__file__).with_name("customs_sources.json"))
+        if not candidate.exists():
+            for p in (Path(sys.prefix) / "customs_sources.json", Path.cwd() / "customs_sources.json"):
+                if p.exists():
+                    candidate = p
+                    break
+        config_path = candidate
         config = json.loads(config_path.read_text(encoding="utf-8"))
         self.cache_seconds = max(300, int(config.get("cache_seconds", 21600)))
         self.sources = list(config.get("sources", []))

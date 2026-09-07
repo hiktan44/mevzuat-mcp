@@ -8,3 +8,6 @@ recursive-exclude * *.py[co]
 recursive-exclude logs *
 include tariff_sources.json
 include control_sources.json
+include customs_sources.json
+recursive-include data *.json
+recursive-include benchmarks *.jsonl

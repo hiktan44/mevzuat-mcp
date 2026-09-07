@@ -29,6 +29,7 @@ import os
 import re
 import sqlite3
 import struct
+import sys
 import time
 from dataclasses import dataclass, field
 from datetime import UTC, date, datetime
@@ -830,6 +831,11 @@ class TradeMeasureStore:
         root.mkdir(parents=True, exist_ok=True)
         self.db_path = root / "trade_measures.sqlite3"
         self.seed_dir = Path(seed_dir or SEED_DIR)
+        if not (self.seed_dir / "antidumping_measures.json").exists():
+            for candidate in (Path(sys.prefix) / "data" / "official", Path.cwd() / "data" / "official"):
+                if (candidate / "antidumping_measures.json").exists():
+                    self.seed_dir = candidate
+                    break
         self._cache: dict[str, Any] = {}
         self._init_schema()
 

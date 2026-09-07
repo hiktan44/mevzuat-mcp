@@ -16,6 +16,7 @@ import logging
 import os
 import re
 import sqlite3
+import sys
 import time
 import unicodedata
 import zipfile
@@ -322,7 +323,13 @@ class TariffEngine:
     """Synchronise, query and diff official tariff snapshots."""
 
     def __init__(self, config_path: str | Path | None = None, data_dir: str | Path | None = None) -> None:
-        config_file = Path(config_path or Path(__file__).with_name("tariff_sources.json"))
+        candidate = Path(config_path or Path(__file__).with_name("tariff_sources.json"))
+        if not candidate.exists():
+            for p in (Path(sys.prefix) / "tariff_sources.json", Path.cwd() / "tariff_sources.json"):
+                if p.exists():
+                    candidate = p
+                    break
+        config_file = candidate
         config = json.loads(config_file.read_text(encoding="utf-8"))
         self.sources = list(config.get("sources", []))
         self.sync_interval_seconds = max(300, int(config.get("sync_interval_seconds", 21600)))

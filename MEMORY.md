@@ -1,6 +1,6 @@
 # Memory — default
 
-> Generated: 2026-09-08 01:51:31  
+> Generated: 2026-09-08 02:07:40  
 > Total memories: **268**  
 > Breakdown: instruction: 25, fact: 19, decision: 25, goal: 25, commitment: 10, preference: 14, context: 25, event: 25, learning: 25, observation: 25, artifact: 25, error: 25
 
@@ -1104,17 +1104,17 @@ MesajPilot guvenlik turu (26 Agu, commit 29a6904 + devami): DUZELTILDI = drizzle
 
 *Confidence: 0.95 | Status: active | Created: 2026-08-26T18:13:56*
 
-### AdSeeQ manual credit UI error root cause: async Re...
-
-AdSeeQ manual credit UI error root cause: async React submit handlers called event.currentTarget.reset() after await, so successful credit/payment API responses could be followed by a client-side reset exception and falsely displayed as errors. Fixed by capturing the form element before await in commit 08ef798; typecheck, 8 tests, build, and Coolify deployment passed.
-
-*Confidence: 1.0 | Status: active | Created: 2026-08-10T18:17:42*
-
 ### Recorder failure root cause validated on 20 July 2...
 
 Recorder failure root cause validated on 20 July 2026: user actions were captured (session rec_cada8a50 has 19 events), but the live UI displayed newer empty session rec_e5ef1bde. Fixed in commit 524bd80 by syncing the extension to the newest page-created session, proxying local recording data through the trusted local agent, and selecting the most recently updated session in the UI. Chrome Recorder package version is 0.4.0; Sites version 23 deployed successfully.
 
 *Confidence: 1.0 | Status: active | Created: 2026-07-20T10:16:01*
+
+### AdSeeQ manual credit UI error root cause: async Re...
+
+AdSeeQ manual credit UI error root cause: async React submit handlers called event.currentTarget.reset() after await, so successful credit/payment API responses could be followed by a client-side reset exception and falsely displayed as errors. Fixed by capturing the form element before await in commit 08ef798; typecheck, 8 tests, build, and Coolify deployment passed.
+
+*Confidence: 1.0 | Status: active | Created: 2026-08-10T18:17:42*
 
 ### Randevu linki paylaşımı canlıda (2026): panelde 'R...
 
