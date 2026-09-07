@@ -1316,6 +1316,9 @@ class TradeMeasureEngine:
                 token = value
         rows: list[dict[str, Any]] = []
         start = 0
+        records_total = 0
+        raw_item_count = 0
+        sample_keys: list[str] | None = None
         while True:
             payload = {
                 "draw": 1,
@@ -1335,6 +1338,10 @@ class TradeMeasureEngine:
             response.raise_for_status()
             body = response.json()
             data = body.get("data", [])
+            records_total = int(body.get("recordsTotal", 0))
+            raw_item_count += len(data)
+            if data and sample_keys is None:
+                sample_keys = sorted(data[0].keys())
             for item in data:
                 name = BeautifulSoup(item.get("mevAdi", ""), "html.parser").get_text(" ", strip=True)
                 if SURVEILLANCE_TITLE.lower()[:20] not in name.lower() and "gözetim" not in name.lower():
@@ -1347,15 +1354,21 @@ class TradeMeasureEngine:
                     }
                 )
             start += len(data)
-            if not data or start >= int(body.get("recordsTotal", 0)):
+            if not data or start >= records_total:
                 break
             await asyncio.sleep(0.5)
+        if not rows:
+            # Aramanın neden bos dondugunu bir sonraki hata mesajinda gorebilmek icin
+            # (antiforgery cerezi, sunucunun bildirdigi toplam kayit ve alan adlari
+            # sitenin API'sini gozlemsiz degistirmesi durumunda tani koymayi saglar).
+            detail = f"antiforgery cerezi {'bulundu' if token else 'BULUNAMADI'}, recordsTotal={records_total}, satir={raw_item_count}"
+            if sample_keys is not None:
+                detail += f", ornek alanlar={sample_keys}"
+            raise ValueError(f"mevzuat.gov.tr aramasında '{title}' için sonuç bulunamadı ({detail}).")
         return rows
 
     async def _sync_surveillance(self) -> SyncOutcome:
         index = await self._mevzuat_search(SURVEILLANCE_TITLE)
-        if not index:
-            raise ValueError("mevzuat.gov.tr aramasında gözetim tebliği bulunamadı.")
         docs: list[dict[str, Any]] = []
         fetched = 0
         for entry in index:
