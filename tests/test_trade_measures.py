@@ -10,6 +10,7 @@ import unittest
 from datetime import date
 from pathlib import Path
 
+import httpx
 import openpyxl
 
 import trade_measures as tm
@@ -371,6 +372,70 @@ class OfficialSeedTests(unittest.TestCase):
         self.assertGreater(status["communiques"]["item_count"], 10)
         report = engine.lookup("730640209000", "Çin", today=date(2026, 9, 6))
         self.assertTrue(report.applicable_anti_dumping)
+
+
+class MevzuatSearchDiagnosticsTests(unittest.IsolatedAsyncioTestCase):
+    """mevzuat.gov.tr aramasi bos donduğunde hata mesaji tani konulabilir bilgi tasimali.
+
+    Sitenin antiforgery cerez adi veya Datatable API alan adlari degisirse arama
+    sessizce bos donuyordu; bu testler o durumun ayirt edilebilir bir mesajla
+    raporlandigini kilit altina alir.
+    """
+
+    def _engine(self, handler) -> tm.TradeMeasureEngine:
+        client = httpx.AsyncClient(transport=httpx.MockTransport(handler))
+        return tm.TradeMeasureEngine(tempfile.mkdtemp(), http=client)
+
+    async def test_missing_antiforgery_cookie_is_named_in_the_error(self):
+        def handler(request: httpx.Request) -> httpx.Response:
+            if request.method == "GET":
+                return httpx.Response(200, text="<html></html>")
+            return httpx.Response(200, json={"data": [], "recordsTotal": 0})
+
+        engine = self._engine(handler)
+        with self.assertRaises(ValueError) as ctx:
+            await engine._mevzuat_search(tm.SURVEILLANCE_TITLE)
+        self.assertIn("BULUNAMADI", str(ctx.exception))
+        self.assertIn("recordsTotal=0", str(ctx.exception))
+
+    async def test_schema_drift_reports_the_actual_field_names(self):
+        def handler(request: httpx.Request) -> httpx.Response:
+            if request.method == "GET":
+                return httpx.Response(200, text="<html></html>", headers={"Set-Cookie": ".AspNetCore.Antiforgery.abc=tokenvalue"})
+            return httpx.Response(200, json={"data": [{"ad": "İthalatta Gözetim Uygulanmasına İlişkin Tebliğ", "no": "2026/1"}], "recordsTotal": 1})
+
+        engine = self._engine(handler)
+        with self.assertRaises(ValueError) as ctx:
+            await engine._mevzuat_search(tm.SURVEILLANCE_TITLE)
+        message = str(ctx.exception)
+        self.assertIn("bulundu", message)
+        self.assertIn("ornek alanlar", message)
+        self.assertIn("'ad'", message)
+        self.assertIn("'no'", message)
+
+    async def test_matching_item_is_still_returned_normally(self):
+        def handler(request: httpx.Request) -> httpx.Response:
+            if request.method == "GET":
+                return httpx.Response(200, text="<html></html>", headers={"Set-Cookie": ".AspNetCore.Antiforgery.abc=tokenvalue"})
+            return httpx.Response(
+                200,
+                json={
+                    "data": [
+                        {
+                            "mevAdi": "İthalatta Gözetim Uygulanmasına İlişkin Tebliğ (No: 2026/1)",
+                            "mevzuatNo": "50001",
+                            "resmiGazeteTarihi": "01/01/2026",
+                            "resmiGazeteSayisi": "31111",
+                        }
+                    ],
+                    "recordsTotal": 1,
+                },
+            )
+
+        engine = self._engine(handler)
+        rows = await engine._mevzuat_search(tm.SURVEILLANCE_TITLE)
+        self.assertEqual(len(rows), 1)
+        self.assertEqual(rows[0]["mevzuat_no"], "50001")
 
 
 if __name__ == "__main__":
