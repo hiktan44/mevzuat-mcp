@@ -392,9 +392,38 @@ class TariffPrefixLookupTests(unittest.IsolatedAsyncioTestCase):
         self.assertFalse(exact.requires_user_selection)
         self.assertEqual(exact.children, [])
 
+    async def test_four_digit_heading_decision_tree(self) -> None:
+        self._insert_measure("h1", "import-2026", "691110000011", "customs_duty", 12, "7")
+        self._insert_measure("h2", "import-2026", "691190000012", "customs_duty", 12, "7")
+        tree = await self.engine.decision_tree("6911", origin_country="Çin", auto_sync=False)
+        self.assertEqual(tree.level, "HS4")
+        self.assertEqual(tree.next_level, "HS6")
+        self.assertEqual(tree.total_children, 2)
+        child_codes = [child.code for child in tree.children]
+        self.assertEqual(child_codes, ["691110", "691190"])
+        self.assertEqual(tree.children[0].level, "HS6")
 
-if __name__ == "__main__":
-    unittest.main()
+    async def test_unlisted_igv_defaults_to_zero_in_calculate(self) -> None:
+        self._insert_measure("u1", "import-2026", "847130000000", "customs_duty", 0, "7")
+        # No additional_duty measure row exists for this GTIP in igv-2026 snapshot
+        inputs = LandedCostInput(
+            invoice_value=1000,
+            freight=50,
+            insurance=10,
+            vat_rate=20,
+            payment_method="peşin",
+            additional_financial_liability_rate=0,
+            anti_dumping_amount=0,
+            sct_amount=0,
+            surveillance_unit_value=0,
+        )
+        calc = await self.engine.calculate("847130000000", "Çin", inputs)
+        cost = calc["cost"]
+        # Because it's not in the IGV decree, IGV defaults to 0% and does not block calculation
+        self.assertEqual(cost["status"], "complete")
+        igv_line = next(line for line in cost["lines"] if line["code"] == "additional_duty")
+        self.assertEqual(igv_line["rate"], 0.0)
+        self.assertEqual(igv_line["amount"], 0.0)
 
 
 class LiraSummaryTests(unittest.TestCase):
@@ -440,3 +469,7 @@ class LiraSummaryTests(unittest.TestCase):
         self.assertEqual(result.try_summary["status"], "partial")
         self.assertIsNone(result.try_summary["landed_total_try"])
         self.assertEqual(result.try_summary["customs_value_try"], 450000.0)
+
+
+if __name__ == "__main__":
+    unittest.main()

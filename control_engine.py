@@ -906,8 +906,8 @@ class ImportControlEngine:
 
     async def lookup(self, gtip: str) -> ImportControlLookupResult:
         code = _normalise_gtip(gtip)
-        if code is None or len(code) != 12:
-            raise ValueError("Kontrol sorgusu için 12 haneli GTİP gereklidir.")
+        if code is None or len(code) not in {4, 6, 8, 10, 12}:
+            raise ValueError("Kontrol sorgusu için 4, 6, 8, 10 veya 12 haneli GTİP gereklidir.")
         if not self.status().ready:
             return ImportControlLookupResult(
                 status="unavailable", gtip=code,
@@ -921,10 +921,13 @@ class ImportControlEngine:
                 SELECT d.*, s.gtip_prefix, s.description, s.source_line, s.source_offset, s.excluded, s.list_kind
                 FROM control_scope s
                 JOIN control_snapshots d ON d.id=s.snapshot_id
-                WHERE d.active=1 AND substr(?,1,length(s.gtip_prefix))=s.gtip_prefix
+                WHERE d.active=1 AND (
+                    substr(?,1,length(s.gtip_prefix))=s.gtip_prefix
+                    OR substr(s.gtip_prefix,1,length(?))=?
+                )
                 ORDER BY length(s.gtip_prefix) DESC, d.code
                 """,
-                (code,),
+                (code, code, code),
             ).fetchall()
         excluded_by_rule: dict[str, list[sqlite3.Row]] = {}
         for row in rows:
@@ -1018,6 +1021,120 @@ class ImportControlEngine:
                     }
                 )
         return result[:limit]
+
+    def search_controls(self, query: str, limit: int = 50) -> list[dict[str, Any]]:
+        """Ürün adı, kelime veya GTİP parçasıyla denetim tebliğleri ve Ek-1 kapsamlarını arar."""
+        text = str(query or "").strip()
+        if not text:
+            return []
+        bounded_limit = max(1, min(limit, 100))
+        wildcard = f"%{text}%"
+        normalised_num = _normalise_gtip(text) or ""
+        with self._connect() as db:
+            rows = db.execute(
+                """
+                SELECT s.gtip_prefix, s.description, s.list_kind, d.code, d.title, d.authority,
+                       d.system, d.source_url, d.required_documents_json, d.exemptions_json
+                FROM control_scope s
+                JOIN control_snapshots d ON d.id=s.snapshot_id
+                WHERE d.active=1 AND s.excluded=0 AND (
+                    s.description LIKE ?
+                    OR d.title LIKE ?
+                    OR d.code LIKE ?
+                    OR (? != '' AND s.gtip_prefix LIKE ?)
+                )
+                ORDER BY d.code, s.gtip_prefix
+                LIMIT ?
+                """,
+                (wildcard, wildcard, wildcard, normalised_num, f"{normalised_num}%", bounded_limit),
+            ).fetchall()
+        
+        results: list[dict[str, Any]] = []
+        for row in rows:
+            docs = []
+            if row["required_documents_json"]:
+                try:
+                    docs = json.loads(row["required_documents_json"])
+                except Exception:
+                    docs = []
+            exemptions = []
+            if row["exemptions_json"]:
+                try:
+                    exemptions = json.loads(row["exemptions_json"])
+                except Exception:
+                    exemptions = []
+            results.append({
+                "gtip_prefix": row["gtip_prefix"],
+                "gtip": row["gtip_prefix"],
+                "description": row["description"],
+                "commodity_name": row["description"],
+                "list_kind": row["list_kind"],
+                "communique_code": row["code"],
+                "communique_title": row["title"],
+                "authority": row["authority"],
+                "system": row["system"],
+                "source_url": row["source_url"],
+                "required_documents": docs,
+                "exemptions": exemptions,
+                "rule": {
+                    "code": row["code"],
+                    "title": row["title"],
+                    "system": row["system"],
+                    "source_url": row["source_url"],
+                    "required_documents": docs,
+                    "exemptions": exemptions,
+                },
+            })
+        return results
+
+    def get_communiques_catalog(self) -> list[dict[str, Any]]:
+        """Tüm güncel Ürün Güvenliği ve Denetimi tebliğlerinin fihristini döndürür."""
+        with self._connect() as db:
+            rows = db.execute(
+                """
+                SELECT id, code, title, category, authority, system, risk_based,
+                       physical_inspection_possible, laboratory_test_possible,
+                       required_documents_excerpt, required_documents_json, exemptions_json,
+                       scope_count, source_url, official_gazette_date, official_gazette_number
+                FROM control_snapshots
+                WHERE active=1
+                ORDER BY CAST(SUBSTR(code, INSTR(code, '/') + 1) AS INTEGER) ASC, code ASC
+                """
+            ).fetchall()
+        catalog: list[dict[str, Any]] = []
+        for row in rows:
+            docs = []
+            if row["required_documents_json"]:
+                try:
+                    docs = json.loads(row["required_documents_json"])
+                except Exception:
+                    docs = []
+            if not docs and row["required_documents_excerpt"]:
+                raw_docs = structure_document_list(row["required_documents_excerpt"])
+                docs = [item.model_dump(mode="json") if hasattr(item, "model_dump") else item for item in raw_docs]
+            exemptions = []
+            if row["exemptions_json"]:
+                try:
+                    exemptions = json.loads(row["exemptions_json"])
+                except Exception:
+                    exemptions = []
+            catalog.append({
+                "code": row["code"],
+                "title": row["title"],
+                "category": row["category"],
+                "authority": row["authority"],
+                "system": row["system"],
+                "risk_based": bool(row["risk_based"]),
+                "physical_inspection_possible": bool(row["physical_inspection_possible"]),
+                "laboratory_test_possible": bool(row["laboratory_test_possible"]),
+                "scope_count": row["scope_count"],
+                "source_url": row["source_url"],
+                "official_gazette_date": row["official_gazette_date"],
+                "official_gazette_number": row["official_gazette_number"],
+                "required_documents": docs,
+                "exemptions": exemptions,
+            })
+        return catalog
 
     async def periodic_sync_loop(self) -> None:
         while True:

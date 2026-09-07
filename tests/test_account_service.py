@@ -170,6 +170,76 @@ class AccountServiceTests(unittest.TestCase):
         self.assertEqual(account["plan"]["code"], "team")
         self.assertEqual(account["subscription"]["billing_cycle"], "yearly")
 
+    def test_default_admin_access(self):
+        self.assertTrue(self.accounts.is_admin(user("h1", "hikmet044@gmail.com")))
+        self.assertTrue(self.accounts.is_admin(user("h2", "hikmet044@gmail")))
+        self.assertTrue(self.accounts.is_admin(user("h3", "hiktan44@gmail.com")))
+        self.assertFalse(self.accounts.is_admin(user("other", "normaluser@example.com")))
+
+    def test_admin_grant_credit_and_quota_consumption(self):
+        admin_actor = user("admin", "hikmet044@gmail.com")
+        # Base limit for starter vision is 5
+        base_account = self.accounts.account(user())
+        self.assertEqual(base_account["quotas"]["vision"]["limit"], 5)
+        # Grant +15 credits
+        res = self.accounts.admin_grant_credit(admin_actor, "user-1", "vision", 15, note="Test hibesi")
+        self.assertTrue(res["granted"])
+        
+        # New limit should be 20 (5 + 15)
+        updated_account = self.accounts.account(user())
+        self.assertEqual(updated_account["quotas"]["vision"]["limit"], 20)
+        self.assertEqual(updated_account["quotas"]["vision"]["granted"], 15)
+        
+        # Can now consume 15 times without failing
+        for _ in range(15):
+            self.accounts.consume(user(), "vision")
+        self.assertEqual(self.accounts.account(user())["quotas"]["vision"]["used"], 15)
+        self.assertEqual(self.accounts.account(user())["quotas"]["vision"]["remaining"], 5)
+
+    def test_record_llm_usage_and_expense_filters(self):
+        self.accounts.record_llm_usage(
+            google_sub="user-1",
+            email="user@example.com",
+            operation="vision",
+            model="google/gemini-flash-latest",
+            prompt_tokens=1000,
+            completion_tokens=200,
+            cost_usd=0.00015,
+        )
+        self.accounts.record_llm_usage(
+            google_sub="user-1",
+            email="user@example.com",
+            operation="classification",
+            model="z-ai/glm-5.3-flash",
+            prompt_tokens=2000,
+            completion_tokens=500,
+            cost_usd=0.00025,
+        )
+        # Daily
+        daily = self.accounts.admin_llm_expenses("daily")
+        self.assertEqual(daily["call_count"], 2)
+        self.assertEqual(daily["total_tokens"], 3700)
+        self.assertAlmostEqual(daily["total_cost_usd"], 0.0004, places=4)
+        self.assertEqual(len(daily["by_model"]), 2)
+        self.assertEqual(len(daily["by_operation"]), 2)
+        
+        # Monthly
+        monthly = self.accounts.admin_llm_expenses("monthly")
+        self.assertEqual(monthly["call_count"], 2)
+
+    def test_admin_payments_and_user_logs(self):
+        admin_actor = user("admin", "hikmet044@gmail.com")
+        self.accounts.admin_set_plan(admin_actor, "user-1", "expert", "active")
+        self.accounts.consume(user(), "vision")
+        
+        logs = self.accounts.admin_user_logs(limit=50)
+        self.assertTrue(any(l["action"] == "subscription.set" for l in logs))
+        self.assertTrue(any(l["action"] == "kota.vision" for l in logs))
+        
+        payments = self.accounts.admin_payments_overview()
+        self.assertIn("sessions", payments)
+        self.assertIn("subscriptions", payments)
+
 
 class BillingSecurityTests(unittest.TestCase):
     @staticmethod
@@ -231,3 +301,4 @@ class BillingSecurityTests(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+

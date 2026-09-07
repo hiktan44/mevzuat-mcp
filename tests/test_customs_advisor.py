@@ -11,6 +11,7 @@ from unittest.mock import AsyncMock, patch
 import httpx
 from PIL import Image
 
+from tariff_engine import TariffLookupResult
 from customs_advisor import (
     CandidateGtip,
     ClassificationAnswer,
@@ -180,6 +181,17 @@ class CustomsAdvisorSafetyTests(unittest.TestCase):
     def test_non_image_upload_is_rejected(self) -> None:
         with self.assertRaises(ValueError):
             validate_image(b"not-an-image", "image/png")
+
+    def test_decompression_bomb_and_oversized_dimensions_are_rejected(self) -> None:
+        import warnings
+        original = io.BytesIO()
+        # 6000 x 5000 = 30,000,000 pixels (> 25 MP limit)
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore", Image.DecompressionBombWarning)
+            Image.new("RGB", (6000, 5000), "white").save(original, format="PNG")
+            with self.assertRaises(ValueError) as exc:
+                validate_image(original.getvalue(), "image/png")
+        self.assertIn("25 megapiksel", str(exc.exception))
 
     def test_vision_json_parser_accepts_fenced_object(self) -> None:
         parsed = _parse_json_object('```json\n{"product_name":"Çocuk şortu"}\n```')
@@ -527,6 +539,73 @@ class TariffClassificationTests(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(len(calls), 3)
         self.assertEqual(result.candidates[0].code, "691110")
         self.assertEqual(result.candidates[0].model_votes, 2)
+
+    async def test_evidence_pack_verifies_and_demotes_unverified_client_gate_flags(self) -> None:
+        class FakeRegistry:
+            async def gather(self, inquiry):
+                return []
+
+            async def close(self):
+                pass
+
+        class PartialTariffEngine:
+            async def lookup(self, code, **kwargs):
+                return TariffLookupResult(
+                    status="partial",
+                    gtip=code,
+                    as_of="2026-09-08T00:00:00+03:00",
+                    matched_gtip_count=2,
+                    unambiguous_rates={"customs_duty": 8.0},
+                    ambiguous_measure_types=[],
+                    rate_variants={"customs_duty": [8.0]},
+                    measures=[],
+                )
+
+        class NotFoundTariffEngine:
+            async def lookup(self, code, **kwargs):
+                return TariffLookupResult(
+                    status="not_found",
+                    gtip=code,
+                    as_of="2026-09-08T00:00:00+03:00",
+                    matched_gtip_count=0,
+                    unambiguous_rates={},
+                    ambiguous_measure_types=[],
+                    rate_variants={},
+                    measures=[],
+                )
+
+        inquiry = CustomsInquiry(
+            question="Bu ürünün gümrük durumu nedir?",
+            product_description="Porselen fincan",
+            candidate_gtip="691110000000",
+            exact_gtip_confirmed=True,
+            tariff_selection_confirmed=True,
+            classification_confidence_score=95,
+        )
+
+        advisor_partial = CustomsAdvisor(
+            registry=FakeRegistry(),
+            tariff_engine=PartialTariffEngine(),
+        )
+        try:
+            pack_partial = await advisor_partial.evidence_pack(inquiry)
+            self.assertFalse(pack_partial.inquiry.exact_gtip_confirmed)
+            self.assertTrue(pack_partial.inquiry.tariff_selection_confirmed)
+            self.assertEqual(pack_partial.inquiry.classification_confidence_score, 60)
+        finally:
+            await advisor_partial.close()
+
+        advisor_not_found = CustomsAdvisor(
+            registry=FakeRegistry(),
+            tariff_engine=NotFoundTariffEngine(),
+        )
+        try:
+            pack_not_found = await advisor_not_found.evidence_pack(inquiry)
+            self.assertFalse(pack_not_found.inquiry.exact_gtip_confirmed)
+            self.assertFalse(pack_not_found.inquiry.tariff_selection_confirmed)
+            self.assertEqual(pack_not_found.inquiry.classification_confidence_score, 30)
+        finally:
+            await advisor_not_found.close()
 
 
 if __name__ == "__main__":

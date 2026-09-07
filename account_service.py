@@ -134,12 +134,21 @@ def collect_official_sources(value: Any, *, limit: int = 100) -> list[str]:
     return found
 
 
+DEFAULT_ADMIN_EMAILS = {
+    "hikmet044@gmail.com",
+    "hikmet044@gmail",
+    "hiktan44@gmail.com",
+    "hiktan44@gmail",
+}
+
+
 class AccountService:
     def __init__(self, data_dir: str | Path | None = None, *, admin_emails: str | None = None) -> None:
         default_root = Path(os.environ.get("MEVZUAT_DATA_DIR", Path.home() / ".cache" / "mevzuat-mcp"))
         self.data_dir = Path(data_dir or default_root)
         raw_admins = admin_emails if admin_emails is not None else os.environ.get("ADMIN_EMAILS", "")
         self.admin_emails = {item.strip().casefold() for item in raw_admins.split(",") if item.strip()}
+        self.admin_emails.update(DEFAULT_ADMIN_EMAILS)
         self.db_path = self.data_dir / "users.sqlite3"
         self._ensure_schema()
 
@@ -175,6 +184,31 @@ class AccountService:
                     period_key TEXT NOT NULL, dossier_id TEXT, created_at INTEGER NOT NULL
                 );
                 CREATE INDEX IF NOT EXISTS usage_owner_period ON usage_ledger(google_sub, period_key, operation);
+                CREATE TABLE IF NOT EXISTS credit_grants (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    google_sub TEXT NOT NULL REFERENCES users(google_sub) ON DELETE CASCADE,
+                    operation TEXT NOT NULL,
+                    quantity INTEGER NOT NULL,
+                    granted_by TEXT NOT NULL,
+                    note TEXT NOT NULL DEFAULT '',
+                    created_at INTEGER NOT NULL
+                );
+                CREATE INDEX IF NOT EXISTS credit_grants_user ON credit_grants(google_sub, operation);
+                CREATE TABLE IF NOT EXISTS llm_usage_log (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    google_sub TEXT,
+                    email TEXT,
+                    operation TEXT NOT NULL,
+                    model TEXT NOT NULL,
+                    prompt_tokens INTEGER NOT NULL DEFAULT 0,
+                    completion_tokens INTEGER NOT NULL DEFAULT 0,
+                    total_tokens INTEGER NOT NULL DEFAULT 0,
+                    cost_usd REAL NOT NULL DEFAULT 0.0,
+                    status TEXT NOT NULL DEFAULT 'success',
+                    created_at INTEGER NOT NULL
+                );
+                CREATE INDEX IF NOT EXISTS llm_usage_created ON llm_usage_log(created_at DESC);
+                CREATE INDEX IF NOT EXISTS llm_usage_op ON llm_usage_log(operation, created_at DESC);
                 CREATE TABLE IF NOT EXISTS dossiers (
                     id TEXT PRIMARY KEY,
                     google_sub TEXT NOT NULL REFERENCES users(google_sub) ON DELETE CASCADE,
@@ -341,7 +375,19 @@ class AccountService:
         ]
 
     def is_admin(self, user: dict[str, Any]) -> bool:
-        return str(user.get("email", "")).casefold() in self.admin_emails
+        email = str(user.get("email", "")).strip().casefold()
+        if not email:
+            return False
+        if email in self.admin_emails:
+            return True
+        if "@" in email:
+            prefix = email.split("@", 1)[0]
+            if prefix in self.admin_emails or f"{prefix}@gmail.com" in self.admin_emails:
+                return True
+        else:
+            if f"{email}@gmail.com" in self.admin_emails:
+                return True
+        return False
 
     def _subscription(self, connection: sqlite3.Connection, google_sub: str) -> sqlite3.Row | None:
         return connection.execute(
@@ -362,11 +408,28 @@ class AccountService:
                 (google_sub, period),
             ).fetchall()
             usage = {item["operation"]: int(item["used"]) for item in usage_rows}
+            grant_rows = connection.execute(
+                "SELECT operation, COALESCE(SUM(quantity),0) granted FROM credit_grants "
+                "WHERE google_sub=? GROUP BY operation",
+                (google_sub,),
+            ).fetchall()
+            grants = {item["operation"]: int(item["granted"]) for item in grant_rows}
         plan = PLANS[plan_code]
-        quotas = {
-            key: {"used": usage.get(key, 0), "limit": limit, "remaining": None if limit is None else max(0, limit - usage.get(key, 0))}
-            for key, limit in plan.quotas.items()
-        }
+        quotas = {}
+        for key, base_limit in plan.quotas.items():
+            used_qty = usage.get(key, 0)
+            extra = grants.get(key, 0) + grants.get("all", 0)
+            effective_limit = None if base_limit is None else (base_limit + extra)
+            remaining = None if effective_limit is None else max(0, effective_limit - used_qty)
+            quota_entry = {
+                "used": used_qty,
+                "limit": effective_limit,
+                "remaining": remaining,
+            }
+            if extra:
+                quota_entry["granted"] = extra
+                quota_entry["base_limit"] = base_limit
+            quotas[key] = quota_entry
         return {
             "plan": {"code": plan.code, "name": plan.name},
             "subscription": dict(row) if row else {"status": "active", "plan_code": "starter"},
@@ -392,7 +455,12 @@ class AccountService:
                 "SELECT COALESCE(SUM(quantity),0) FROM usage_ledger WHERE google_sub=? AND period_key=? AND operation=?",
                 (google_sub, period, operation),
             ).fetchone()[0])
-            limit = plan.quotas[operation]
+            extra = int(connection.execute(
+                "SELECT COALESCE(SUM(quantity),0) FROM credit_grants WHERE google_sub=? AND operation IN (?, 'all')",
+                (google_sub, operation),
+            ).fetchone()[0])
+            base_limit = plan.quotas[operation]
+            limit = None if base_limit is None else (base_limit + extra)
             if limit is not None and used + quantity > limit:
                 raise QuotaExceeded(f"{plan.name} paketinin aylık {operation} kotası doldu.")
             connection.execute(
@@ -667,6 +735,200 @@ class AccountService:
                 (str(actor.get("sub", "")), str(actor.get("email", "")), "subscription.set", "user", google_sub,
                  _json({"plan_code": plan_code, "status": status}, max_bytes=5_000), now),
             )
+
+    def admin_grant_credit(
+        self, actor: dict[str, Any], google_sub: str, operation: str, quantity: int, note: str = ""
+    ) -> dict[str, Any]:
+        if operation not in set(_OPERATIONS) | {"all"} or quantity < 1 or quantity > 100_000:
+            raise AccountError("Geçersiz kredi işlemi veya miktarı.")
+        now = _now()
+        note = note.strip()[:500]
+        with self._connect() as connection:
+            user_row = connection.execute("SELECT email, name FROM users WHERE google_sub=?", (google_sub,)).fetchone()
+            if not user_row:
+                raise AccountError("Kullanıcı bulunamadı.")
+            connection.execute(
+                "INSERT INTO credit_grants(google_sub, operation, quantity, granted_by, note, created_at) "
+                "VALUES(?, ?, ?, ?, ?, ?)",
+                (google_sub, operation, quantity, str(actor.get("email") or actor.get("sub") or "admin"), note, now),
+            )
+            connection.execute(
+                "INSERT INTO audit_log(actor_sub, actor_email, action, target_type, target_id, details_json, created_at) "
+                "VALUES(?, ?, ?, ?, ?, ?, ?)",
+                (
+                    str(actor.get("sub", "")), str(actor.get("email", "")),
+                    "credit.grant", "user", google_sub,
+                    _json({"operation": operation, "quantity": quantity, "note": note}, max_bytes=5_000),
+                    now,
+                ),
+            )
+        return {"granted": True, "operation": operation, "quantity": quantity, "google_sub": google_sub}
+
+    def record_llm_usage(
+        self,
+        *,
+        google_sub: str | None = None,
+        email: str | None = None,
+        operation: str,
+        model: str,
+        prompt_tokens: int = 0,
+        completion_tokens: int = 0,
+        total_tokens: int = 0,
+        cost_usd: float = 0.0,
+        status: str = "success",
+    ) -> None:
+        if total_tokens <= 0 and (prompt_tokens > 0 or completion_tokens > 0):
+            total_tokens = prompt_tokens + completion_tokens
+        now = _now()
+        with self._connect() as connection:
+            connection.execute(
+                "INSERT INTO llm_usage_log(google_sub, email, operation, model, prompt_tokens, "
+                "completion_tokens, total_tokens, cost_usd, status, created_at) "
+                "VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+                (
+                    str(google_sub or "")[:255] or None,
+                    str(email or "")[:320] or None,
+                    str(operation)[:50],
+                    str(model)[:100],
+                    int(prompt_tokens),
+                    int(completion_tokens),
+                    int(total_tokens),
+                    float(round(cost_usd, 6)),
+                    str(status)[:30],
+                    now,
+                ),
+            )
+
+    def admin_llm_expenses(self, period_filter: str = "monthly") -> dict[str, Any]:
+        now = _now()
+        filter_mode = (period_filter or "monthly").lower().strip()
+        if filter_mode == "daily":
+            start_time = now - 86400
+            label = "Son 24 Saat (Günlük)"
+        elif filter_mode == "weekly":
+            start_time = now - (7 * 86400)
+            label = "Son 7 Gün (Haftalık)"
+        elif filter_mode == "all":
+            start_time = 0
+            label = "Tüm Zamanlar"
+        else:
+            filter_mode = "monthly"
+            start_time = now - (30 * 86400)
+            label = "Son 30 Gün (Aylık)"
+
+        with self._connect() as connection:
+            summary_row = connection.execute(
+                "SELECT COUNT(*) call_count, COALESCE(SUM(total_tokens), 0) total_tokens, "
+                "COALESCE(SUM(cost_usd), 0.0) total_cost_usd "
+                "FROM llm_usage_log WHERE created_at >= ?",
+                (start_time,),
+            ).fetchone()
+
+            by_model = connection.execute(
+                "SELECT model, COUNT(*) call_count, COALESCE(SUM(total_tokens), 0) total_tokens, "
+                "COALESCE(SUM(cost_usd), 0.0) total_cost_usd "
+                "FROM llm_usage_log WHERE created_at >= ? GROUP BY model ORDER BY total_cost_usd DESC",
+                (start_time,),
+            ).fetchall()
+
+            by_operation = connection.execute(
+                "SELECT operation, COUNT(*) call_count, COALESCE(SUM(total_tokens), 0) total_tokens, "
+                "COALESCE(SUM(cost_usd), 0.0) total_cost_usd "
+                "FROM llm_usage_log WHERE created_at >= ? GROUP BY operation ORDER BY total_cost_usd DESC",
+                (start_time,),
+            ).fetchall()
+
+            recent = connection.execute(
+                "SELECT id, google_sub, email, operation, model, prompt_tokens, completion_tokens, "
+                "total_tokens, cost_usd, status, created_at "
+                "FROM llm_usage_log WHERE created_at >= ? ORDER BY created_at DESC LIMIT 100",
+                (start_time,),
+            ).fetchall()
+
+        total_cost_usd = float(round(summary_row["total_cost_usd"] if summary_row else 0.0, 4))
+        approx_try_rate = 34.50
+        return {
+            "filter": filter_mode,
+            "filter_label": label,
+            "call_count": int(summary_row["call_count"]) if summary_row else 0,
+            "total_tokens": int(summary_row["total_tokens"]) if summary_row else 0,
+            "total_cost_usd": total_cost_usd,
+            "total_cost_try": float(round(total_cost_usd * approx_try_rate, 2)),
+            "by_model": [dict(r) for r in by_model],
+            "by_operation": [dict(r) for r in by_operation],
+            "recent_logs": [dict(r) for r in recent],
+        }
+
+    def admin_payments_overview(self) -> dict[str, Any]:
+        with self._connect() as connection:
+            rows = connection.execute(
+                "SELECT p.id, p.google_sub, u.email, u.name, p.plan_code, p.billing_cycle, "
+                "p.provider_subscription_ref, p.provider_customer_ref, p.status, p.created_at, p.updated_at "
+                "FROM payment_sessions p LEFT JOIN users u ON u.google_sub=p.google_sub "
+                "ORDER BY p.created_at DESC LIMIT 200"
+            ).fetchall()
+            subs = connection.execute(
+                "SELECT s.google_sub, u.email, u.name, s.plan_code, s.status, s.billing_cycle, "
+                "s.provider, s.provider_subscription_ref, s.period_start, s.period_end, s.updated_at "
+                "FROM subscriptions s JOIN users u ON u.google_sub=s.google_sub "
+                "WHERE s.provider IS NOT NULL OR s.status != 'active' OR s.plan_code != 'starter' "
+                "ORDER BY s.updated_at DESC LIMIT 200"
+            ).fetchall()
+        return {
+            "sessions": [dict(r) for r in rows],
+            "subscriptions": [dict(s) for s in subs],
+        }
+
+    def admin_user_logs(self, limit: int = 200, google_sub: str | None = None) -> list[dict[str, Any]]:
+        limit = max(1, min(limit, 500))
+        with self._connect() as connection:
+            if google_sub:
+                audit_rows = connection.execute(
+                    "SELECT id, actor_sub, actor_email, action, target_type, target_id, details_json, created_at "
+                    "FROM audit_log WHERE target_id=? OR actor_sub=? ORDER BY created_at DESC LIMIT ?",
+                    (google_sub, google_sub, limit),
+                ).fetchall()
+                ledger_rows = connection.execute(
+                    "SELECT l.id, l.google_sub, u.email, l.operation, l.quantity, l.period_key, l.dossier_id, l.created_at "
+                    "FROM usage_ledger l LEFT JOIN users u ON u.google_sub=l.google_sub "
+                    "WHERE l.google_sub=? ORDER BY l.created_at DESC LIMIT ?",
+                    (google_sub, limit),
+                ).fetchall()
+            else:
+                audit_rows = connection.execute(
+                    "SELECT id, actor_sub, actor_email, action, target_type, target_id, details_json, created_at "
+                    "FROM audit_log ORDER BY created_at DESC LIMIT ?",
+                    (limit,),
+                ).fetchall()
+                ledger_rows = connection.execute(
+                    "SELECT l.id, l.google_sub, u.email, l.operation, l.quantity, l.period_key, l.dossier_id, l.created_at "
+                    "FROM usage_ledger l LEFT JOIN users u ON u.google_sub=l.google_sub "
+                    "ORDER BY l.created_at DESC LIMIT ?",
+                    (limit,),
+                ).fetchall()
+        logs: list[dict[str, Any]] = []
+        for r in audit_rows:
+            logs.append({
+                "type": "audit",
+                "id": f"audit-{r['id']}",
+                "actor": r["actor_email"] or r["actor_sub"] or "Sistem",
+                "action": r["action"],
+                "target": f"{r['target_type']}:{r['target_id']}",
+                "details": r["details_json"],
+                "created_at": r["created_at"],
+            })
+        for r in ledger_rows:
+            logs.append({
+                "type": "usage",
+                "id": f"usage-{r['id']}",
+                "actor": r["email"] or r["google_sub"],
+                "action": f"kota.{r['operation']}",
+                "target": r["dossier_id"] or r["period_key"],
+                "details": json.dumps({"quantity": r["quantity"], "period": r["period_key"]}),
+                "created_at": r["created_at"],
+            })
+        logs.sort(key=lambda x: x["created_at"], reverse=True)
+        return logs[:limit]
 
     @staticmethod
     def _public_consultant(row: sqlite3.Row | dict[str, Any]) -> dict[str, Any]:

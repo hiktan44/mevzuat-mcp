@@ -1,19 +1,326 @@
 <!doctype html>
 <html lang="tr">
 <head>
-  <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-  <meta name="robots" content="noindex,nofollow"><meta name="theme-color" content="#0b1e3f">
-  <title>Yönetim · Ticaret Bilgi Masası</title>
-  <link rel="stylesheet" href="/assets/app.css"><script src="/assets/admin.js" defer></script>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="robots" content="noindex,nofollow">
+  <meta name="theme-color" content="#0b1e3f">
+  <title>Yönetim Paneli · Gümrükçe & Ticaret Bilgi Masası</title>
+  <link rel="stylesheet" href="/assets/app.css">
+  <script src="/assets/admin.js" defer></script>
 </head>
 <body class="admin-page">
-  <header class="topbar"><a class="brand" href="/app"><span class="brand-mark" aria-hidden="true"><i></i><b></b></span><span><strong>Ticaret Bilgi Masası</strong><small>Abonelik yönetimi</small></span></a><a class="app-login" href="/app">Uygulamaya dön</a></header>
+  <header class="topbar">
+    <a class="brand" href="/app">
+      <span class="brand-mark" aria-hidden="true"><i></i><b></b></span>
+      <span><strong>Ticaret Bilgi Masası</strong><small>Sistem & Operasyon Yönetimi</small></span>
+    </a>
+    <div class="topbar-actions">
+      <span class="badge badge-admin">Yönetici Paneli</span>
+      <a class="app-login" href="/app">Uygulamaya Dön</a>
+    </div>
+  </header>
+
   <main class="admin-main">
-    <header class="customs-hero"><div><span class="eyebrow">Yetkili yönetim alanı</span><h1>Abonelik ve kullanım</h1><p>Paket değişiklikleri sunucuda uygulanır ve denetim günlüğüne kaydedilir.</p></div></header>
-    <section class="quota-grid" id="adminStats"></section>
-    <section class="results admin-users"><header class="results-header"><h2>Kullanıcılar</h2><p><strong id="adminUserCount">—</strong> hesap</p></header><div class="admin-table-wrap"><table class="admin-table"><thead><tr><th>Kullanıcı</th><th>Paket</th><th>Durum</th><th>Son giriş</th><th>İşlem</th></tr></thead><tbody id="adminUsers"><tr><td colspan="5">Yükleniyor…</td></tr></tbody></table></div></section>
-    <section class="results admin-users"><header class="results-header"><h2>Danışman başvuruları</h2><p><strong id="adminConsultantCount">—</strong> profil</p></header><div class="admin-table-wrap"><table class="admin-table"><thead><tr><th>Danışman</th><th>Alan</th><th>Şehir</th><th>Yayın durumu</th><th>İşlem</th></tr></thead><tbody id="adminConsultants"><tr><td colspan="5">Yükleniyor…</td></tr></tbody></table></div></section>
+    <header class="customs-hero admin-hero">
+      <div>
+        <span class="eyebrow">Merkezi Kontrol Masası</span>
+        <h1>Sistem ve Finansal Yönetim</h1>
+        <p>Kullanıcı kotaları, kredi yüklemeleri, ödemeler, denetim logları ve çoklu model LLM harcamalarını yönetin.</p>
+      </div>
+    </header>
+
+    <!-- Admin Tabs -->
+    <nav class="admin-tabs" role="tablist">
+      <button type="button" class="admin-tab-btn active" data-tab="overview">📊 Genel Bakış</button>
+      <button type="button" class="admin-tab-btn" data-tab="llm">🤖 LLM Harcamaları</button>
+      <button type="button" class="admin-tab-btn" data-tab="users">👥 Kullanıcılar & Kredi</button>
+      <button type="button" class="admin-tab-btn" data-tab="payments">💳 Ödemeler</button>
+      <button type="button" class="admin-tab-btn" data-tab="logs">📜 Kullanıcı Logları</button>
+      <button type="button" class="admin-tab-btn" data-tab="consultants">👨‍💼 Danışmanlar</button>
+    </nav>
+
+    <!-- TAB 1: OVERVIEW -->
+    <section class="admin-tab-content active" id="tab-overview">
+      <section class="quota-grid" id="adminStats"></section>
+      
+      <div class="admin-dashboard-split">
+        <section class="results admin-section">
+          <header class="results-header">
+            <h2>Hızlı Kullanıcı Özeti</h2>
+            <button type="button" class="btn-link" onclick="switchTab('users')">Tümünü Yönet →</button>
+          </header>
+          <div class="admin-table-wrap">
+            <table class="admin-table">
+              <thead><tr><th>Kullanıcı</th><th>Paket</th><th>Durum</th><th>Son Giriş</th></tr></thead>
+              <tbody id="adminQuickUsers"><tr><td colspan="4">Yükleniyor…</td></tr></tbody>
+            </table>
+          </div>
+        </section>
+
+        <section class="results admin-section">
+          <header class="results-header">
+            <h2>Son LLM Kullanımları</h2>
+            <button type="button" class="btn-link" onclick="switchTab('llm')">Detaylı Rapor →</button>
+          </header>
+          <div class="admin-table-wrap">
+            <table class="admin-table">
+              <thead><tr><th>İşlem / Model</th><th>Token</th><th>Maliyet</th><th>Zaman</th></tr></thead>
+              <tbody id="adminQuickLLM"><tr><td colspan="4">Yükleniyor…</td></tr></tbody>
+            </table>
+          </div>
+        </section>
+      </div>
+    </section>
+
+    <!-- TAB 2: LLM EXPENSES -->
+    <section class="admin-tab-content" id="tab-llm">
+      <section class="results admin-section">
+        <header class="results-header flex-header">
+          <div>
+            <h2>LLM Harcama ve Token Analitiği</h2>
+            <p>Çoklu model zincirinde (Gemini Flash, GLM Flash, Grok, GPT, Claude) gerçekleşen API maliyetleri.</p>
+          </div>
+          <div class="filter-pills" id="llmFilterPills">
+            <button type="button" class="filter-pill" data-filter="daily">Günlük (24s)</button>
+            <button type="button" class="filter-pill" data-filter="weekly">Haftalık (7g)</button>
+            <button type="button" class="filter-pill active" data-filter="monthly">Aylık (30g)</button>
+            <button type="button" class="filter-pill" data-filter="all">Tüm Zamanlar</button>
+          </div>
+        </header>
+
+        <div class="expense-metrics-grid" id="llmMetricsGrid">
+          <article class="metric-card">
+            <span>Toplam Maliyet (USD)</span>
+            <strong id="llmTotalCostUsd">$0.00</strong>
+            <small id="llmTotalCostTry">≈ 0.00 TL</small>
+          </article>
+          <article class="metric-card">
+            <span>Toplam Token Sarfiyatı</span>
+            <strong id="llmTotalTokens">0</strong>
+            <small>Girdi + Çıktı Token</small>
+          </article>
+          <article class="metric-card">
+            <span>API Çağrı Sayısı</span>
+            <strong id="llmCallCount">0</strong>
+            <small>Model İsteği</small>
+          </article>
+          <article class="metric-card">
+            <span>Seçili Aralık</span>
+            <strong id="llmPeriodLabel">Son 30 Gün</strong>
+            <small>Otomatik Güncellenir</small>
+          </article>
+        </div>
+
+        <div class="breakdown-grid">
+          <div class="breakdown-box">
+            <h3>Model Bazlı Dağılım</h3>
+            <div id="llmByModel">Yükleniyor…</div>
+          </div>
+          <div class="breakdown-box">
+            <h3>İşlem Türü Bazlı Dağılım</h3>
+            <div id="llmByOperation">Yükleniyor…</div>
+          </div>
+        </div>
+
+        <h3 class="subheading">Ayrıntılı LLM Çağrı Günlüğü (Son 100 İstek)</h3>
+        <div class="admin-table-wrap">
+          <table class="admin-table">
+            <thead>
+              <tr>
+                <th>Zaman</th>
+                <th>Kullanıcı / E-posta</th>
+                <th>İşlem</th>
+                <th>Model</th>
+                <th>Token (Girdi/Çıktı)</th>
+                <th>Maliyet ($)</th>
+                <th>Durum</th>
+              </tr>
+            </thead>
+            <tbody id="llmRecentTable"><tr><td colspan="7">Yükleniyor…</td></tr></tbody>
+          </table>
+        </div>
+      </section>
+    </section>
+
+    <!-- TAB 3: USERS & CREDITS -->
+    <section class="admin-tab-content" id="tab-users">
+      <section class="results admin-section">
+        <header class="results-header flex-header">
+          <div>
+            <h2>Kullanıcılar & Abonelikler</h2>
+            <p><strong id="adminUserCount">—</strong> kayıtlı hesap</p>
+          </div>
+          <div class="search-wrap">
+            <input type="search" id="userSearchInput" class="admin-search-input" placeholder="E-posta veya ad ile ara…">
+          </div>
+        </header>
+        <div class="admin-table-wrap">
+          <table class="admin-table">
+            <thead>
+              <tr>
+                <th>Kullanıcı</th>
+                <th>Mevcut Paket</th>
+                <th>Abonelik Durumu</th>
+                <th>Son Giriş</th>
+                <th>İşlemler</th>
+              </tr>
+            </thead>
+            <tbody id="adminUsers"><tr><td colspan="5">Yükleniyor…</td></tr></tbody>
+          </table>
+        </div>
+      </section>
+    </section>
+
+    <!-- TAB 4: PAYMENTS -->
+    <section class="admin-tab-content" id="tab-payments">
+      <section class="results admin-section">
+        <header class="results-header">
+          <div>
+            <h2>Ödemeler ve Satın Alımlar</h2>
+            <p>Stripe ve sistem içi başlatılan abonelik ödemeleri, fatura durumları ve müşteri referansları.</p>
+          </div>
+          <button type="button" class="btn-refresh" id="refreshPaymentsBtn">Yenile ⟳</button>
+        </header>
+
+        <h3 class="subheading">Aktif / Ücretli Abonelikler</h3>
+        <div class="admin-table-wrap">
+          <table class="admin-table">
+            <thead>
+              <tr>
+                <th>Kullanıcı</th>
+                <th>Paket</th>
+                <th>Döngü</th>
+                <th>Durum</th>
+                <th>Sağlayıcı</th>
+                <th>Abonelik Ref</th>
+                <th>Güncelleme</th>
+              </tr>
+            </thead>
+            <tbody id="adminSubscriptionsTable"><tr><td colspan="7">Yükleniyor…</td></tr></tbody>
+          </table>
+        </div>
+
+        <h3 class="subheading" style="margin-top:24px;">Ödeme Oturumları Geçmişi</h3>
+        <div class="admin-table-wrap">
+          <table class="admin-table">
+            <thead>
+              <tr>
+                <th>Oturum ID</th>
+                <th>Kullanıcı</th>
+                <th>Paket / Döngü</th>
+                <th>Durum</th>
+                <th>Müşteri Ref</th>
+                <th>Oluşturulma</th>
+              </tr>
+            </thead>
+            <tbody id="adminPaymentSessionsTable"><tr><td colspan="6">Yükleniyor…</td></tr></tbody>
+          </table>
+        </div>
+      </section>
+    </section>
+
+    <!-- TAB 5: AUDIT LOGS -->
+    <section class="admin-tab-content" id="tab-logs">
+      <section class="results admin-section">
+        <header class="results-header flex-header">
+          <div>
+            <h2>Kullanıcı & Sistem Günlükleri (Audit Trail)</h2>
+            <p>Girişler, kota tüketimleri, admin işlemleri ve güvenlik olayları.</p>
+          </div>
+          <div class="search-wrap">
+            <input type="search" id="logSearchInput" class="admin-search-input" placeholder="İşlem veya kullanıcı filtrele…">
+          </div>
+        </header>
+        <div class="admin-table-wrap">
+          <table class="admin-table">
+            <thead>
+              <tr>
+                <th>Tür</th>
+                <th>Aktör / Kullanıcı</th>
+                <th>Eylem</th>
+                <th>Hedef</th>
+                <th>Ayrıntılar</th>
+                <th>Tarih</th>
+              </tr>
+            </thead>
+            <tbody id="adminLogsTable"><tr><td colspan="6">Yükleniyor…</td></tr></tbody>
+          </table>
+        </div>
+      </section>
+    </section>
+
+    <!-- TAB 6: CONSULTANTS -->
+    <section class="admin-tab-content" id="tab-consultants">
+      <section class="results admin-section">
+        <header class="results-header">
+          <h2>Gümrük Danışmanı Başvuruları</h2>
+          <p><strong id="adminConsultantCount">—</strong> profil</p>
+        </header>
+        <div class="admin-table-wrap">
+          <table class="admin-table">
+            <thead>
+              <tr>
+                <th>Danışman</th>
+                <th>Uzmanlık & Biyografi</th>
+                <th>Şehir / Mod</th>
+                <th>Yayın Durumu</th>
+                <th>İşlem</th>
+              </tr>
+            </thead>
+            <tbody id="adminConsultants"><tr><td colspan="5">Yükleniyor…</td></tr></tbody>
+          </table>
+        </div>
+      </section>
+    </section>
   </main>
+
+  <!-- KREDİ EKLEME MODALI -->
+  <div class="modal-backdrop" id="creditModal" hidden>
+    <div class="modal-box" role="dialog" aria-modal="true" aria-labelledby="modalTitle">
+      <header class="modal-header">
+        <h3 id="modalTitle">Kullanıcıya Kredi Ekle</h3>
+        <button type="button" class="btn-close" id="closeCreditModal" aria-label="Kapat">&times;</button>
+      </header>
+      <form id="creditGrantForm">
+        <input type="hidden" id="modalUserSub">
+        <div class="form-group">
+          <label>Kullanıcı</label>
+          <input type="text" id="modalUserDisplay" readonly class="readonly-input">
+        </div>
+        <div class="form-group">
+          <label for="creditOperation">İşlem / Kredi Türü</label>
+          <select id="creditOperation" required>
+            <option value="all">Tüm İşlemler (Genel Kota Bonusu)</option>
+            <option value="vision">Görsel Evsaf Analizi</option>
+            <option value="classification">GTİP Adayı Tespiti</option>
+            <option value="precheck">İthalat Ön Değerlendirmesi</option>
+            <option value="dossier">Resmî Kanıt Dosyası</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label for="creditQuantity">Eklenecek Kredi Adedi</label>
+          <div class="quick-credit-pills">
+            <button type="button" class="quick-pill" data-amount="5">+5</button>
+            <button type="button" class="quick-pill" data-amount="10">+10</button>
+            <button type="button" class="quick-pill" data-amount="25">+25</button>
+            <button type="button" class="quick-pill" data-amount="50">+50</button>
+            <button type="button" class="quick-pill" data-amount="100">+100</button>
+          </div>
+          <input type="number" id="creditQuantity" min="1" max="10000" value="10" required>
+        </div>
+        <div class="form-group">
+          <label for="creditNote">Açıklama / Not</label>
+          <input type="text" id="creditNote" placeholder="Örn: Manuel müşteri desteği, kampanya hakkı vb.">
+        </div>
+        <footer class="modal-footer">
+          <button type="button" class="btn-secondary" id="cancelCreditModal">Vazgeç</button>
+          <button type="submit" class="btn-primary" id="saveCreditBtn">Krediyi Tanımla</button>
+        </footer>
+      </form>
+    </div>
+  </div>
+
   <div class="toast" id="toast" role="status" aria-live="polite"></div>
 </body>
 </html>

@@ -2779,8 +2779,8 @@ async def query_customs_declaration_status(
 async def resolve_turkish_tariff_tree(
     gtip: str = Field(
         ...,
-        pattern=r"^(?:(?:\d[. ]*){6}|(?:\d[. ]*){8}|(?:\d[. ]*){10}|(?:\d[. ]*){12})$",
-        description="Kullanıcının seçtiği 6/8/10/12 haneli tarife dalı.",
+        pattern=r"^(?:(?:\d[. ]*){4}|(?:\d[. ]*){6}|(?:\d[. ]*){8}|(?:\d[. ]*){10}|(?:\d[. ]*){12})$",
+        description="Kullanıcının seçtiği 4/6/8/10/12 haneli tarife dalı.",
     ),
     origin_country: Optional[str] = Field(None, max_length=100),
 ) -> TariffDecisionTreeResult:

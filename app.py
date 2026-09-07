@@ -29,7 +29,13 @@ from starlette.responses import FileResponse, HTMLResponse, JSONResponse, PlainT
 from auth_service import AuthError, GoogleAuthService
 from account_service import PLANS, AccountError, AccountService, QuotaExceeded
 from billing_service import BillingError, StripeBilling
-from customs_advisor import CustomsInquiry, CustomsPrecheckResult, ProductClassificationRequest, decode_image_data_url
+from customs_advisor import (
+    CustomsInquiry,
+    CustomsPrecheckResult,
+    ProductClassificationRequest,
+    decode_image_data_url,
+    register_llm_usage_hook,
+)
 from email_service import MailError, ResendEmailSender, render_consultation_email, render_precheck_email, render_watch_email
 from mevzuat_mcp_server import (
     _BED_VALID_TYPES,
@@ -57,6 +63,7 @@ from eylemio_client import EylemioError, summarise_declaration
 from trade_measures import KIND_LABELS as TRADE_MEASURE_LABELS, summary_lines as trade_measure_summary
 from tax_lists import summary_lines as excise_tax_summary
 from tariff_engine import LandedCostInput
+from unified_search import UnifiedSearchEngine
 
 logger = logging.getLogger(__name__)
 WEB_DIR = Path(__file__).resolve().parent / "web"
@@ -72,6 +79,31 @@ account_service = AccountService(google_auth.data_dir)
 stripe_billing = StripeBilling()
 email_sender = ResendEmailSender()
 agent_identity = AgentTokenVerifier()
+unified_search = UnifiedSearchEngine()
+
+
+def _track_llm_telemetry(
+    operation: str,
+    model: str,
+    prompt_tokens: int = 0,
+    completion_tokens: int = 0,
+    total_tokens: int = 0,
+    cost_usd: float = 0.0,
+) -> None:
+    try:
+        account_service.record_llm_usage(
+            operation=operation,
+            model=model,
+            prompt_tokens=prompt_tokens,
+            completion_tokens=completion_tokens,
+            total_tokens=total_tokens,
+            cost_usd=cost_usd,
+        )
+    except Exception:
+        logger.exception("LLM kullanım telemetrisi kaydedilemedi")
+
+
+register_llm_usage_hook(_track_llm_telemetry)
 
 
 class FixedWindowRateLimiter:
@@ -426,7 +458,23 @@ async def web_sitemap(request: Request):
     )
 
 
-def _google_redirect_uri() -> str:
+def _google_redirect_uri(request: Request | None = None) -> str:
+    if request:
+        proto = request.headers.get("x-forwarded-proto") or request.url.scheme or "https"
+        host = request.headers.get("x-forwarded-host") or request.headers.get("host") or ""
+        if host:
+            if (proto == "https" and host.endswith(":443")) or (proto == "http" and host.endswith(":80")):
+                host = host.rsplit(":", 1)[0]
+            origin = f"{proto}://{host}"
+            trusted = {_origin_key(PUBLIC_BASE_URL)}
+            trusted.update(_origin_key(extra) for extra in ADDITIONAL_ALLOWED_ORIGINS)
+            trusted.add(_origin_key("https://mevzuat-mcp.seymata.com"))
+            trusted.add(_origin_key("https://gumruksor.com"))
+            trusted.add(_origin_key("https://www.gumruksor.com"))
+            trusted.add(_origin_key("http://localhost:8000"))
+            trusted.add(_origin_key("http://127.0.0.1:8000"))
+            if _origin_key(origin) in trusted:
+                return f"{origin}/auth/google/callback"
     return f"{PUBLIC_BASE_URL}/auth/google/callback"
 
 
@@ -470,10 +518,11 @@ async def web_google_login(request: Request):
         return limited
     if not google_auth.configured:
         return RedirectResponse("/?auth=google-setup#login", status_code=303)
-    state, nonce = google_auth.create_oauth_state()
+    redirect_uri = _google_redirect_uri(request)
+    state, nonce = google_auth.create_oauth_state(redirect_uri=redirect_uri)
     response = RedirectResponse(
         google_auth.authorization_url(
-            redirect_uri=_google_redirect_uri(), state=state, nonce=nonce
+            redirect_uri=redirect_uri, state=state, nonce=nonce
         ),
         status_code=303,
     )
@@ -503,9 +552,10 @@ async def web_google_callback(request: Request):
         if not state or not state_cookie or not hmac.compare_digest(state, state_cookie):
             raise AuthError("Google giriş isteği eşleşmedi.")
         state_payload = google_auth.verify_oauth_state(state_cookie)
+        callback_redirect_uri = str(state_payload.get("redirect_uri") or _google_redirect_uri(request))
         profile = await google_auth.exchange_code(
             code=code,
-            redirect_uri=_google_redirect_uri(),
+            redirect_uri=callback_redirect_uri,
             expected_nonce=str(state_payload.get("nonce", "")),
         )
         google_auth.upsert_user(profile)
@@ -968,6 +1018,62 @@ async def web_admin_consultant(request: Request):
         return JSONResponse({"error": str(exc)}, status_code=422)
 
 
+@mcp.custom_route("/api/admin/llm-expenses", methods=["GET"])
+async def web_admin_llm_expenses(request: Request):
+    try:
+        _require_admin(request)
+        period = request.query_params.get("filter", "monthly")
+        return JSONResponse(account_service.admin_llm_expenses(period), headers={"Cache-Control": "no-store"})
+    except AuthError as exc:
+        return _auth_error(exc, status_code=403)
+
+
+@mcp.custom_route("/api/admin/payments", methods=["GET"])
+async def web_admin_payments(request: Request):
+    try:
+        _require_admin(request)
+        return JSONResponse(account_service.admin_payments_overview(), headers={"Cache-Control": "no-store"})
+    except AuthError as exc:
+        return _auth_error(exc, status_code=403)
+
+
+@mcp.custom_route("/api/admin/logs", methods=["GET"])
+async def web_admin_logs(request: Request):
+    try:
+        _require_admin(request)
+        limit = int(request.query_params.get("limit", "200"))
+        google_sub = request.query_params.get("user")
+        return JSONResponse({"logs": account_service.admin_user_logs(limit, google_sub)}, headers={"Cache-Control": "no-store"})
+    except (ValueError, TypeError):
+        return JSONResponse({"logs": account_service.admin_user_logs(200)}, headers={"Cache-Control": "no-store"})
+    except AuthError as exc:
+        return _auth_error(exc, status_code=403)
+
+
+@mcp.custom_route("/api/admin/users/{google_sub}/credits", methods=["POST"])
+async def web_admin_grant_credit(request: Request):
+    try:
+        _trusted_request_origin(request)
+        actor = _require_admin(request)
+        body = await request.json()
+        if not isinstance(body, dict):
+            raise AccountError("Kredi ekleme bilgisi geçersiz.")
+        res = account_service.admin_grant_credit(
+            actor,
+            request.path_params.get("google_sub", ""),
+            str(body.get("operation", "all")),
+            int(body.get("quantity", 0)),
+            str(body.get("note", "")),
+        )
+        return JSONResponse(res)
+    except SecurityViolation as exc:
+        return _security_response(exc)
+    except AuthError as exc:
+        return _auth_error(exc, status_code=403)
+    except (AccountError, ValueError) as exc:
+        return JSONResponse({"error": str(exc)}, status_code=422)
+
+
 @mcp.custom_route("/api/search", methods=["POST"])
 async def web_search(request: Request):
     limited = _rate_limit_response(request, "search")
@@ -1232,14 +1338,25 @@ async def web_customs_describe_image(request: Request):
         return _auth_error(exc)
     except QuotaExceeded as exc:
         return JSONResponse({"error": str(exc), "code": "quota_exceeded"}, status_code=429)
+    MAX_IMAGE_REQUEST_BYTES = 12 * 1024 * 1024
     try:
         content_length = int(request.headers.get("content-length", "0") or 0)
     except ValueError:
         content_length = 0
-    if content_length > 12 * 1024 * 1024:
+    if content_length > MAX_IMAGE_REQUEST_BYTES:
         return JSONResponse({"error": "İstek boyutu 12 MB sınırını aşıyor."}, status_code=413)
     try:
-        body = await request.json()
+        chunks = []
+        bytes_read = 0
+        async for chunk in request.stream():
+            bytes_read += len(chunk)
+            if bytes_read > MAX_IMAGE_REQUEST_BYTES:
+                return JSONResponse({"error": "İstek boyutu 12 MB sınırını aşıyor."}, status_code=413)
+            chunks.append(chunk)
+        raw_body = b"".join(chunks)
+        if not raw_body:
+            return JSONResponse({"error": "Analiz edilecek ürün görselini yükleyin."}, status_code=422)
+        body = json.loads(raw_body.decode("utf-8"))
         if not isinstance(body, dict) or not body.get("image_data_url"):
             return JSONResponse({"error": "Analiz edilecek ürün görselini yükleyin."}, status_code=422)
         image_bytes, image_media_type = decode_image_data_url(body["image_data_url"])
@@ -1769,6 +1886,66 @@ async def web_import_communiques(request: Request):
     if query:
         entries = [entry for entry in entries if query in entry.get("title", "").casefold()]
     return JSONResponse({"count": len(entries), "entries": entries[:300], "dataset": trade_measure_engine.store.metadata("communiques")})
+
+
+@mcp.custom_route("/api/tariff/autocomplete", methods=["GET"])
+async def web_tariff_autocomplete(request: Request):
+    """Search-as-you-type GTİP ve ürün fihristi önerileri."""
+    limited = _rate_limit_response(request, "tariff-autocomplete", limit=120, window_seconds=60)
+    if limited:
+        return limited
+    query = str(request.query_params.get("q", "")).strip()[:100]
+    limit_val = max(1, min(int(request.query_params.get("limit", "12") or 12), 30))
+    items = unified_search.autocomplete(query, limit=limit_val)
+    return JSONResponse({"items": items, "results": items, "count": len(items), "total": len(items)})
+
+
+@mcp.custom_route("/api/controls/communiques", methods=["GET"])
+async def web_controls_communiques(request: Request):
+    """Güncel Ürün Güvenliği ve Denetimi (ÜGD 2026/1 - 2026/32) tebliğ fihristi."""
+    limited = _rate_limit_response(request, "controls-communiques", limit=60, window_seconds=60)
+    if limited:
+        return limited
+    catalog = control_engine.get_communiques_catalog()
+    return JSONResponse({"items": catalog, "communiques": catalog, "count": len(catalog), "total": len(catalog)})
+
+
+@mcp.custom_route("/api/controls/search", methods=["GET", "POST"])
+async def web_controls_search(request: Request):
+    """Ürün adı, kelime veya GTİP parçasıyla denetim tebliğleri ve Ek-1 kapsamlarında arama."""
+    limited = _rate_limit_response(request, "controls-search", limit=60, window_seconds=60)
+    if limited:
+        return limited
+    if request.method == "POST":
+        try:
+            body = await request.json()
+            query = str(body.get("query", "") if isinstance(body, dict) else "").strip()
+        except Exception:
+            query = ""
+    else:
+        query = str(request.query_params.get("q", "")).strip()
+    items = control_engine.search_controls(query, limit=60)
+    return JSONResponse({"query": query, "items": items, "results": items, "count": len(items), "total": len(items)})
+
+
+@mcp.custom_route("/api/search/unified", methods=["GET", "POST"])
+async def web_unified_search(request: Request):
+    """Tarife, TAREKS/TSE denetimleri, ÖTV ve resmi mevzuat üzerinde birleşik arama."""
+    limited = _rate_limit_response(request, "unified-search", limit=60, window_seconds=60)
+    if limited:
+        return limited
+    if request.method == "POST":
+        try:
+            body = await request.json()
+            query = str(body.get("query", "") if isinstance(body, dict) else "").strip()
+            category = str(body.get("category", "all") if isinstance(body, dict) else "all").strip()
+        except Exception:
+            query, category = "", "all"
+    else:
+        query = str(request.query_params.get("q", "")).strip()
+        category = str(request.query_params.get("category", "all")).strip()
+    result = unified_search.search_all(query, category=category, limit=30)
+    return JSONResponse(result)
 
 
 @mcp.custom_route("/api/customs/declaration", methods=["POST"])

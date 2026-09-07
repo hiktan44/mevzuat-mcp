@@ -524,14 +524,18 @@ def validate_image(image_bytes: bytes, media_type: str) -> tuple[bytes, str]:
         raise ValueError("Yalnızca JPEG, PNG veya WebP görsel yüklenebilir.")
     if not image_bytes or len(image_bytes) > 8 * 1024 * 1024:
         raise ValueError("Görsel en fazla 8 MB olabilir.")
+    Image.MAX_IMAGE_PIXELS = 25_000_000
     try:
         with Image.open(io.BytesIO(image_bytes)) as image:
-            image.verify()
-        with Image.open(io.BytesIO(image_bytes)) as image:
-            image = ImageOps.exif_transpose(image)
             width, height = image.size
             if width < 80 or height < 80 or width * height > 25_000_000:
                 raise ValueError("Görsel boyutları 80×80 ile 25 megapiksel arasında olmalıdır.")
+            image.verify()
+        with Image.open(io.BytesIO(image_bytes)) as image:
+            width, height = image.size
+            if width < 80 or height < 80 or width * height > 25_000_000:
+                raise ValueError("Görsel boyutları 80×80 ile 25 megapiksel arasında olmalıdır.")
+            image = ImageOps.exif_transpose(image)
             image.thumbnail((2048, 2048))
             clean = image.convert("RGB")
             output = io.BytesIO()
@@ -708,6 +712,59 @@ def _openrouter_error_detail(response: httpx.Response) -> str:
     return detail[:240] or "sağlayıcı ayrıntı vermedi"
 
 
+_LLM_USAGE_HOOK: Any = None
+
+
+def register_llm_usage_hook(callback: Any) -> None:
+    """Register a global callback for tracking LLM tokens and costs."""
+    global _LLM_USAGE_HOOK
+    _LLM_USAGE_HOOK = callback
+
+
+def estimate_llm_cost(model: str, prompt_tokens: int, completion_tokens: int) -> float:
+    """Calculate approximate USD cost based on token counts and model pricing."""
+    m = model.lower()
+    if "claude-opus" in m:
+        prompt_rate, comp_rate = 15.00, 75.00
+    elif "claude-sonnet" in m or "claude" in m:
+        prompt_rate, comp_rate = 3.00, 15.00
+    elif "grok" in m:
+        prompt_rate, comp_rate = 2.00, 10.00
+    elif "gpt-4" in m or "gpt-chat" in m:
+        prompt_rate, comp_rate = 0.15, 0.60
+    elif "glm" in m:
+        prompt_rate, comp_rate = 0.05, 0.10
+    elif "gemini" in m or "flash" in m:
+        prompt_rate, comp_rate = 0.075, 0.30
+    else:
+        prompt_rate, comp_rate = 0.10, 0.40
+
+    cost = (prompt_tokens * prompt_rate / 1_000_000.0) + (completion_tokens * comp_rate / 1_000_000.0)
+    return max(0.000001, round(cost, 6))
+
+
+def _notify_llm_usage(
+    operation: str,
+    model: str,
+    prompt_tokens: int,
+    completion_tokens: int,
+    total_tokens: int,
+    cost_usd: float,
+) -> None:
+    if _LLM_USAGE_HOOK is not None:
+        try:
+            _LLM_USAGE_HOOK(
+                operation=operation,
+                model=model,
+                prompt_tokens=prompt_tokens,
+                completion_tokens=completion_tokens,
+                total_tokens=total_tokens,
+                cost_usd=cost_usd,
+            )
+        except Exception:
+            logger.exception("LLM usage hook failed")
+
+
 async def _openrouter_chat(
     *,
     api_key: str,
@@ -755,7 +812,25 @@ async def _openrouter_chat(
             except (KeyError, IndexError, TypeError, ValueError) as exc:
                 failures.append(f"{model}: geçersiz yanıt ({type(exc).__name__})")
                 continue
-            return content, str(body.get("model") or model)
+            usage_data = body.get("usage") or {}
+            resolved_m = str(body.get("model") or model)
+            prompt_tok = int(usage_data.get("prompt_tokens") or 0)
+            comp_tok = int(usage_data.get("completion_tokens") or 0)
+            tot_tok = int(usage_data.get("total_tokens") or (prompt_tok + comp_tok))
+            if prompt_tok == 0 and comp_tok == 0:
+                prompt_tok = max(10, len(str(payload)) // 4)
+                comp_tok = max(5, len(content) // 4)
+                tot_tok = prompt_tok + comp_tok
+            cost = estimate_llm_cost(resolved_m, prompt_tok, comp_tok)
+            _notify_llm_usage(
+                operation=schema_name or "chat",
+                model=resolved_m,
+                prompt_tokens=prompt_tok,
+                completion_tokens=comp_tok,
+                total_tokens=tot_tok,
+                cost_usd=cost,
+            )
+            return content, resolved_m
     summary = " | ".join(failures)
     raise RuntimeError(f"OpenRouter model zinciri yanıt vermedi. {summary}"[:1200])
 
@@ -913,10 +988,18 @@ def _deterministic_cost(
     customs_duty_rate: float | None = None,
     additional_duty_rate: float | None = None,
     additional_financial_liability_rate: float | None = None,
+    tariff_lookup: TariffLookupResult | None = None,
 ) -> dict[str, Any] | None:
     if inquiry.invoice_value is None:
         return None
     duty_rate = inquiry.customs_duty_rate if inquiry.customs_duty_rate is not None else customs_duty_rate
+    if additional_duty_rate is None and tariff_lookup and tariff_lookup.status in {"matched", "partial"}:
+        if (
+            "additional_duty" not in tariff_lookup.ambiguous_measure_types
+            and tariff_lookup.measure_coverage.get("additional_duty")
+            and tariff_lookup.measure_coverage["additional_duty"].status == "verified_snapshot"
+        ):
+            additional_duty_rate = 0.0
     additional_rate = inquiry.additional_duty_rate if inquiry.additional_duty_rate is not None else additional_duty_rate
     emy_rate = (
         inquiry.additional_financial_liability_rate
@@ -1176,6 +1259,44 @@ class CustomsAdvisor:
                         sha256=measure.archive_sha256,
                     )
                 )
+        # Gate flags verification: do not blindly trust client flags
+        code = inquiry.candidate_gtip or ""
+        exact_gtip_confirmed = bool(
+            inquiry.exact_gtip_confirmed
+            and code
+            and len(code) == 12
+            and tariff_lookup
+            and tariff_lookup.status == "matched"
+            and tariff_lookup.matched_gtip_count == 1
+        )
+        if tariff_lookup and tariff_lookup.status == "not_found":
+            candidate_gtip = None
+            tariff_selection_confirmed = False
+        else:
+            candidate_gtip = inquiry.candidate_gtip
+            tariff_selection_confirmed = bool(
+                inquiry.tariff_selection_confirmed
+                and code
+                and (not tariff_lookup or tariff_lookup.status in {"matched", "partial"})
+            )
+        confidence_score = inquiry.classification_confidence_score
+        if confidence_score is not None:
+            if not tariff_lookup or tariff_lookup.status == "not_found":
+                confidence_score = min(confidence_score, 30)
+            elif tariff_lookup.status != "matched" or len(code) != 12:
+                confidence_score = min(confidence_score, 60)
+            elif tariff_lookup.ambiguous_measure_types:
+                confidence_score = min(confidence_score, 75)
+
+        inquiry = inquiry.model_copy(
+            update={
+                "candidate_gtip": candidate_gtip,
+                "exact_gtip_confirmed": exact_gtip_confirmed,
+                "tariff_selection_confirmed": tariff_selection_confirmed,
+                "classification_confidence_score": confidence_score,
+            }
+        )
+
         control_sources: list[EvidenceSource] = []
         if (
             self.control_engine
@@ -1240,6 +1361,7 @@ class CustomsAdvisor:
                 customs_duty_rate=official_rates.get("customs_duty"),
                 additional_duty_rate=official_rates.get("additional_duty"),
                 additional_financial_liability_rate=official_rates.get("additional_financial_liability"),
+                tariff_lookup=tariff_lookup,
             ),
             tariff_lookup=tariff_lookup,
             control_lookup=control_lookup,
@@ -1247,7 +1369,6 @@ class CustomsAdvisor:
                 inquiry.origin_country or "",
                 gtip=inquiry.candidate_gtip,
                 dispatch_country=inquiry.dispatch_country,
-                atr_certificate=inquiry.atr_certificate,
             ),
             sources=sources,
             legal_notice=_legal_notice(as_of),

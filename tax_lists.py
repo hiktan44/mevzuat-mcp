@@ -38,6 +38,68 @@ LIST_NOTES = {
     "IV": "Lüks tüketim ve dayanıklı tüketim malları; vergi ithalatta oransal olarak alınır.",
 }
 
+# 2022 WCO Armonize Sistem revizyonu ile değişen ve 4760 sayılı ÖTV Kanunu ekli listelerinde
+# eski kodlarla yer alan malların güncel Türk Gümrük Tarife Cetveli (TGTC) korelasyon haritası
+HS_EXCISE_CORRELATIONS: dict[str, tuple[str, str]] = {
+    "851713": ("851712", "Akıllı telefonlar (2022 öncesi 8517.12 karşılığı; IV Sayılı Liste)"),
+    "851714": ("851712", "Diğer hücresel ağ telefonları (2022 öncesi 8517.12 karşılığı; IV Sayılı Liste)"),
+    "851771": ("851770", "Antenler ve yansıtıcılar (eski 8517.70 karşılığı)"),
+    "851779": ("851770", "Telefon aksam ve parçaları (eski 8517.70 karşılığı)"),
+    "8524": ("8528", "Düz panel ekran modülleri"),
+    "8806": ("8802", "İnsansız hava araçları (İHA / Drone)"),
+}
+
+def estimate_vat_rate(gtip: str) -> dict[str, Any]:
+    """3065 sayılı KDV Kanununa göre GTİP bazlı tahmini KDV oranını ve dayanağını döndürür."""
+    code = normalise_code(gtip)
+    if not code:
+        return {"rate": 20.0, "list": "Genel Oran", "legal_basis": "3065 sayılı KDV Kanunu md. 28"}
+    
+    chapter = code[:2]
+    heading = code[:4]
+    
+    # %1 Oranlı (I Sayılı Liste): Tohumluk, hububat tohumları vb.
+    if code.startswith(("070110", "100111", "100191", "100510", "120110", "120510", "12060010")):
+        return {
+            "rate": 1.0,
+            "list": "I Sayılı Liste (İndirimli)",
+            "legal_basis": "2007/13033 sayılı BKK eki (I) sayılı liste (Tohumluk ve tarımsal hammaddeler)",
+        }
+    
+    # %10 Oranlı (II Sayılı Liste): Temel gıda maddeleri, tekstil, giyim, ayakkabı, ilaç, tıbbi cihaz
+    food_chapters = {f"{i:02d}" for i in range(1, 25)}
+    textile_chapters = {f"{i:02d}" for i in range(50, 64)}
+    
+    if chapter in food_chapters:
+        # Özel tüketim / alkol / tütün genel orana tabidir
+        if chapter in {"22", "24"} and not code.startswith(("2201", "2202")):
+            return {"rate": 20.0, "list": "Genel Oran", "legal_basis": "3065 sayılı KDV Kanunu (Alkollü içecekler/tütün)"}
+        return {
+            "rate": 10.0,
+            "list": "II Sayılı Liste (İndirimli)",
+            "legal_basis": "2007/13033 sayılı BKK eki (II) sayılı liste (Temel gıda maddeleri)",
+        }
+    
+    if chapter in textile_chapters or chapter == "64":  # Tekstil, konfeksiyon, ayakkabı
+        return {
+            "rate": 10.0,
+            "list": "II Sayılı Liste (İndirimli)",
+            "legal_basis": "2007/13033 sayılı BKK eki (II) sayılı liste (Tekstil, giyim eşyası ve ayakkabı)",
+        }
+    
+    if chapter == "30" or heading in {"9018", "9019", "9021"}:  # İlaç ve tıbbi cihaz
+        return {
+            "rate": 10.0,
+            "list": "II Sayılı Liste (İndirimli)",
+            "legal_basis": "2007/13033 sayılı BKK eki (II) sayılı liste (Tıbbi ürünler ve cihazlar)",
+        }
+    
+    return {
+        "rate": 20.0,
+        "list": "Genel Oran",
+        "legal_basis": "3065 sayılı KDV Kanunu md. 28 (Genel Mal ve Hizmetler)",
+    }
+
 _VALUE_LABELS = {
     "tax_rate": "Kanuni vergi oranı (%)",
     "applied_tax_rate": "Uygulanacak vergi oranı (%)",
@@ -143,6 +205,17 @@ class ExciseTaxIndex:
         matches = [entry for entry in self._entries if code_matches(entry["code"], code)]
         matches.sort(key=lambda entry: len(entry["code"]), reverse=True)
 
+        correlated_info: tuple[str, str] | None = None
+        if not matches:
+            for prefix, (target, desc) in HS_EXCISE_CORRELATIONS.items():
+                if code.startswith(prefix):
+                    target_matches = [entry for entry in self._entries if code_matches(entry["code"], target)]
+                    if target_matches:
+                        matches = target_matches
+                        matches.sort(key=lambda entry: len(entry["code"]), reverse=True)
+                        correlated_info = (target, desc)
+                        break
+
         results: list[dict[str, Any]] = []
         warnings: list[str] = []
         for entry in matches:
@@ -152,7 +225,7 @@ class ExciseTaxIndex:
                 for key, value in entry["values"].items()
                 if entry["rates_verified"] or key == "unit"
             }
-            results.append({
+            res_item: dict[str, Any] = {
                 "matched_code": entry["raw_code"],
                 "list": entry["list"],
                 "cetvel": entry["cetvel"],
@@ -161,7 +234,10 @@ class ExciseTaxIndex:
                 "rates_verified": entry["rates_verified"],
                 "values": values,
                 "note": LIST_NOTES.get(entry["list"], ""),
-            })
+            }
+            if correlated_info:
+                res_item["correlation_note"] = f"Armonize Sistem korelasyonu: {correlated_info[1]}"
+            results.append(res_item)
 
         neighbours: list[dict[str, str]] = []
         if not results and len(code) >= 4:
@@ -184,9 +260,15 @@ class ExciseTaxIndex:
 
         if results:
             first = results[0]
-            warnings.append(
-                f"Eşya ÖTV kapsamındadır: {first['list_label']}, {first['matched_code']}. {first['note']}"
-            )
+            if correlated_info:
+                warnings.append(
+                    f"Eşya korelasyon uyarınca ÖTV kapsamındadır: {first['list_label']}, eski kod {first['matched_code']}. "
+                    f"GİB/TGTC 2022 korelasyonu ({correlated_info[1]}). {first['note']}"
+                )
+            else:
+                warnings.append(
+                    f"Eşya ÖTV kapsamındadır: {first['list_label']}, {first['matched_code']}. {first['note']}"
+                )
             if not first["rates_verified"]:
                 warnings.append(
                     "Bu listede oran sütunları resmî metinde birleşik basıldığı için otomatik okunmadı; "
@@ -197,6 +279,7 @@ class ExciseTaxIndex:
                     "Kanundaki oran/tutarlar Cumhurbaşkanı kararlarıyla değiştirilebilir; "
                     "beyanname öncesi yürürlükteki değeri doğrulayın."
                 )
+        vat_info = estimate_vat_rate(code)
         return {
             "gtip": code,
             "in_scope": bool(results),
@@ -204,6 +287,7 @@ class ExciseTaxIndex:
             "match_count": len(results),
             "related_positions": neighbours[:10],
             "warnings": warnings,
+            "vat_estimate": vat_info,
             "legal_basis": LEGAL_BASIS,
             "source_url": self._payload.get("source_url"),
         }

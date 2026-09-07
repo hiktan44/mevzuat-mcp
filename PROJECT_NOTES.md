@@ -1,25 +1,23 @@
 # Proje Devir Notu — Ticaret Bilgi Masası / mevzuat-mcp
 
-Son güncelleme: 5 Eylül 2026
+Son güncelleme: 8 Eylül 2026
 
-## 5 Eylül 2026 oturumu — gümrük müşaviri testi ve kritik motor düzeltmeleri
+## 8 Eylül 2026 oturumu — 3., 4. ve 5. sıra aşamalarının tamamlanması
 
-- Uygulama bir gümrük müşaviri gibi uçtan uca test edildi; 55 bulgu ve eksik özellik listesi
-  `docs/gumrukcu-test-raporu-2026-09-05.md` dosyasında (dosya/satır numaralı, önerilen sırayla).
-- Raporun 1. sırası kapatıldı (126 test): belirlenimci ve ölçü türü bazlı menşe sütunu seçimi,
-  IV/V sayılı liste ayrımı, İGV Ek-2/3 sayfa adı toleransı, tebliğ kodu tam eşleşmesi, çok parçalı ek
-  birleştirme ve `scope_annexes` / `list_kind` (ithali yasak listesi) altyapısı. Ayrıntı raporun
-  "Düzeltme günlüğü" bölümünde.
-- Raporun 2. sırası da kapatıldı (142 test): `countries.py` ortak ülke kayıt defteri, fasıl + sevk ülkesine
-  göre menşe belgesi kuralı (A.TR / EUR.1 tarım / EUR.1 AKÇT / menşe beyanı), `dispatch_country` ile A.TR
-  serbest dolaşım mantığı ve İGV/EMY menşe tevsiki bayrağı, kullanıcı-oran çakışma uyarısı, `extra="forbid"`,
-  MCP maliyet aracına ödeme şekli/EMY/oran parametreleri. Ayrıntı raporun "Düzeltme günlüğü" bölümünde.
-- Eksik özellik listesinden tamamlananlar (5 Eyl akşam): ülke öneri listesi + Türkçe sayı girişi; CSV dışa aktarım ve
-  kopyalama; toplu hesap (`bulk_costing.py`, `/api/tariff/bulk`); TL beyanname özeti (damga vergisi, liman/ardiye,
-  GEKAP, TRT bandrolü; formula v4) ve tamamlanmış Tarife & Maliyet formu; kontrol tebliği belge listesi satırları +
-  muafiyet cümleleri; sunucu izleme listesi + değişiklik/danışman e-posta bildirimleri (`RESEND_API_KEY` gerekir).
-- Sıradaki iş: raporun 3. sırası (Tarife & Maliyet formuna eksik alanlar, "İGV listesinde yok → %0" mantığı,
-  4 haneli karar ağacı) ve 4. sırası (sunucu tarafı doğrulama, görsel redaksiyon atlaması, görsel boyut kontrolü).
+- Raporun 3. sırası kapatıldı:
+  - 4 haneli HS4 karar ağacı ve arama desteği (`tariff_engine.py`, `mevzuat_mcp_server.py`). HS4 kodları doğrudan HS6 seviyesine dallandırılıyor.
+  - "İGV listesinde yoksa %0" mantığı: İGV ekli listelerinde yer almayan doğrulanmış GTİP'lerde ek gümrük vergisi otomatik olarak %0 kabul ediliyor ve hesap `complete` statüsüne geçiyor; `lookup` ve arayüzde bilgilendirme uyarısı veriliyor.
+- Raporun 4. sırası kapatıldı:
+  - Sunucu tarafı kapı bayrakları doğrulaması (`customs_advisor.py:evidence_pack`): `exact_gtip_confirmed`, `tariff_selection_confirmed` ve `classification_confidence_score` bayrakları resmî tarife veritabanı eşleşmesine göre denetleniyor; eşleşmeyenler sunucuda düşürülüyor.
+  - Görsel base64 redaksiyon atlaması (`security_firewall.py`): `data:image/` ve `data:application/` URL'leri TCKN/telefon maskelemesinden muaf tutularak piksellerin bozulması önlendi.
+  - Erken görsel boyut denetimi ve dekompresyon bombası koruması (`customs_advisor.py:validate_image`, `app.py`): Piksel açılmadan önce `image.size` başlığı denetlenip 25 MP üzeri ve geçersiz boyutlar derhal engelleniyor; gövde akışı 12 MB ile sınırlandırıldı.
+- Raporun 5. sırası (Arayüz & Kullanılabilirlik) kapatıldı:
+  - Danışman sekmesi görünürlüğü (`web/app.js`): Açılışta `initMarketplaceStatus()` ile `/api/consultants` denetlenerek `marketplace-enabled` sınıfı atanıyor; sekme kendiliğinden görünür kılınıyor.
+  - PDF çok sayfalı yazdırma ve detay açılımı (`web/app.css`, `web/app.js`): `inset: 0` ve mutlak konumlandırma yerine akışkan yazdırma düzeni sağlandı, yazdırma esnasında kapalı `<details>` blokları açılarak çok sayfalı dosyaların ilk sayfada kırpılması engellendi.
+  - `safeStorage` try/catch sarmalayıcısı (`web/app.js`): Bütün depolama işlemleri sarmalanarak kısıtlı gizli sekme modlarında uygulamanın çökmesi önlendi.
+  - Tarife doğrulama / analiz gönderim yarışı (`web/app.js`): `#customsForm` submit anında doğrudan tarife ağacı beklenerek `pendingSubmit` kilitlenmesi giderildi; 4 haneli kodlar arayüz doğrulamasına dahil edildi.
+  - Cihazda kayıtlı ön değerlendirmeler (`web/app.js`): `saveLocalScenario` ile her ön değerlendirme `gumrukce-scenarios` anahtarına yerel cihaz kaydı olarak yazılıyor; giriş yapmamış kullanıcılar için `#scenarioList` paneli aktifleştirildi.
+- 225 birim ve entegrasyon testi 0 hata ile geçiyor (`pytest`).
 - Cloudflare "Workers Builds: mevzuat-mcp" kontrolü depoya dışarıdan bağlı ve her commit'te kırmızı;
   depoda Workers yapılandırması yok. Cloudflare panosundan Workers & Pages → mevzuat-mcp → Settings →
   Builds → Disconnect ile kaldırılmalı (MCP'de bu işlem için araç yok).

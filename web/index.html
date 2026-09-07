@@ -134,6 +134,16 @@
           <button type="submit">Ara</button>
         </div>
 
+        <div class="quick-pills" id="quickPills">
+          <span class="quick-pills-label">Sık Aranan Mevzuat:</span>
+          <button type="button" class="quick-pill" data-query="3350 Sayılı İthalat Rejimi Kararı">3350 İthalat Rejimi</button>
+          <button type="button" class="quick-pill" data-query="3351 Sayılı İlave Gümrük Vergisi Kararı">3351 İGV Kararı</button>
+          <button type="button" class="quick-pill" data-query="4458 Sayılı Gümrük Kanunu">4458 Gümrük Kanunu</button>
+          <button type="button" class="quick-pill" data-query="Gümrük Yönetmeliği">Gümrük Yönetmeliği</button>
+          <button type="button" class="quick-pill" data-query="4760 Sayılı Özel Tüketim Vergisi Kanunu">ÖTV Kanunu Listeleri</button>
+          <button type="button" class="quick-pill" data-query="2026 Ürün Güvenliği ve Denetimi TAREKS">2026 ÜGD / TAREKS</button>
+        </div>
+
         <div class="filter-bar" id="ticaretFilters">
           <label><span>Kaynak</span><select id="sourceFilter"><option value="">Tümü</option></select></label>
           <label><span>Belge türü</span><select id="documentType"><option value="">Tümü</option><option>Kanun</option><option>Yönetmelik</option><option>Tebliğ</option><option>Genelge</option><option>Karar</option><option>Rapor</option><option>İstatistik</option><option>Rehber</option></select></label>
@@ -214,6 +224,12 @@
               </div>
               <div class="product-fields">
                 <label class="field"><span>Ürün tanımı <b>*</b></span><textarea id="productDescription" maxlength="2000" required placeholder="Ürünün adı, işlevi, marka/modeli, ölçüsü ve teknik özellikleri"></textarea></label>
+                <div class="product-description-actions">
+                  <button class="secondary-action direct-classify-btn" type="button" id="directClassifyButton">
+                    <svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true"><path d="m5 12 14 0M14 6l6 6-6 6"/></svg>
+                    <span>Aday GTİP Bul (Fotoğrafsız / Yalnızca Metin)</span>
+                  </button>
+                </div>
                 <details class="advanced-fields" id="documentIngest">
                   <summary><span>Ürün belgesi ekle (PDF veya ürün sayfası)</span><small>Teknik föy, fiyat listesi, e-ticaret sayfası</small></summary>
                   <label class="field"><span>Belge adresi (URL)</span><input id="ingestUrl" maxlength="2000" inputmode="url" placeholder="https://..."></label>
@@ -222,7 +238,12 @@
                   <div id="ingestOutput" aria-live="polite"></div>
                 </details>
                 <div class="field-row">
-                  <label class="field"><span>Seçilen HS / CN / Türk GTİP</span><input id="candidateGtip" maxlength="30" inputmode="numeric" placeholder="Aday seçin veya 6, 8, 10, 12 hane yazın"></label>
+                  <label class="field"><span>Seçilen HS / CN / Türk GTİP</span>
+                    <div class="autocomplete-wrapper">
+                      <input id="candidateGtip" maxlength="30" inputmode="numeric" autocomplete="off" placeholder="Aday seçin veya 6, 8, 10, 12 hane yazın">
+                      <div class="autocomplete-dropdown" id="candidateGtipDropdown" hidden></div>
+                    </div>
+                  </label>
                   <label class="field"><span>Menşe ülke <b>*</b></span><input id="originCountry" list="countryList" autocomplete="off" maxlength="100" required placeholder="Örn. Çin"></label>
                 </div>
                 <section class="gtip-suggestions" id="gtipSuggestions" hidden aria-live="polite">
@@ -361,7 +382,12 @@
         <section class="customs-tool-panel" data-customs-panel="tariff" hidden aria-labelledby="tariffPanelTitle">
           <header class="tool-panel-head"><span>01 / RESMÎ TARİFE</span><h2 id="tariffPanelTitle">GTİP, menşe ve ithalat maliyeti</h2><p>2026 İthalat Rejimi ve İlave Gümrük Vergisi arşivlerinin kaynak satırlarını sorgular. Dipnotlu veya belirsiz oran toplam hesaba otomatik alınmaz.</p></header>
           <form class="tool-form" id="tariffForm">
-            <label class="field"><span>HS / CN / GTİP kodu <b>*</b></span><input id="tariffGtip" required inputmode="numeric" maxlength="30" placeholder="6, 8, 10 veya 12 hane"></label>
+            <label class="field"><span>HS / CN / GTİP kodu <b>*</b></span>
+              <div class="autocomplete-wrapper">
+                <input id="tariffGtip" required inputmode="numeric" maxlength="30" autocomplete="off" placeholder="6, 8, 10 veya 12 hane ya da eşya adı">
+                <div class="autocomplete-dropdown" id="tariffGtipDropdown" hidden></div>
+              </div>
+            </label>
             <label class="field"><span>Menşe ülke <b>*</b></span><input id="tariffOrigin" list="countryList" autocomplete="off" required maxlength="100" placeholder="Örn. Çin"></label>
             <label class="field"><span>Sevk ülkesi</span><input id="tariffDispatch" list="countryList" autocomplete="off" maxlength="100" placeholder="Menşeden farklıysa, örn. Almanya"></label>
             <label class="field"><span>A.TR dolaşım belgesi</span><select id="tariffAtr"><option value="">Belirtilmedi</option><option value="true">İbraz edilecek</option><option value="false">Yok</option></select></label>
@@ -407,12 +433,22 @@
         </section>
 
         <section class="customs-tool-panel" data-customs-panel="controls" hidden aria-labelledby="controlsPanelTitle">
-          <header class="tool-panel-head"><span>02 / ÜRÜN GÜVENLİĞİ</span><h2 id="controlsPanelTitle">TAREKS, TSE, kimyasal ve belge kapsamı</h2><p>GTİP’i güncel Ürün Güvenliği ve Denetimi tebliğlerinin Ek-1 listelerinde arar. Liste eşleşmesi fiilî denetime seçildiğiniz anlamına gelmez.</p></header>
+          <header class="tool-panel-head"><span>02 / ÜRÜN GÜVENLİĞİ</span><h2 id="controlsPanelTitle">TAREKS, TSE, kimyasal ve belge kapsamı</h2><p>GTİP veya ürün kelimesini 2026 Ürün Güvenliği ve Denetimi tebliğlerinin Ek-1 listelerinde arar ya da tüm 2026 tebliğ fihristini listeler.</p></header>
+          <div class="controls-mode-switch">
+            <button type="button" id="controlsModeSearch" class="active"><span>GTİP / Kelime Sorgula</span></button>
+            <button type="button" id="controlsModeCatalog"><span>2026 ÜGD Tebliğ Fihristi (24 Tebliğ)</span></button>
+          </div>
           <form class="tool-form compact" id="controlsForm">
-            <label class="field"><span>12 haneli GTİP <b>*</b></span><input id="controlsGtip" required inputmode="numeric" maxlength="30" placeholder="6104.63.00.00.00"></label>
+            <label class="field"><span>GTİP veya Eşya / Tebliğ Adı <b>*</b></span>
+              <div class="autocomplete-wrapper">
+                <input id="controlsGtip" required maxlength="60" autocomplete="off" placeholder="Örn: 8517, 6104.63, oyuncak, telsiz, tıbbi cihaz, asansör">
+                <div class="autocomplete-dropdown" id="controlsGtipDropdown" hidden></div>
+              </div>
+            </label>
             <button class="analyse-button" type="submit"><span>Kontrol ve belge kapsamını sorgula</span></button>
           </form>
           <div class="tool-output" id="controlsOutput" aria-live="polite"></div>
+          <div class="communiques-catalog" id="communiquesCatalog" hidden aria-live="polite"></div>
         </section>
 
         <section class="customs-tool-panel" data-customs-panel="changes" hidden aria-labelledby="changesPanelTitle">

@@ -32,6 +32,17 @@ const state = {
 
 const $ = (selector) => document.querySelector(selector);
 const $$ = (selector) => [...document.querySelectorAll(selector)];
+const safeStorage = {
+  getItem(key) {
+    try { return localStorage.getItem(key); } catch (_) { return null; }
+  },
+  setItem(key, value) {
+    try { localStorage.setItem(key, value); } catch (_) {}
+  },
+  removeItem(key) {
+    try { localStorage.removeItem(key); } catch (_) {}
+  },
+};
 const form = $("#searchForm");
 const queryInput = $("#query");
 const resultList = $("#resultList");
@@ -987,6 +998,7 @@ function renderExpertReviewPacket(packet) {
 function renderCustomsResult(data) {
   exportStore.precheck = data;
   state.currentCustomsResult = data;
+  saveLocalScenario(data);
   const sourceMap = customsSourceMap(data);
   const statusLabels = {
     preliminary: "Ön değerlendirme",
@@ -1035,9 +1047,9 @@ function renderCustomsResult(data) {
     $("#customsForm").requestSubmit();
   });
   $("#saveScenario")?.addEventListener("click", async () => {
+    saveLocalScenario(data);
     if (!state.auth?.authenticated) {
-      showToast("Kanıt dosyası için Google hesabınızla giriş yapın.");
-      window.setTimeout(() => { location.href = "/auth/google"; }, 700);
+      showToast("Ön değerlendirme bu cihaza kaydedildi. Kalıcı sunucu kaydı ve paylaşım için Google ile giriş yapabilirsiniz.");
       return;
     }
     const button = $("#saveScenario"); button.disabled = true;
@@ -1395,8 +1407,15 @@ async function prefillVerifiedRates(code) {
       body: JSON.stringify({ gtip: code, origin_country: origin }),
     });
     const safe = tariff.unambiguous_rates || {};
+    const safeAdditionalDuty = safe.additional_duty != null ? safe.additional_duty : (
+      !tariff.ambiguous_measure_types?.includes("additional_duty") && tariff.measure_coverage?.additional_duty?.status === "verified_snapshot" ? 0 : null
+    );
     let filled = 0;
-    [["#customsDutyRate", safe.customs_duty], ["#additionalDutyRate", safe.additional_duty]].forEach(([selector, value]) => {
+    [
+      ["#customsDutyRate", safe.customs_duty],
+      ["#additionalDutyRate", safeAdditionalDuty],
+      ["#additionalFinancialLiabilityRate", safe.additional_financial_liability],
+    ].forEach(([selector, value]) => {
       const input = $(selector);
       if (value == null || !input || input.value.trim() !== "") return;
       input.value = String(value);
@@ -1707,7 +1726,7 @@ $("#candidateGtip").addEventListener("input", () => {
     state.customsExactGtipConfirmed = false;
     state.customsSelectedCandidate = state.customsClassificationResult?.candidates?.find((candidate) => candidate.code === current) || null;
     window.clearTimeout(manualTariffTimer);
-    if ([6, 8, 10, 12].includes(current.length)) {
+    if ([4, 6, 8, 10, 12].includes(current.length)) {
       manualTariffTimer = window.setTimeout(async () => {
         try {
           const tree = await loadTariffTree(current, state.customsSelectedCandidate);
@@ -1803,15 +1822,28 @@ $("#customsForm").addEventListener("submit", async (event) => {
     $("#gtipSuggestions").scrollIntoView({ behavior: "smooth", block: "center" });
     return;
   }
-  if (selectedTariffCode && ![6, 8, 10, 12].includes(selectedTariffCode.length)) {
-    showToast("Tarife kodu 6, 8, 10 veya 12 haneli olmalıdır.");
+  if (selectedTariffCode && ![4, 6, 8, 10, 12].includes(selectedTariffCode.length)) {
+    showToast("Tarife kodu 4, 6, 8, 10 veya 12 haneli olmalıdır.");
     $("#candidateGtip").focus();
     return;
   }
   if (selectedTariffCode && !state.customsGtipSelectionConfirmed) {
-    state.customsPendingSubmit = true;
-    showToast("Kod resmî tarife ağacında doğrulanıyor; analiz doğrulama biter bitmez kendiliğinden başlayacak.");
-    return;
+    window.clearTimeout(manualTariffTimer);
+    showToast("Kod resmî tarife ağacında doğrulanıyor…");
+    try {
+      const tree = await loadTariffTree(selectedTariffCode, state.customsSelectedCandidate);
+      if (tree && (tree.status === "matched" || tree.status === "partial")) {
+        state.customsGtipSelectionConfirmed = true;
+        state.customsExactGtipConfirmed = Boolean(tree.exact_gtip_selected);
+        updateReadiness();
+      } else {
+        showToast("Kod resmî tarife ağacında bulunamadı; lütfen geçerli bir GTİP girin veya aday seçin.");
+        return;
+      }
+    } catch (error) {
+      showToast(error.message || "Tarife doğrulanamadı.");
+      return;
+    }
   }
   state.customsPendingSubmit = false;
   if (selectedTariffCode && selectedTariffCode.length < 12) {
@@ -2132,12 +2164,19 @@ const tariffMeasureLabels = {
 
 function tariffMatchSummary(tariff) {
   if (tariff.match_mode !== "prefix") return "";
-  const variants = Object.entries(tariff.rate_variants || {}).map(([type, rates]) => {
+  const variantItems = Object.entries(tariff.rate_variants || {}).map(([type, rates]) => {
     const label = tariffMeasureLabels[type] || type;
     const values = rates?.length ? rates.map((rate) => `%${numberFormat.format(rate)}`).join(" / ") : "oran okunamadı";
     const ambiguous = (tariff.ambiguous_measure_types || []).includes(type);
     return `<li><b>${escapeHtml(label)}:</b> ${escapeHtml(values)}${ambiguous ? " · oran veya kapsam alt GTİP’e göre değişiyor" : " · bütün alt satırlarda aynı"}</li>`;
-  }).join("");
+  });
+  if (!tariff.rate_variants?.additional_duty && tariff.measure_coverage?.additional_duty?.status === "verified_snapshot" && !(tariff.ambiguous_measure_types || []).includes("additional_duty")) {
+    variantItems.push(`<li><b>${escapeHtml(tariffMeasureLabels.additional_duty)}:</b> %0 · İGV listesinde yer almıyor (uygulanmıyor)</li>`);
+  }
+  if (!tariff.rate_variants?.additional_financial_liability && !(tariff.ambiguous_measure_types || []).includes("additional_financial_liability")) {
+    variantItems.push(`<li><b>${escapeHtml(tariffMeasureLabels.additional_financial_liability)}:</b> %0 · EMY listesinde yer almıyor (uygulanmıyor)</li>`);
+  }
+  const variants = variantItems.join("");
   return `<div class="result-caution"><strong>${escapeHtml(tariff.gtip.length)} haneli kodla ön ek araması:</strong> ${escapeHtml(tariff.matched_gtip_count || 0)} adet 12 haneli Türk GTİP satırı bulundu.${variants ? `<ul>${variants}</ul>` : ""}</div>`;
 }
 
@@ -2155,6 +2194,9 @@ function applicableTariffRates(tariff) {
     if (item.rate == null || !rateFieldByMeasure[item.measure_type] || ambiguous.has(item.measure_type)) return;
     if (!(item.measure_type in rates)) rates[item.measure_type] = Number(item.rate);
   });
+  if (!ambiguous.has("additional_duty") && !("additional_duty" in rates) && tariff.measure_coverage?.additional_duty?.status === "verified_snapshot") {
+    rates.additional_duty = 0;
+  }
   return rates;
 }
 
@@ -2296,13 +2338,80 @@ document.addEventListener("click", (event) => {
 function renderLiraSummary(summary) {
   if (!summary) return "";
   const lira = (value) => value == null ? "—" : `${numberFormat.format(value)} TL`;
-  return `<div class="formula-ledger lira-ledger"><h3>TL beyanname özeti · ${escapeHtml(summary.status === "complete" ? "tam" : "eksik girdi")}</h3>
-    ${(summary.lines || []).map((line) => `<div class="formula-line"><span>${escapeHtml(line.label)}</span><code>${lira(line.amount_try)}</code></div>`).join("")}
-    <div class="formula-line"><strong>KDV matrahı (TL)</strong><code>${lira(summary.vat_base_try)}</code></div>
-    <div class="formula-line"><strong>Toplam vergi (TL)</strong><code>${lira(summary.total_taxes_try)}</code></div>
-    <div class="formula-line"><strong>Genel toplam (TL)</strong><code>${lira(summary.landed_total_try)}</code></div>
-    ${summary.unit_landed_cost_try != null ? `<div class="formula-line"><strong>Birim maliyet (TL)</strong><code>${lira(summary.unit_landed_cost_try)}</code></div>` : ""}
-    <p class="rate-warning">${(summary.notes || []).map((item) => escapeHtml(item)).join(" ")}</p></div>`;
+  const bilgeCodeMap = {
+    duty: "401 (Gümrük Vergisi)",
+    additional: "403 (İlave Gümrük Vergisi)",
+    additional_financial_liability: "404 (Ek Mali Yükümlülük)",
+    anti_dumping: "405 (Dampinge Karşı Vergi)",
+    kkdf: "408 (Kaynak Kullanım Fonu)",
+    sct: "409 (Özel Tüketim Vergisi)",
+    trt_bandrol: "410 (TRT Bandrol)",
+    stamp_duty: "0001 (Damga Vergisi)",
+    port_storage: "— (Liman/Ardiye Tescil Öncesi)",
+    vat: "407 (KDV)",
+    gekap: "— (GEKAP)",
+  };
+
+  const lines = (summary.lines || []).map((line) => {
+    const code = bilgeCodeMap[line.code] || "—";
+    return `<tr>
+      <td>${escapeHtml(line.label)}</td>
+      <td><code>${escapeHtml(code)}</code></td>
+      <td class="num">${lira(line.amount_try)}</td>
+    </tr>`;
+  }).join("");
+
+  return `
+    <div class="tax-compass-wrapper">
+      <div class="tax-compass-header">
+        <h3>
+          <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M7 8h10M7 12h10M7 16h6"/></svg>
+          <span>Gümrük Beyannamesi Tahakkuk Pusulası</span>
+          <span class="bilge-badge">BİLGE TAHAKKUK FORMATI</span>
+        </h3>
+        <small>${summary.currency} TCMB Satış Kuru: <b>${summary.exchange_rate} TL</b>${summary.exchange_rate_date ? ` (${summary.exchange_rate_date})` : ""}</small>
+      </div>
+      <table class="tax-compass-table">
+        <thead>
+          <tr>
+            <th>Vergi / Masraf Türü</th>
+            <th>BİLGE Kodu</th>
+            <th style="text-align:right">Tutar (TL)</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr class="compass-section-head">
+            <td colspan="2">1. Gümrük CIF Kıymeti Matrahı</td>
+            <td class="num">${lira(summary.customs_value_try)}</td>
+          </tr>
+          ${lines}
+          <tr class="compass-section-head">
+            <td colspan="2">2. KDV Matrahı (CIF + İthalat Vergileri + Ardiye + Damga)</td>
+            <td class="num">${lira(summary.vat_base_try)}</td>
+          </tr>
+          <tr class="compass-total-row">
+            <td>Gümrük İdaresine Ödenecek Toplam Vergi ve Harçlar</td>
+            <td><code>401-410 Toplam</code></td>
+            <td class="num">${lira(summary.total_taxes_try)}</td>
+          </tr>
+          <tr class="compass-total-row" style="background: color-mix(in srgb, var(--teal) 14%, var(--surface));">
+            <td><strong>Genel İthalat Çıkış Maliyeti (Eşya Bedeli + Tüm Vergiler)</strong></td>
+            <td><strong>Landed Cost</strong></td>
+            <td class="num"><strong>${lira(summary.landed_total_try)}</strong></td>
+          </tr>
+          ${summary.unit_landed_cost_try != null ? `
+          <tr>
+            <td>Birim İthalat Maliyeti (Adet / Birim Başına)</td>
+            <td>Birim</td>
+            <td class="num"><strong>${lira(summary.unit_landed_cost_try)}</strong></td>
+          </tr>` : ""}
+        </tbody>
+      </table>
+      <div style="padding: 8px 14px; font-size: .72rem; color: var(--ink-2); background: var(--surface-2, #f9fafb); border-top: 1px solid var(--line);">
+        ${(summary.notes || []).map((n) => `<p style="margin:2px 0;">${escapeHtml(n)}</p>`).join("")}
+      </div>
+    </div>
+  `;
 }
 
 const TRADE_MEASURE_LABELS = { anti_dumping: "Damping / sübvansiyon", safeguard: "Korunma önlemleri", surveillance: "Gözetim tebliğleri", tariff_quota: "Tarım tarife kontenjanları", communiques: "İthalat Tebliğleri" };
@@ -2541,8 +2650,11 @@ $("#scenarioCompare").addEventListener("click", async () => {
 document.addEventListener("click", (event) => {
   if (!event.target.closest("#printPrecheck")) return;
   document.body.classList.add("print-dossier");
+  const closedDetails = document.querySelectorAll(".answer-sheet details:not([open])");
+  closedDetails.forEach((el) => el.setAttribute("open", "true"));
   const cleanup = () => {
     document.body.classList.remove("print-dossier");
+    closedDetails.forEach((el) => el.removeAttribute("open"));
     window.removeEventListener("afterprint", cleanup);
   };
   window.addEventListener("afterprint", cleanup);
@@ -2641,26 +2753,89 @@ function renderControlTool(data) {
     ${(data.warnings || []).length ? `<div class="result-caution">${data.warnings.map((item) => escapeHtml(item)).join(" · ")}</div>` : ""}`;
 }
 
+function renderControlSearchResults(data) {
+  const results = data.results || [];
+  if (!results.length) {
+    return `<div class="answer-head"><span class="answer-status warning">0 sonuç</span><div><h2>“${escapeHtml(data.query || "")}” için denetim kapsamı bulunamadı</h2><p>İndekslenen 2026 ÜGD Ek-1 listelerinde bu kelimeye veya GTİP'e ait kayıt eşleşmedi. GTİP kodunu 4, 6 veya 12 hane olarak yazabilir ya da Tebliğ Fihristinden inceleyebilirsiniz.</p></div></div>`;
+  }
+  const cards = results.map((item) => {
+    const rule = item.rule || {};
+    return `<article class="control-card">
+      <header>
+        <code>${escapeHtml(rule.code || "ÜGD")}</code>
+        <b>${escapeHtml(rule.title || "")}</b>
+        ${rule.source_url ? `<a href="${safeUrl(rule.source_url)}" target="_blank" rel="noreferrer">Resmî metin ↗</a>` : ""}
+      </header>
+      <dl>
+        <div><dt>Eşleşen GTİP / Kapsam</dt><dd><b>${escapeHtml(item.gtip || "")}</b></dd></div>
+        <div><dt>Sistem</dt><dd>${escapeHtml(rule.system || "TAREKS")}</dd></div>
+        <div><dt>Eşya Tanımı</dt><dd>${escapeHtml(item.commodity_name || "—")}</dd></div>
+        <div><dt>Denetim Şekli</dt><dd>${rule.risk_based ? "Risk analizine bağlı fiilî denetim" : "Belge kontrolü / Heyet"}</dd></div>
+        <div><dt>Laboratuvar</dt><dd>${rule.laboratory_test_possible ? "Mümkün; otomatik değil" : "Metinde tespit edilmedi"}</dd></div>
+      </dl>
+      ${renderRuleDocuments(rule)}
+    </article>`;
+  }).join("");
+
+  return `<div class="answer-head">
+    <span class="answer-status">${results.length} eşleşme</span>
+    <div>
+      <h2>“${escapeHtml(data.query || "")}” arama sonuçları</h2>
+      <p>2026 Ürün Güvenliği ve Denetimi tebliğlerinde bulunan ürün ve GTİP kapsamları</p>
+    </div>
+  </div>
+  ${cards}`;
+}
+
 $("#controlsForm").addEventListener("submit", async (event) => {
   event.preventDefault();
   const output = $("#controlsOutput");
   const button = event.currentTarget.querySelector("button[type=submit]");
   button.disabled = true;
-  output.innerHTML = '<div class="analysis-loading"><i></i><div><b>Kontrol tebliğleri taranıyor</b><span>Ek-1 kapsamı ile risk sonucu birbirinden ayrılıyor…</span></div></div>';
+  output.innerHTML = '<div class="analysis-loading"><i></i><div><b>Kontrol tebliğleri taranıyor</b><span>Ek-1 kapsamı ile risk sonucu taranıyor…</span></div></div>';
+  const query = $("#controlsGtip").value.trim();
+  const digits = query.replace(/\D/g, "");
   try {
-    const data = await fetchJson("/api/controls/lookup", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ gtip: $("#controlsGtip").value.trim() }) });
-    output.innerHTML = renderControlTool(data);
+    let data;
+    if (digits.length >= 4 && digits.length <= 12 && digits.length === query.replace(/[\s.]/g, "").length) {
+      data = await fetchJson("/api/controls/lookup", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ gtip: digits }) });
+      output.innerHTML = renderControlTool(data);
+    } else {
+      const searchRes = await fetchJson(`/api/controls/search?q=${encodeURIComponent(query)}`);
+      output.innerHTML = renderControlSearchResults(searchRes);
+    }
   } catch (error) {
     output.innerHTML = `<div class="answer-error"><h2>Kontrol sorgusu tamamlanamadı</h2><p>${escapeHtml(error.message)}</p></div>`;
   } finally { button.disabled = false; }
 });
 
+function saveLocalScenario(data) {
+  if (!data) return;
+  try {
+    const items = savedScenarios();
+    const title = data.inquiry?.product_description || $("#productDescription")?.value?.trim() || "İthalat ön değerlendirmesi";
+    const gtip = data.inquiry?.candidate_gtip || $("#candidateGtip")?.value?.trim() || "";
+    const origin = data.inquiry?.origin_country || $("#originCountry")?.value?.trim() || "";
+    const newEntry = {
+      title,
+      gtip,
+      origin,
+      savedAt: new Date().toISOString(),
+      result: data,
+    };
+    const filtered = items.filter((x) => !(x.gtip === gtip && x.title === title));
+    filtered.unshift(newEntry);
+    safeStorage.setItem("gumrukce-scenarios", JSON.stringify(filtered.slice(0, 25)));
+    renderWatchList();
+  } catch (_) {}
+}
+
 function savedWatchItems() {
-  try { return JSON.parse(localStorage.getItem("gumrukce-watchlist") || "[]"); } catch (_) { return []; }
+  try { return JSON.parse(safeStorage.getItem("gumrukce-watchlist") || "[]"); } catch (_) { return []; }
 }
 
 function savedScenarios() {
-  try { return JSON.parse(localStorage.getItem("gumrukce-scenarios") || "[]"); } catch (_) { return []; }
+  try { return JSON.parse(safeStorage.getItem("gumrukce-scenarios") || "[]"); } catch (_) { return []; }
 }
 
 function watchlistOnServer() {
@@ -2689,7 +2864,7 @@ async function migrateLocalWatchItems() {
   if (!local.length || !watchlistOnServer()) return;
   try {
     await fetchJson("/api/watchlist", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ items: local.map((item) => ({ gtip: item.gtip, label: item.label || "" })) }) });
-    localStorage.removeItem("gumrukce-watchlist");
+    safeStorage.removeItem("gumrukce-watchlist");
     showToast(`${local.length} izlenen GTİP hesabınıza taşındı.`);
   } catch (_) {
     // Local copy stays until the server accepts it.
@@ -2733,7 +2908,7 @@ $("#addWatch").addEventListener("click", async () => {
   }
   const items = savedWatchItems();
   if (!items.some((item) => item.gtip === gtip)) items.push({ gtip, label, addedAt: new Date().toISOString() });
-  localStorage.setItem("gumrukce-watchlist", JSON.stringify(items.slice(-100)));
+  safeStorage.setItem("gumrukce-watchlist", JSON.stringify(items.slice(-100)));
   renderWatchList();
   showToast("GTİP bu cihazdaki izleme listesine eklendi.");
 });
@@ -2746,7 +2921,7 @@ $("#watchList").addEventListener("click", async (event) => {
       try { await fetchJson(`/api/watchlist/${encodeURIComponent(remove.dataset.watchId)}`, { method: "DELETE" }); } catch (error) { showToast(error.message); }
     } else {
       const items = savedWatchItems(); items.splice(Number(remove.dataset.watchRemove), 1);
-      localStorage.setItem("gumrukce-watchlist", JSON.stringify(items));
+      safeStorage.setItem("gumrukce-watchlist", JSON.stringify(items));
     }
     renderWatchList();
   }
@@ -2765,7 +2940,7 @@ $("#scenarioList").addEventListener("click", (event) => {
   const items = savedScenarios();
   if (remove) {
     items.splice(Number(remove.dataset.scenarioRemove), 1);
-    localStorage.setItem("gumrukce-scenarios", JSON.stringify(items)); renderWatchList();
+    safeStorage.setItem("gumrukce-scenarios", JSON.stringify(items)); renderWatchList();
   }
   if (open) {
     const item = items[Number(open.dataset.scenarioOpen)];
@@ -2813,12 +2988,12 @@ async function loadChanges() {
 $("#refreshChanges").addEventListener("click", loadChanges);
 renderWatchList();
 
-const savedTheme = localStorage.getItem("ticaret-bilgi-theme");
+const savedTheme = safeStorage.getItem("ticaret-bilgi-theme");
 if (savedTheme) document.documentElement.dataset.theme = savedTheme;
 $("#themeToggle").addEventListener("click", () => {
   const next = document.documentElement.dataset.theme === "dark" ? "light" : "dark";
   document.documentElement.dataset.theme = next;
-  localStorage.setItem("ticaret-bilgi-theme", next);
+  safeStorage.setItem("ticaret-bilgi-theme", next);
 });
 
 loadCatalogStatus();
@@ -2881,7 +3056,239 @@ async function queryDeclaration() {
 }
 $("#declarationQuery")?.addEventListener("click", queryDeclaration);
 $("#declarationNo")?.addEventListener("keydown", (event) => { if (event.key === "Enter") { event.preventDefault(); queryDeclaration(); } });
+async function initMarketplaceStatus() {
+  try {
+    const data = await fetchJson("/api/consultants");
+    const enabled = data.enabled !== false;
+    state.consultantsMarketplace = enabled;
+    document.body.classList.toggle("marketplace-enabled", enabled);
+  } catch (_) {}
+}
+
 loadDeclarationStatus();
+initMarketplaceStatus();
+
+// Autocomplete logic
+function setupAutocomplete(inputEl, dropdownEl, onSelect) {
+  if (!inputEl || !dropdownEl) return;
+  let debounceTimer = null;
+  let activeIndex = -1;
+  let currentItems = [];
+
+  const closeDropdown = () => {
+    dropdownEl.hidden = true;
+    dropdownEl.innerHTML = "";
+    activeIndex = -1;
+    currentItems = [];
+  };
+
+  inputEl.addEventListener("input", () => {
+    clearTimeout(debounceTimer);
+    const val = inputEl.value.trim();
+    if (val.length < 2) {
+      closeDropdown();
+      return;
+    }
+    debounceTimer = setTimeout(async () => {
+      try {
+        const res = await fetchJson(`/api/tariff/autocomplete?q=${encodeURIComponent(val)}`);
+        const items = res.results || [];
+        currentItems = items;
+        if (!items.length) {
+          closeDropdown();
+          return;
+        }
+        dropdownEl.innerHTML = items.map((item, idx) => `
+          <div class="autocomplete-item" data-idx="${idx}">
+            <span class="ac-code">${escapeHtml(item.code)}</span>
+            <span class="ac-name">${escapeHtml(item.name)}</span>
+            <span class="ac-badge">${escapeHtml(item.category || (item.chapter ? `Fasıl ${item.chapter}` : ""))}</span>
+          </div>
+        `).join("");
+        dropdownEl.hidden = false;
+        activeIndex = -1;
+
+        dropdownEl.querySelectorAll(".autocomplete-item").forEach((el) => {
+          el.addEventListener("click", () => {
+            const idx = Number(el.dataset.idx);
+            const selected = currentItems[idx];
+            if (selected) {
+              inputEl.value = selected.code;
+              inputEl.dispatchEvent(new Event("input", { bubbles: true }));
+              closeDropdown();
+              if (onSelect) onSelect(selected);
+            }
+          });
+        });
+      } catch (_) {
+        closeDropdown();
+      }
+    }, 220);
+  });
+
+  inputEl.addEventListener("keydown", (e) => {
+    if (dropdownEl.hidden || !currentItems.length) return;
+    const items = dropdownEl.querySelectorAll(".autocomplete-item");
+    if (e.key === "ArrowDown") {
+      e.preventDefault();
+      activeIndex = (activeIndex + 1) % items.length;
+      items.forEach((item, i) => item.classList.toggle("active", i === activeIndex));
+      items[activeIndex]?.scrollIntoView({ block: "nearest" });
+    } else if (e.key === "ArrowUp") {
+      e.preventDefault();
+      activeIndex = (activeIndex - 1 + items.length) % items.length;
+      items.forEach((item, i) => item.classList.toggle("active", i === activeIndex));
+      items[activeIndex]?.scrollIntoView({ block: "nearest" });
+    } else if (e.key === "Enter" && activeIndex >= 0) {
+      e.preventDefault();
+      items[activeIndex]?.click();
+    } else if (e.key === "Escape") {
+      closeDropdown();
+    }
+  });
+
+  document.addEventListener("click", (e) => {
+    if (!inputEl.contains(e.target) && !dropdownEl.contains(e.target)) {
+      closeDropdown();
+    }
+  });
+}
+
+setupAutocomplete($("#candidateGtip"), $("#candidateGtipDropdown"), (item) => {
+  showToast(`${item.code} seçildi.`);
+});
+
+setupAutocomplete($("#tariffGtip"), $("#tariffGtipDropdown"), (item) => {
+  showToast(`${item.code} seçildi.`);
+});
+
+setupAutocomplete($("#controlsGtip"), $("#controlsGtipDropdown"), (item) => {
+  showToast(`${item.code} seçildi.`);
+});
+
+// Direct classify button for text-only inquiry in Gümrükçe'ye Sor
+$("#directClassifyButton")?.addEventListener("click", async () => {
+  const desc = $("#productDescription").value.trim();
+  if (desc.length < 5) {
+    showToast("Lütfen önce ürün tanımını (ürün adı, malzemesi, işlevi vb.) yazın.");
+    $("#productDescription").focus();
+    return;
+  }
+  const btn = $("#directClassifyButton");
+  btn.disabled = true;
+  const originalHtml = btn.innerHTML;
+  btn.innerHTML = '<span>Aday GTİP’ler taranıyor…</span>';
+  try {
+    setVisionState(
+      "confirmed",
+      "Ürün tanım evsafları doğrulanıyor. En yakın GTİP adayları ve vergi oranları taranıyor...",
+      "Metin tabanlı sınıflandırma"
+    );
+    const classification = await classifyApprovedProduct();
+    if (classification.candidates?.length) {
+      showToast(`${classification.candidates.length} aday tarife kodu bulundu.`);
+      $("#gtipSuggestions").scrollIntoView({ behavior: "smooth", block: "center" });
+    } else {
+      showToast("Aday kod için ürün tanımı biraz daha detaylandırılmalı.");
+    }
+  } catch (error) {
+    showToast(error.message || "Sınıflandırma gerçekleştirilemedi.");
+  } finally {
+    btn.disabled = false;
+    btn.innerHTML = originalHtml;
+  }
+});
+
+// Quick pills in search
+$$(".quick-pill").forEach((button) => {
+  button.addEventListener("click", () => {
+    const q = button.dataset.query;
+    if (q) {
+      queryInput.value = q;
+      form.requestSubmit();
+    }
+  });
+});
+
+// Controls mode switch & communiques catalog
+$("#controlsModeSearch")?.addEventListener("click", () => {
+  $("#controlsModeSearch").classList.add("active");
+  $("#controlsModeCatalog")?.classList.remove("active");
+  $("#controlsForm").hidden = false;
+  $("#controlsOutput").hidden = false;
+  $("#communiquesCatalog").hidden = true;
+});
+
+$("#controlsModeCatalog")?.addEventListener("click", async () => {
+  $("#controlsModeCatalog").classList.add("active");
+  $("#controlsModeSearch")?.classList.remove("active");
+  $("#controlsForm").hidden = true;
+  $("#controlsOutput").hidden = true;
+  $("#communiquesCatalog").hidden = false;
+  await loadCommuniquesCatalog();
+});
+
+async function loadCommuniquesCatalog() {
+  const container = $("#communiquesCatalog");
+  if (!container) return;
+  if (container.dataset.loaded === "true") return;
+  container.innerHTML = '<div class="analysis-loading"><i></i><div><b>2026 ÜGD Tebliğ Fihristi yükleniyor</b><span>24 tebliğ, TAREKS ve TSE kapsamları getiriliyor…</span></div></div>';
+  try {
+    const data = await fetchJson("/api/controls/communiques");
+    container.dataset.loaded = "true";
+    const communiques = data.communiques || [];
+    container.innerHTML = `
+      <div class="answer-head">
+        <span class="answer-status">${communiques.length} tebliğ</span>
+        <div>
+          <h2>2026 Yılı İthalatta Ürün Güvenliği ve Denetimi (ÜGD) Tebliğleri</h2>
+          <p>Ticaret Bakanlığı koordinasyonunda TAREKS, TSE, Tarım ve Çevre denetim sistemlerine tabi tüm resmi tebliğler</p>
+        </div>
+      </div>
+      <div class="communique-catalog-grid">
+        ${communiques.map((c) => {
+          const sys = (c.system || "").toLowerCase();
+          const sysClass = sys.includes("tse") ? "tse" : (sys.includes("tar") ? "tarim" : "tareks");
+          const docs = (c.required_documents || []).slice(0, 3);
+          return `
+            <div class="communique-card">
+              <div class="communique-header">
+                <span class="communique-no">${escapeHtml(c.code)}</span>
+                <span class="communique-system-badge ${sysClass}">${escapeHtml(c.system || "TAREKS")}</span>
+              </div>
+              <div class="communique-title">${escapeHtml(c.title)}</div>
+              <div class="communique-stats">
+                <strong>${c.scope_count}</strong> denetime tabi GTİP kapsamı
+                ${c.official_gazette_date ? ` · RG: ${escapeHtml(c.official_gazette_date)}` : ""}
+              </div>
+              ${docs.length ? `
+                <div class="communique-docs">
+                  <b>Zorunlu / İbraz Edilecek Belgeler:</b>
+                  <ul>${docs.map((d) => `<li>${escapeHtml(d.text)}</li>`).join("")}</ul>
+                </div>
+              ` : ""}
+              <div class="card-actions" style="margin-top:auto; display:flex; gap:6px;">
+                <button type="button" class="secondary-action" style="padding:4px 8px; font-size:.7rem;" data-filter-communique="${escapeHtml(c.code)}">Bu Tebliğde Ara</button>
+                <a href="${safeUrl(c.source_url)}" target="_blank" rel="noreferrer" style="margin-left:auto; font-size:.72rem; color:var(--teal);">Resmî Gazete ↗</a>
+              </div>
+            </div>
+          `;
+        }).join("")}
+      </div>
+    `;
+
+    container.querySelectorAll("[data-filter-communique]").forEach((btn) => {
+      btn.addEventListener("click", () => {
+        const code = btn.dataset.filterCommunique;
+        $("#controlsModeSearch")?.click();
+        $("#controlsGtip").value = code;
+        $("#controlsForm")?.requestSubmit();
+      });
+    });
+  } catch (err) {
+    container.innerHTML = `<div class="answer-error"><p>${escapeHtml(err.message || "Tebliğler yüklenemedi.")}</p></div>`;
+  }
+}
 
 bindLocalizedNumberInputs();
 if (new URLSearchParams(location.search).get("scope") === "customs" || location.hash === "#customs") switchScope("customs");

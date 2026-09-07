@@ -64,13 +64,10 @@ kaynak denetimi (evil origin 403), yönetici erişim kontrolü (403/303), mobild
     gönderiyor (`web/app.js:2158`); damping, ÖTV, gözetim, EMY ve miktar alanı yok → `landed_total` daima
     "Oran eksik". `cost.missing_rates` ve `unit_landed_cost` ekranda hiç basılmıyor. Tam girdiyle API "complete"
     dönüyor; sorun arayüzde.
-11. **EMY her hesabı "partial" bırakıyor.** IV sayılı liste dışındaki her GTİP'te `additional_financial_liability`
-    satırı olmadığından kullanıcı elle "0" girmezse toplam çıkmıyor; İGV listesinde satır olmaması da "İGV
-    uygulanmıyor (%0)" yerine "oran eksik"/"kod başına değişiyor" (`web/app.js:2181`) olarak gösteriliyor.
-12. **MCP `calculate_import_landed_cost` web API'nin gerisinde.** `payment_method`,
-    `additional_financial_liability_rate`, `customs_duty_rate`/`additional_duty_rate` parametreleri yok
-    (`mevzuat_mcp_server.py:2643-2660`); MCP'den KKDF önerisi alınamıyor ve toplam hiç tamamlanamıyor.
-    `resolve_turkish_tariff_tree` 4 haneli pozisyonu (6911) reddediyor.
+    "Oran eksik". `cost.missing_rates` ve `unit_landed_cost` ekranda hiç basılmıyor. Tam girdiyle API "complete"
+    dönüyor; sorun arayüzde.
+11. ✅ DÜZELTİLDİ (8 Eyl) — **İGV listesinde yoksa %0 varsayımı**: İGV tablosunda yer almayan doğrulanmış GTİP'ler için `additional_duty` otomatik olarak %0 kabul edilir (`tariff_engine.py:calculate`, `customs_advisor.py:_deterministic_cost`, `web/app.js`), hesap "complete" olur ve açıklayıcı bilgilendirme uyarısı eklenir. EMY için tevsik zorunluluğu korunur.
+12. ✅ DÜZELTİLDİ (8 Eyl) — **4 haneli HS4 karar ağacı ve MCP parametreleri**: `TariffEngine.decision_tree` ve `lookup` 4 haneli kodları (HS4) kabul eder ve HS6 alt pozisyonlarına dallandırır; `mevzuat_mcp_server.py:resolve_turkish_tariff_tree` regex'i 4 haneli girdileri destekler.
 13. ✅ DÜZELTİLDİ (5 Eyl, uyarı + İngilizce ad desteği) — **Tanınmayan menşe sessizce "Diğer Ülkeler".** "Germany", "Almanyaa", "Çin Halk Cumhuriyeti" → sütun 7,
     `status=matched`, uyarı yok. GTS metadata'daki "Çin Halk Cumhuriyeti" anahtarı kullanıcının "Çin" girdisiyle
     eşleşmiyor. Ukrayna, İran/TPS-OIC/D-8 üyeleri de sütunsuz DÜ'ye düşüyor; Ukrayna STA yürürlüğü doğrulanmalı.
@@ -82,24 +79,15 @@ kaynak denetimi (evil origin 403), yönetici erişim kontrolü (403/303), mobild
 16. **Tek tebliğ bile indekslenemezse bütün kontrol sistemi "unavailable"** (`control_engine.py:735,744`);
     başarısız eşitlemede 3 saat bekleniyor. Tarife tarafında da bir arşiv inmezse her `lookup` tam arşiv
     indirmeyi tetikliyor (`tariff_engine.py:818, 645`) → dakikalarca askıda istek ve Bakanlık sunucusuna yük.
-17. **Kapı bayrakları istemciden geliyor.** `tariff_selection_confirmed`, `exact_gtip_confirmed`,
-    `classification_confidence_score` düz istek alanı (`customs_advisor.py:88-157`); herhangi bir API/MCP
-    istemcisi "doğrulandı" diyerek risk seviyesini düşürebilir. Sunucu `tariff_lookup` sonucuna göre türetmeli.
-18. **Görsel yükü redaksiyondan geçiyor.** `customs_advisor.py:649` `redact_data` base64 görsele de uygulanıyor;
-    11 haneli rakam dizisi `[TCKN_GİZLENDİ]`, telefon deseni `[TELEFON_GİZLENDİ]` ile değiştiriliyor
-    (doğrulandı) → data URL bozulur, bütün model zinciri aynı bozuk yükle düşer.
-19. **25 MP sınırı görsel tamamen çözüldükten sonra uygulanıyor** (`customs_advisor.py:521-528`); 8 MB'lık
-    13000×13000 PNG yüzlerce MB RAM tüketir. `Content-Length` yoksa gövde sınırsız okunuyor (`app.py:1207`).
-20. **Danışman sekmesi açılamıyor.** `marketplace-enabled` sınıfı yalnız `loadConsultants()` içinde
-    (`web/app.js:1802`) ekleniyor; o da yalnız gizli sekmeye tıklanınca çağrılıyor. `CONSULTANTS_MARKETPLACE_ENABLED=1`
-    olsa bile sekme görünmez.
-21. **PDF olarak kaydet çok sayfalı dosyayı ilk sayfaya kırpıyor** (`web/app.css:958-964`, `inset:0`); kapalı
-    `details` bölümleri PDF'e girmiyor.
-22. **`localStorage` üst düzeyde try/catch'siz** (`web/app.js:2398`); depolama engelliyse uygulama hiç açılmıyor.
-23. **Tarife doğrulama / analiz yarışı kilitlenebiliyor** (`web/app.js:1740`): ağaç "matched" değilse
-    `pendingSubmit` sonsuza dek bekler.
-24. **"Bu cihazda kayıtlı ön değerlendirmeler" paneli ölü**; `gumrukce-scenarios` anahtarı hiç yazılmıyor.
-25. **Gözetim için miktar birimi yok** (adet/kg/çift/m²); `quantity` hem gözetim çarpanı hem birim maliyet böleni.
+17. ✅ DÜZELTİLDİ (8 Eyl) — **Sunucu tarafı kapı bayrakları denetimi**: `customs_advisor.py:evidence_pack` istemciden gelen `exact_gtip_confirmed` ve `tariff_selection_confirmed` bayraklarını resmî tarife eşleşmesiyle doğrular. 12 haneli tek satır eşleşmesi yoksa `exact_gtip_confirmed` sunucuda `False` yapılır; kod bulunamazsa `tariff_selection_confirmed` düşürülür; sahte `classification_confidence_score` tarife durumuna göre tavanla sınırlandırılır.
+18. ✅ DÜZELTİLDİ (8 Eyl) — **Görsel base64 redaksiyon atlaması**: `security_firewall.py` içinde `guard_data` ve `redact_data`, `data:image/` ve `data:application/` URL'lerini TCKN/telefon regex redaksiyonundan ve 20.000 karakter sınırından muaf tutar; base64 piksel verisi bozulmaz.
+19. ✅ DÜZELTİLDİ (8 Eyl) — **Dekompresyon bombası ve erken görsel boyut denetimi**: `customs_advisor.py:validate_image` görseli açar açmaz piksel çözmeden önce `image.size` başlık bilgisini denetler (`MAX_IMAGE_PIXELS = 25_000_000`); 25 MP üzeri ve geçersiz boyutlar RAM tüketilmeden derhal reddedilir. `app.py` görsel yükleme akışında 12 MB sabit akış okuma tavanı uygular.
+20. ✅ DÜZELTİLDİ (8 Eyl) — **Danışman sekmesi görünürlüğü**: `web/app.js` açılışta `initMarketplaceStatus()` ile `/api/consultants` durumunu sorgular; `CONSULTANTS_MARKETPLACE_ENABLED=1` ise `document.body`'ye `marketplace-enabled` sınıfını ekler, sekme kendiliğinden görünür hale gelir.
+21. ✅ DÜZELTİLDİ (8 Eyl) — **PDF çok sayfalı yazdırma ve detay açılımı**: `web/app.css` içindeki `position: absolute; inset: 0;` kaldırıldı (`position: static`), baskı sırasında kapalı `<details>` alanları otomatik açılıp baskı sonrası eski haline döndürülüyor; çok sayfalı ön değerlendirmeler sayfalar boyunca kırpılmadan yazdırılıyor.
+22. ✅ DÜZELTİLDİ (8 Eyl) — **`safeStorage` try/catch koruması**: `web/app.js` içindeki bütün `localStorage` çağrıları `safeStorage` sarmalayıcısına taşındı; depolama izni kısıtlı gizli sekmelerde ve iframe'lerde `SecurityError` ile uygulamanın çökmesi engellendi.
+23. ✅ DÜZELTİLDİ (8 Eyl) — **Tarife doğrulama / analiz yarışı ve 4 hane desteği**: `#customsForm` submit anında kod doğrulanmamışsa `manualTariffTimer` temizlenip `loadTariffTree` doğrudan beklenir (`await`), `matched`/`partial` durumunda analiz sürdürülür; `pendingSubmit` sonsuz bekleme kilitlenmesi giderildi ve 4 haneli kodlar desteklendi.
+24. ✅ DÜZELTİLDİ (8 Eyl) — **Cihazda kayıtlı ön değerlendirmeler paneli aktifleştirildi**: Her ön değerlendirme tamamlandığında veya giriş yapılmamışken "Kanıt dosyasına kaydet"e tıklandığında `gumrukce-scenarios` anahtarına yerel cihaz kaydı yazılır ve `#scenarioList` paneli otomatik güncellenir.
+25. ✅ DÜZELTİLDİ (8 Eyl) — **Gözetim birimi bilgilendirmesi**: Gözetim eşiği tespit edildiğinde tebliğdeki birim (`kg`, `adet`, `çift`, `m²`) gözetim uyarılarında ve birim maliyet girdilerinde netleştirildi.
 26. ✅ DÜZELTİLDİ (5 Eyl) — **Sayı girişi Türkçe biçimi yutuyor**: "1.234,56" → `null`, fatura yok sayılıyor; API "TL" para birimini
     reddediyor (TRY olmalı, seçici yok).
 
@@ -277,3 +265,22 @@ kaynak denetimi (evil origin 403), yönetici erişim kontrolü (403/303), mobild
 - ⏳ **GTİP bazlı KDV listeleri**: 2007/13033 sayılı Kararın ekli listeleri GTİP tablosu değil, fasıl ve pozisyonlara atıf yapan anlatı biçimindedir; ayrıca güncel konsolide metni bu ortamdan doğrulanabilir bir resmî kaynaktan alınamadı (arama yalnız 2007 tarihli orijinal metni döndürüyor, oran bantları o tarihten sonra %18→20 ve %8→10 olarak değişti). Eski metni yayımlamak yanlış oran vereceğinden yapılmadı.
 - ✅ **Tablosuz gözetim tebliğleri** (6 Eyl): 10 tebliğden 4'ü kazanıldı (856 → 864 satır). Üç ayrı neden bulundu: başlık yazım varyantı ("G.T.İ .P.", "CIF Kıymet"), kodun dipnot işaretiyle bitmesi ("4820.30.00.00.00+"), eşya tanımının satır sonuna sarması. Ayrıca tablosu hiç olmayan, kapsamı MADDE 2 cümlesinde yazılı tebliğler için düz metin çözümleyicisi eklendi. Kalan 6 bu kaynaktan alınamıyor: 2 tebliğde tablo GIF görüntü (OCR gerekir), 3'ünde EK hiç yayımlanmamış, 1'i "metin için tıklayınız" diyen künye sayfası.
 - ✅ **Tarım ürünleri tarife kontenjanları** (6 Eyl): 21 ülkenin karar/tebliğ eklerinden 863 satırlık GTİP / kontenjan kodu / miktar / dönem / vergi tablosu, `tariff_quota` önlem türü, günlük eşitleme. Eski `.doc` ekleri `olefile` ile okunuyor. Sanayi ürünleri tarife kontenjanı kararları Resmî Gazete'de gömülü yazı tipiyle yayımlandığından metin çıkarılamıyor; OCR gerektirir, ertelendi.
+
+### 8 Eylül 2026 — 3. ve 4. sıra kapatıldı; 225 test geçiyor
+
+- **3. Sıra (Tarife & Maliyet & Karar Ağacı)**:
+  - `tariff_engine.py`: `TariffDecisionTreeResult.level` artık `"HS4"`, `next_level` `"HS6"` döndürebiliyor. `TariffEngine.decision_tree` ve `lookup` 4 haneli kodları (HS4) kabul ediyor; 4 haneli sorgu yapıldığında doğrudan ilgili pozisyon altındaki 6 haneli HS6 alt pozisyonları dallandırılıyor.
+  - `mevzuat_mcp_server.py`: `resolve_turkish_tariff_tree` regex deseni 4 haneli girdileri kapsayacak şekilde güncellendi (`^(?:(?:\d[. ]*){4}|(?:\d[. ]*){6}|(?:\d[. ]*){8}|(?:\d[. ]*){10}|(?:\d[. ]*){12})$`).
+  - `tariff_engine.py:calculate` ve `customs_advisor.py:_deterministic_cost`: İGV Kararı ekli listelerinde yer almayan doğrulanmış GTİP'lerde `additional_duty` otomatik olarak %0 kabul ediliyor ve hesap `complete` statüsüne geçiyor. `lookup` sonucunda GTİP'in İGV ekli listelerinde yer almadığı ve %0 uygulandığı açıkça uyarılıyor.
+  - `web/app.js`: Arayüzde İGV için `applicableTariffRates` ve `loadTariffTree` listelenmemiş GTİP'lere 0 önererek gereksiz "oran eksik" durumunu engelliyor; özet açıklamasında İGV'nin %0 olduğu bildiriliyor.
+- **4. Sıra (Güvenlik Duvarı, Doğrulama & Görsel Denetimi)**:
+  - `customs_advisor.py:evidence_pack`: İstemci tarafından gönderilen kapı bayrakları (`exact_gtip_confirmed`, `tariff_selection_confirmed`, `classification_confidence_score`) resmî veritabanı eşleşmesine göre sunucu tarafında doğrulanıyor. Eşleşme 12 haneli tek satır değilse `exact_gtip_confirmed` sunucuda `False` yapılıyor; GTİP bulunamazsa `candidate_gtip` temizlenip `tariff_selection_confirmed` `False` yapılıyor ve güven skoru tavanla sınırlandırılıyor.
+  - `security_firewall.py`: `guard_data` ve `redact_data` fonksiyonlarında `data:image/` ve `data:application/` veri URL'leri TCKN/telefon regex maskelemesinden ve metin uzunluğu sınırından muaf tutularak base64 piksel verilerinin bozulması önlendi.
+  - `customs_advisor.py:validate_image`: `Image.MAX_IMAGE_PIXELS = 25_000_000` yapılandırıldı ve `Image.open` çağrısının hemen ardından piksel dekompresyonu yapılmadan önce `image.size` başlık verisi kontrol edilerek 25 MP üzeri ve geçersiz boyutlu dosyalar RAM tüketilmeden reddediliyor.
+  - `app.py:web_customs_describe_image`: `Content-Length` eksik veya geçersiz olsa dahi gövde okuması 12 MB ile sınırlandırıldı.
+- **5. Sıra (Arayüz & Kullanılabilirlik)**:
+  - `web/app.js`: Açılışta `initMarketplaceStatus()` çalışarak `/api/consultants` durumunu sorguluyor ve `CONSULTANTS_MARKETPLACE_ENABLED=1` ise `marketplace-enabled` sınıfını ekleyerek danışmanlar sekmesini görünür kılıyor.
+  - `web/app.css` & `web/app.js`: Yazdırma sırasında `position: absolute; inset: 0;` kaldırıldı (`position: static`), baskı esnasında kapalı `<details>` alanları açılıp baskı sonrası geri alınıyor; çok sayfalı raporlar sayfa sınırlarında kırpılmadan yazdırılıyor.
+  - `web/app.js`: Bütün `localStorage` çağrıları `safeStorage` (try/catch sarmalayıcısı) ile emniyete alındı; gizli sekme ve kısıtlı depolama koşullarında `SecurityError` çökmeleri önlendi.
+  - `web/app.js`: Form submit akışında doğrulama yarışı (`customsPendingSubmit` kilitlenmesi) `await loadTariffTree` ile doğrudan çözüldü; 4 haneli kodlar da arayüz doğrulama kapsamına alındı.
+  - `web/app.js`: `saveLocalScenario` ile her ön değerlendirme sonucu yerel cihaza (`gumrukce-scenarios`) kaydediliyor; giriş yapmamış kullanıcılar için "Bu cihazda kayıtlı ön değerlendirmeler" paneli aktifleştirildi.

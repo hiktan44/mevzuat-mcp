@@ -60,12 +60,16 @@ def guard_text(value: str, *, source: str = "user", max_chars: int = 20_000) -> 
 def guard_data(value: Any, *, path: str = "istek") -> None:
     """Recursively scan a JSON-compatible request before it reaches an agent/model."""
     if isinstance(value, str):
+        if value.startswith("data:image/") or value.startswith("data:application/"):
+            return
         guard_text(value, source=path, max_chars=20_000)
     elif isinstance(value, list):
         for index, item in enumerate(value):
             guard_data(item, path=f"{path}[{index}]")
     elif isinstance(value, dict):
         for key, item in value.items():
+            if key == "url" and isinstance(item, str) and item.startswith("data:"):
+                continue
             guard_data(item, path=f"{path}.{key}")
 
 
@@ -131,13 +135,19 @@ def redact_text(value: str, *, contact_data: bool = True) -> str:
 def redact_data(value: Any, *, contact_data: bool = True) -> Any:
     """Recursively redact a JSON-compatible structure."""
     if isinstance(value, str):
+        if value.startswith("data:image/") or value.startswith("data:application/"):
+            return value
         return redact_text(value, contact_data=contact_data)
     if isinstance(value, list):
         return [redact_data(item, contact_data=contact_data) for item in value]
     if isinstance(value, tuple):
         return tuple(redact_data(item, contact_data=contact_data) for item in value)
     if isinstance(value, dict):
-        return {key: redact_data(item, contact_data=contact_data) for key, item in value.items()}
+        return {
+            key: (item if key == "url" and isinstance(item, str) and item.startswith("data:")
+                  else redact_data(item, contact_data=contact_data))
+            for key, item in value.items()
+        }
     return value
 
 

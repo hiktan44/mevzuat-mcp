@@ -88,13 +88,18 @@ class GoogleAuthService:
             raise AuthError("Oturumun süresi doldu.")
         return payload
 
-    def create_oauth_state(self) -> tuple[str, str]:
+    def create_oauth_state(self, redirect_uri: str | None = None) -> tuple[str, str]:
         nonce = secrets.token_urlsafe(24)
         now = int(time.time())
-        token = self._sign(
-            {"state": secrets.token_urlsafe(24), "nonce": nonce, "iat": now, "exp": now + 600},
-            purpose="google-oauth-state",
-        )
+        payload: dict[str, Any] = {
+            "state": secrets.token_urlsafe(24),
+            "nonce": nonce,
+            "iat": now,
+            "exp": now + 600,
+        }
+        if redirect_uri:
+            payload["redirect_uri"] = str(redirect_uri)[:500]
+        token = self._sign(payload, purpose="google-oauth-state")
         return token, nonce
 
     def verify_oauth_state(self, token: str) -> dict[str, Any]:

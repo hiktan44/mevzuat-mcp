@@ -76,6 +76,25 @@ class SecurityFirewallTests(unittest.TestCase):
         with self.assertRaises(SecurityViolation):
             verifier.verify(token, now=1_400)
 
+    def test_image_data_url_is_preserved_in_redact_data(self):
+        # Base64 string containing patterns that look like phone or TCKN digits
+        fake_data_url = "data:image/jpeg;base64,/9j/4AAQSkZJRgABAQEASABIAAD/10000000146/05321234567=="
+        payload = {
+            "type": "image_url",
+            "image_url": {"url": fake_data_url},
+            "text": "Ürün resmi ile TCKN 10000000146",
+        }
+        redacted = redact_data(payload)
+        self.assertEqual(redacted["image_url"]["url"], fake_data_url)
+        self.assertNotIn("10000000146", redacted["text"])
+        self.assertIn("[TCKN_GİZLENDİ]", redacted["text"])
+
+    def test_image_data_url_is_allowed_in_guard_data(self):
+        from security_firewall import guard_data
+        long_data_url = "data:image/jpeg;base64," + "A" * 30_000
+        # Should not raise SecurityViolation even though length > 20,000
+        guard_data({"image": long_data_url})
+
 
 if __name__ == "__main__":
     unittest.main()

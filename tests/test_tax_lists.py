@@ -71,12 +71,19 @@ class ExciseTaxIndexTests(unittest.TestCase):
         self.assertTrue(any("doğrulayın" in warning for warning in report["warnings"]))
 
     def test_renumbered_position_is_reported_instead_of_silent_miss(self) -> None:
-        # 8517.13 (akıllı telefon) Kanun metninde yok; aynı pozisyondaki 8517.12 satırı uyarılmalı.
-        report = self.index.lookup("851713000000")
+        # 8517.61 (baz istasyonları) ÖTV listelerinde yok; aynı pozisyondaki (8517) satırlar uyarılmalı.
+        report = self.index.lookup("851761000000")
         self.assertFalse(report["in_scope"])
         self.assertTrue(report["related_positions"])
-        self.assertEqual(report["related_positions"][0]["matched_code"], "8517.12.00.00.11")
         self.assertTrue(any("yeniden numaralandırılmış" in warning for warning in report["warnings"]))
+
+    def test_correlated_gtip_is_in_scope(self) -> None:
+        # 8517.13 (akıllı telefon) 2022 Armonize Sistem korelasyonu ile (IV) sayılı liste kapsamında bulunmalı.
+        report = self.index.lookup("851713000011")
+        self.assertTrue(report["in_scope"])
+        self.assertTrue(any("korelasyon" in match.get("correlation_note", "").lower() for match in report["matches"]))
+        self.assertIn("vat_estimate", report)
+        self.assertEqual(report["vat_estimate"]["rate"], 20.0)
 
     def test_out_of_scope_gtip_reports_nothing(self) -> None:
         report = self.index.lookup("940360000000")

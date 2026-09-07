@@ -205,8 +205,8 @@ class TariffDecisionTreeResult(BaseModel):
 
     status: Literal["matched", "not_found", "unavailable"]
     prefix: str
-    level: Literal["HS6", "CN8", "TR10", "GTIP12"]
-    next_level: Literal["CN8", "TR10", "GTIP12"] | None = None
+    level: Literal["HS4", "HS6", "CN8", "TR10", "GTIP12"]
+    next_level: Literal["HS6", "CN8", "TR10", "GTIP12"] | None = None
     origin_country: str | None = None
     total_children: int = 0
     children: list[TariffTreeNode] = Field(default_factory=list)
@@ -961,8 +961,8 @@ class TariffEngine:
         auto_sync: bool = True,
     ) -> TariffLookupResult:
         normalised = _normalise_gtip(gtip)
-        if not normalised or len(normalised) not in {6, 8, 10, 12}:
-            raise ValueError("Tarife sorgusu için 6, 8, 10 veya 12 haneli HS/CN/GTİP kodu gereklidir.")
+        if not normalised or len(normalised) not in {4, 6, 8, 10, 12}:
+            raise ValueError("Tarife sorgusu için 4, 6, 8, 10 veya 12 haneli HS/CN/GTİP kodu gereklidir.")
         match_mode: Literal["exact", "prefix"] = "exact" if len(normalised) == 12 else "prefix"
         if auto_sync and not self.status().ready:
             await self.sync()
@@ -1148,6 +1148,35 @@ class TariffEngine:
                     "Gösterilen otomatik oranlar bütün eşleşen 12 haneli satırlarda aynıdır; beyan öncesinde kesin 12 haneli GTİP yine doğrulanmalıdır."
                 )
         coverage = self._measure_coverage(snapshots)
+        lookup_status = "matched" if primary and not ambiguous_measure_types else "partial"
+        if origin_country and selected and lookup_status:
+            if (
+                "additional_duty" not in rate_variants
+                and "additional_duty" not in ambiguous_measure_types
+                and coverage.get("additional_duty")
+                and coverage["additional_duty"].status == "verified_snapshot"
+            ):
+                warnings.append("Bu GTİP İlave Gümrük Vergisi (İGV) ekli listelerinde yer almamaktadır; İGV uygulanmaz (%0).")
+            safeguards = []
+            if self.trade_measures:
+                try:
+                    if hasattr(self.trade_measures, "lookup"):
+                        safeguards = getattr(self.trade_measures.lookup(normalised, origin_country), "safeguard", [])
+                    elif hasattr(self.trade_measures, "measures_for_gtip"):
+                        safeguards = self.trade_measures.measures_for_gtip(normalised, origin=origin_country).get("safeguard") or []
+                except Exception:
+                    safeguards = []
+            has_live_safeguard = any(
+                (getattr(hit, "status", None) or (hit.get("status") if isinstance(hit, dict) else None)) != "expired"
+                and (getattr(hit, "origin_match", None) or (hit.get("origin_match") if isinstance(hit, dict) else None)) is not False
+                for hit in safeguards
+            )
+            if (
+                "additional_financial_liability" not in rate_variants
+                and "additional_financial_liability" not in ambiguous_measure_types
+                and not has_live_safeguard
+            ):
+                warnings.append("Bu GTİP için ek mali yükümlülük (EMY) tespit edilmemiştir; EMY uygulanmaz (%0).")
         unresolved = [key for key, item in coverage.items() if item.status != "verified_snapshot"]
         if unresolved:
             warnings.append(
@@ -1184,19 +1213,21 @@ class TariffEngine:
         prove that the user's goods belong under that code.
         """
         normalised = _normalise_gtip(gtip)
-        level_by_length: dict[int, Literal["HS6", "CN8", "TR10", "GTIP12"]] = {
+        level_by_length: dict[int, Literal["HS4", "HS6", "CN8", "TR10", "GTIP12"]] = {
+            4: "HS4",
             6: "HS6",
             8: "CN8",
             10: "TR10",
             12: "GTIP12",
         }
-        next_by_length: dict[int, tuple[int, Literal["CN8", "TR10", "GTIP12"]]] = {
+        next_by_length: dict[int, tuple[int, Literal["HS6", "CN8", "TR10", "GTIP12"]]] = {
+            4: (6, "HS6"),
             6: (8, "CN8"),
             8: (10, "TR10"),
             10: (12, "GTIP12"),
         }
         if not normalised or len(normalised) not in level_by_length:
-            raise ValueError("Tarife karar ağacı için 6, 8, 10 veya 12 haneli kod gereklidir.")
+            raise ValueError("Tarife karar ağacı için 4, 6, 8, 10 veya 12 haneli kod gereklidir.")
         if auto_sync and not self.status().ready:
             await self.sync()
         if not self.status().ready:
@@ -1318,10 +1349,21 @@ class TariffEngine:
                     f"{_MEASURE_LABELS.get(measure_type, measure_type)}: girdiğiniz %{float(user_rate):g} resmî satırdaki "
                     f"%{float(official):g} oranından farklı; hesapta girdiğiniz oran kullanıldı, beyan öncesi doğrulayın."
                 )
+        inferred_additional_duty = safe_rates.get("additional_duty")
+        if (
+            inferred_additional_duty is None
+            and data.additional_duty_rate is None
+            and "additional_duty" not in lookup.ambiguous_measure_types
+            and lookup.measure_coverage.get("additional_duty")
+            and lookup.measure_coverage["additional_duty"].status == "verified_snapshot"
+            and lookup.status in {"matched", "partial"}
+        ):
+            inferred_additional_duty = 0.0
+
         enriched = data.model_copy(
             update={
                 "customs_duty_rate": data.customs_duty_rate if data.customs_duty_rate is not None else safe_rates.get("customs_duty"),
-                "additional_duty_rate": data.additional_duty_rate if data.additional_duty_rate is not None else safe_rates.get("additional_duty"),
+                "additional_duty_rate": data.additional_duty_rate if data.additional_duty_rate is not None else inferred_additional_duty,
                 "additional_financial_liability_rate": (
                     data.additional_financial_liability_rate
                     if data.additional_financial_liability_rate is not None
