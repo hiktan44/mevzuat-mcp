@@ -21,9 +21,15 @@ jobs:
       - name: Coolify deploy webhook'unu tetikle
         env:
           COOLIFY_DEPLOY_WEBHOOK: ${{ secrets.COOLIFY_DEPLOY_WEBHOOK }}
+          COOLIFY_API_TOKEN: ${{ secrets.COOLIFY_API_TOKEN }}
         run: |
           if [ -z "$COOLIFY_DEPLOY_WEBHOOK" ]; then
             echo "COOLIFY_DEPLOY_WEBHOOK secret'i tanimli degil; depo ayarlarindan ekleyin." >&2
             exit 1
           fi
-          curl --fail --silent --show-error --max-time 30 -X POST "$COOLIFY_DEPLOY_WEBHOOK"
+          if [ -z "$COOLIFY_API_TOKEN" ]; then
+            echo "COOLIFY_API_TOKEN secret'i tanimli degil; Coolify'da Keys & Tokens'tan olusturup ekleyin (deploy uc noktasi Bearer token istiyor)." >&2
+            exit 1
+          fi
+          curl --fail --silent --show-error --max-time 30 -X POST "$COOLIFY_DEPLOY_WEBHOOK" \
+            -H "Authorization: Bearer $COOLIFY_API_TOKEN"
