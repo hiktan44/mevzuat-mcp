@@ -21,7 +21,7 @@ jobs:
       - name: Coolify deploy webhook'unu tetikle
         env:
           COOLIFY_DEPLOY_WEBHOOK: ${{ secrets.COOLIFY_DEPLOY_WEBHOOK }}
-          COOLIFY_API_TOKEN: ${{ secrets.COOLIFY_API_TOKEN }}
+          COOLIFY_API_TOKEN: ${{ secrets.COOLIFY_API_SECRET }}
         run: |
           if [ -z "$COOLIFY_DEPLOY_WEBHOOK" ]; then
             echo "COOLIFY_DEPLOY_WEBHOOK secret'i tanimli degil; depo ayarlarindan ekleyin." >&2
