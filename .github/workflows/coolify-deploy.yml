@@ -1,0 +1,29 @@
+name: Coolify deploy
+
+# "Security firewall" is workflow security.yml; main'e her push'ta (PR merge
+# veya dogrudan push) o kontrol basariyla bittiginde Coolify'daki deploy
+# webhook'unu tetikler. Boylece testleri gecmeyen bir kod otomatik olarak
+# canliya cikamaz.
+on:
+  workflow_run:
+    workflows: ["Security firewall"]
+    branches: [main]
+    types: [completed]
+
+permissions:
+  contents: read
+
+jobs:
+  deploy:
+    if: ${{ github.event.workflow_run.conclusion == 'success' }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Coolify deploy webhook'unu tetikle
+        env:
+          COOLIFY_DEPLOY_WEBHOOK: ${{ secrets.COOLIFY_DEPLOY_WEBHOOK }}
+        run: |
+          if [ -z "$COOLIFY_DEPLOY_WEBHOOK" ]; then
+            echo "COOLIFY_DEPLOY_WEBHOOK secret'i tanimli degil; depo ayarlarindan ekleyin." >&2
+            exit 1
+          fi
+          curl --fail --silent --show-error --max-time 30 -X POST "$COOLIFY_DEPLOY_WEBHOOK"
