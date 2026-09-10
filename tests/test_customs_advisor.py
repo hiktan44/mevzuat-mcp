@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import asyncio
 import base64
 import io
 import json
@@ -34,6 +35,12 @@ from customs_advisor import (
     _openrouter_error_detail,
     _openrouter_models,
     _openrouter_payload,
+    _llm_api_key_value,
+    _llm_base_url,
+    _llm_provider,
+    _model_payload,
+    _openrouter_chat,
+    _strip_json_fences,
     _parse_json_object,
     _sanitize_model_result,
     _strict_json_schema,
@@ -606,6 +613,297 @@ class TariffClassificationTests(unittest.IsolatedAsyncioTestCase):
             self.assertEqual(pack_not_found.inquiry.classification_confidence_score, 30)
         finally:
             await advisor_not_found.close()
+
+
+_REAL_ASYNC_CLIENT = httpx.AsyncClient
+_LLM_ENV_KEYS = ("ZAI_API_KEY", "OPENROUTER_API_KEY", "LLM_BASE_URL", "ZAI_REASONING_EFFORT", "ZAI_MAX_CONCURRENCY")
+
+
+def _llm_env(**values: str) -> dict[str, str]:
+    """Environment with every LLM variable cleared except the given ones."""
+    env = {key: value for key, value in os.environ.items() if key not in _LLM_ENV_KEYS}
+    env.update(values)
+    return env
+
+
+def _chat_response(content: str, model: str = "glm-5.3") -> dict:
+    return {
+        "model": model,
+        "choices": [{"message": {"content": content}}],
+        "usage": {"prompt_tokens": 10, "completion_tokens": 5, "total_tokens": 15},
+    }
+
+
+def _mock_client_factory(handler):
+    def factory(*args, **kwargs):
+        return _REAL_ASYNC_CLIENT(transport=httpx.MockTransport(handler), timeout=kwargs.get("timeout"))
+
+    return factory
+
+
+class ZaiProviderConfigTests(unittest.TestCase):
+    def test_zai_key_selects_zai_base_url_and_takes_precedence(self) -> None:
+        with patch.dict(os.environ, _llm_env(ZAI_API_KEY="zai-key", OPENROUTER_API_KEY="or-key"), clear=True):
+            self.assertEqual(_llm_base_url(), "https://api.z.ai/api/coding/paas/v4")
+            self.assertEqual(_llm_provider(), "zai")
+            self.assertEqual(_llm_api_key_value(), "zai-key")
+
+    def test_without_zai_key_openrouter_stays_default(self) -> None:
+        with patch.dict(os.environ, _llm_env(OPENROUTER_API_KEY="or-key"), clear=True):
+            self.assertEqual(_llm_base_url(), "https://openrouter.ai/api/v1")
+            self.assertEqual(_llm_provider(), "openrouter")
+            self.assertEqual(_llm_api_key_value(), "or-key")
+
+    def test_explicit_base_url_wins(self) -> None:
+        with patch.dict(
+            os.environ,
+            _llm_env(ZAI_API_KEY="zai-key", LLM_BASE_URL="https://open.bigmodel.cn/api/paas/v4/"),
+            clear=True,
+        ):
+            self.assertEqual(_llm_base_url(), "https://open.bigmodel.cn/api/paas/v4")
+            self.assertEqual(_llm_provider(), "zai")
+
+    def test_slashless_zai_model_ids_are_accepted(self) -> None:
+        with patch.dict(os.environ, {"OPENROUTER_VISION_MODELS": "glm-5v-turbo, glm-4.6v, glm-5v-turbo"}):
+            self.assertEqual(_openrouter_models("OPENROUTER_VISION_MODELS"), ["glm-5v-turbo", "glm-4.6v"])
+        with patch.dict(os.environ, {"OPENROUTER_CUSTOMS_MODELS": "glm-5.3,glm-5.3-flash"}):
+            self.assertEqual(_openrouter_models("OPENROUTER_CUSTOMS_MODELS"), ["glm-5.3", "glm-5.3-flash"])
+
+    def test_zai_payload_uses_json_object_without_openrouter_provider(self) -> None:
+        payload = _openrouter_payload(
+            models=["glm-5.3"],
+            messages=[{"role": "system", "content": "Sistem"}, {"role": "user", "content": "test"}],
+            response_schema={"type": "object", "properties": {"summary": {"type": "string"}}},
+            schema_name="test_schema",
+            max_tokens=100,
+            provider="zai",
+        )
+        self.assertNotIn("provider", payload)
+        self.assertEqual(payload["response_format"], {"type": "json_object"})
+        self.assertEqual(payload["max_tokens"], 4100)
+        system = payload["messages"][0]["content"]
+        self.assertTrue(system.startswith("Sistem"))
+        self.assertIn("test_schema", system)
+        self.assertIn('"summary"', system)
+        self.assertEqual(payload["messages"][1], {"role": "user", "content": "test"})
+
+    def test_reasoning_effort_only_for_glm5_text_models(self) -> None:
+        base = {"models": ["x"], "messages": [], "max_tokens": 10}
+        with patch.dict(os.environ, _llm_env(), clear=True):
+            self.assertEqual(_model_payload(base, "glm-5.3", "zai")["reasoning_effort"], "low")
+            self.assertEqual(_model_payload(base, "glm-5.3-flash", "zai")["reasoning_effort"], "low")
+            self.assertNotIn("reasoning_effort", _model_payload(base, "glm-5v-turbo", "zai"))
+            self.assertNotIn("reasoning_effort", _model_payload(base, "glm-4.6v", "zai"))
+            self.assertNotIn("reasoning_effort", _model_payload(base, "z-ai/glm-5.3-flash", "openrouter"))
+            self.assertNotIn("models", _model_payload(base, "glm-5.3", "zai"))
+        with patch.dict(os.environ, _llm_env(ZAI_REASONING_EFFORT="medium"), clear=True):
+            self.assertEqual(_model_payload(base, "glm-5.3", "zai")["reasoning_effort"], "medium")
+
+    def test_zai_headers_omit_openrouter_attribution(self) -> None:
+        headers = _openrouter_headers("zai-test", "zai")
+        self.assertEqual(headers["Authorization"], "Bearer zai-test")
+        self.assertNotIn("X-OpenRouter-Title", headers)
+        self.assertNotIn("HTTP-Referer", headers)
+
+    def test_json_fences_are_stripped(self) -> None:
+        self.assertEqual(_strip_json_fences('```json\n{"a": 1}\n```'), '{"a": 1}')
+        self.assertEqual(_strip_json_fences('```\n{"a": 1}\n```'), '{"a": 1}')
+        self.assertEqual(_strip_json_fences('Yanıt:\n```json\n{"a": 1}\n```'), '{"a": 1}')
+        self.assertEqual(_strip_json_fences(' {"a": 1} '), '{"a": 1}')
+
+
+class ZaiChatTransportTests(unittest.IsolatedAsyncioTestCase):
+    async def _chat(self, handler, models, env, sleep_mock=None):
+        sleep_mock = sleep_mock or AsyncMock()
+        with patch.dict(os.environ, env, clear=True), patch(
+            "customs_advisor.httpx.AsyncClient", new=_mock_client_factory(handler)
+        ), patch("customs_advisor._retry_sleep", new=sleep_mock):
+            return await _openrouter_chat(
+                api_key="test-key",
+                models=models,
+                messages=[{"role": "system", "content": "Sistem"}, {"role": "user", "content": "Ürün"}],
+                response_schema={"type": "object", "properties": {"a": {"type": "integer"}}},
+                schema_name="test_schema",
+                max_tokens=100,
+            )
+
+    async def test_zai_request_body_and_fence_stripping(self) -> None:
+        seen: list[httpx.Request] = []
+
+        def handler(request: httpx.Request) -> httpx.Response:
+            seen.append(request)
+            return httpx.Response(200, json=_chat_response('```json\n{"a": 1}\n```'))
+
+        text, model = await self._chat(handler, ["glm-5.3"], _llm_env(ZAI_API_KEY="zai-key"))
+        self.assertEqual(text, '{"a": 1}')
+        self.assertEqual(model, "glm-5.3")
+        request = seen[0]
+        self.assertEqual(str(request.url), "https://api.z.ai/api/coding/paas/v4/chat/completions")
+        self.assertNotIn("x-openrouter-title", request.headers)
+        body = json.loads(request.content)
+        self.assertNotIn("provider", body)
+        self.assertEqual(body["response_format"], {"type": "json_object"})
+        self.assertEqual(body["reasoning_effort"], "low")
+        self.assertEqual(body["model"], "glm-5.3")
+        self.assertEqual(body["max_tokens"], 4100)
+
+    async def test_zai_vision_request_keeps_image_url_without_reasoning_effort(self) -> None:
+        seen: list[dict] = []
+
+        def handler(request: httpx.Request) -> httpx.Response:
+            seen.append(json.loads(request.content))
+            return httpx.Response(200, json=_chat_response('{"a": 1}', "glm-5v-turbo"))
+
+        env = _llm_env(ZAI_API_KEY="zai-key")
+        with patch.dict(os.environ, env, clear=True), patch(
+            "customs_advisor.httpx.AsyncClient", new=_mock_client_factory(handler)
+        ):
+            await _openrouter_chat(
+                api_key="test-key",
+                models=["glm-5v-turbo"],
+                messages=[
+                    {
+                        "role": "user",
+                        "content": [
+                            {"type": "text", "text": "Evsaf"},
+                            {"type": "image_url", "image_url": {"url": "data:image/jpeg;base64,AAAA"}},
+                        ],
+                    }
+                ],
+                response_schema={"type": "object", "properties": {"a": {"type": "integer"}}},
+                schema_name="product_attributes",
+                max_tokens=100,
+            )
+        body = seen[0]
+        self.assertNotIn("reasoning_effort", body)
+        self.assertEqual(body["messages"][0]["role"], "system")
+        image_part = body["messages"][1]["content"][1]
+        self.assertEqual(image_part["type"], "image_url")
+        self.assertEqual(image_part["image_url"]["url"], "data:image/jpeg;base64,AAAA")
+
+    async def test_zai_1302_rate_limit_is_retried_on_same_model(self) -> None:
+        calls: list[str] = []
+
+        def handler(request: httpx.Request) -> httpx.Response:
+            calls.append(json.loads(request.content)["model"])
+            if len(calls) == 1:
+                return httpx.Response(429, json={"error": {"code": "1302", "message": "concurrency"}})
+            return httpx.Response(200, json=_chat_response('{"a": 1}'))
+
+        sleep_mock = AsyncMock()
+        text, model = await self._chat(
+            handler, ["glm-5.3", "glm-5.3-flash"], _llm_env(ZAI_API_KEY="zai-key"), sleep_mock
+        )
+        self.assertEqual(text, '{"a": 1}')
+        self.assertEqual(calls, ["glm-5.3", "glm-5.3"])
+        sleep_mock.assert_awaited_once_with(3.0)
+
+    async def test_zai_rate_limit_retries_at_most_twice_then_next_model(self) -> None:
+        calls: list[str] = []
+
+        def handler(request: httpx.Request) -> httpx.Response:
+            model = json.loads(request.content)["model"]
+            calls.append(model)
+            if model == "glm-5.3":
+                return httpx.Response(429, json={"error": {"code": "1302"}})
+            return httpx.Response(200, json=_chat_response('{"a": 2}', model))
+
+        sleep_mock = AsyncMock()
+        text, model = await self._chat(
+            handler, ["glm-5.3", "glm-5.3-flash"], _llm_env(ZAI_API_KEY="zai-key"), sleep_mock
+        )
+        self.assertEqual((text, model), ('{"a": 2}', "glm-5.3-flash"))
+        self.assertEqual(calls, ["glm-5.3", "glm-5.3", "glm-5.3", "glm-5.3-flash"])
+        self.assertEqual([call.args[0] for call in sleep_mock.await_args_list], [3.0, 6.0])
+
+    async def test_zai_1113_moves_to_next_model_without_retry(self) -> None:
+        calls: list[str] = []
+
+        def handler(request: httpx.Request) -> httpx.Response:
+            model = json.loads(request.content)["model"]
+            calls.append(model)
+            if model == "glm-5.3":
+                return httpx.Response(429, json={"error": {"code": "1113", "message": "balance"}})
+            return httpx.Response(200, json=_chat_response('{"a": 3}', model))
+
+        sleep_mock = AsyncMock()
+        text, model = await self._chat(
+            handler, ["glm-5.3", "glm-5.3-flash"], _llm_env(ZAI_API_KEY="zai-key"), sleep_mock
+        )
+        self.assertEqual(model, "glm-5.3-flash")
+        self.assertEqual(calls, ["glm-5.3", "glm-5.3-flash"])
+        sleep_mock.assert_not_awaited()
+
+    async def test_zai_concurrency_is_capped(self) -> None:
+        state = {"active": 0, "peak": 0}
+
+        async def handler(request: httpx.Request) -> httpx.Response:
+            state["active"] += 1
+            state["peak"] = max(state["peak"], state["active"])
+            await asyncio.sleep(0.01)
+            state["active"] -= 1
+            return httpx.Response(200, json=_chat_response('{"a": 1}'))
+
+        env = _llm_env(ZAI_API_KEY="zai-key", ZAI_MAX_CONCURRENCY="2")
+        with patch.dict(os.environ, env, clear=True), patch(
+            "customs_advisor.httpx.AsyncClient", new=_mock_client_factory(handler)
+        ):
+            await asyncio.gather(
+                *[
+                    _openrouter_chat(
+                        api_key="k",
+                        models=["glm-5.3"],
+                        messages=[{"role": "user", "content": "x"}],
+                        response_schema={"type": "object"},
+                        schema_name="s",
+                        max_tokens=10,
+                    )
+                    for _ in range(5)
+                ]
+            )
+        self.assertEqual(state["peak"], 2)
+
+    async def test_without_zai_key_openrouter_body_is_unchanged(self) -> None:
+        seen: list[httpx.Request] = []
+
+        def handler(request: httpx.Request) -> httpx.Response:
+            seen.append(request)
+            if len(seen) == 1:
+                return httpx.Response(429, json={"error": {"code": 429, "message": "rate"}})
+            return httpx.Response(200, json=_chat_response('```json\n{"a": 1}\n```', "google/gemini"))
+
+        sleep_mock = AsyncMock()
+        text, _ = await self._chat(
+            handler,
+            ["~google/gemini-flash-latest", "z-ai/glm-5.3-flash"],
+            _llm_env(OPENROUTER_API_KEY="or-key"),
+            sleep_mock,
+        )
+        # OpenRouter path: no retry, next model, content returned verbatim.
+        sleep_mock.assert_not_awaited()
+        self.assertEqual(text, '```json\n{"a": 1}\n```')
+        self.assertEqual(str(seen[0].url), "https://openrouter.ai/api/v1/chat/completions")
+        self.assertEqual(seen[0].headers["x-openrouter-title"], "Gumrukce")
+        body = json.loads(seen[1].content)
+        self.assertEqual(body["model"], "z-ai/glm-5.3-flash")
+        self.assertEqual(body["provider"]["data_collection"], "deny")
+        self.assertTrue(body["response_format"]["json_schema"]["strict"])
+        self.assertEqual(body["max_tokens"], 100)
+        self.assertNotIn("reasoning_effort", body)
+        self.assertNotIn("models", body)
+
+
+class ZaiDescribeImageProviderTests(unittest.IsolatedAsyncioTestCase):
+    async def test_describe_image_reports_zai_provider(self) -> None:
+        buffer = io.BytesIO()
+        Image.new("RGB", (120, 90), "white").save(buffer, format="JPEG")
+        with patch.dict(os.environ, _llm_env(ZAI_API_KEY="zai-key"), clear=True), patch(
+            "customs_advisor._request_openrouter_vision_analysis",
+            new=AsyncMock(return_value=({"product_name": "Fincan"}, "glm-5v-turbo")),
+        ):
+            result = await CustomsAdvisor().describe_image(buffer.getvalue(), "image/jpeg")
+        self.assertEqual(result.provider, "zai")
+        self.assertEqual(result.model, "glm-5v-turbo")
 
 
 if __name__ == "__main__":

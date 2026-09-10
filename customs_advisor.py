@@ -590,7 +590,58 @@ _OPENROUTER_DEFAULT_MODELS = [
     "openai/gpt-chat-latest",
     "~anthropic/claude-opus-latest",
 ]
-_OPENROUTER_MODEL_RE = re.compile(r"^~?[a-z0-9][a-z0-9._-]*/[a-z0-9][a-z0-9._:-]*$")
+# Provider prefixes are optional: OpenRouter uses "vendor/model", Z.ai uses bare "glm-5.3".
+_OPENROUTER_MODEL_RE = re.compile(r"^~?[a-z0-9][a-z0-9._-]*(?:/[a-z0-9][a-z0-9._:-]*)?$")
+_OPENROUTER_BASE_URL = "https://openrouter.ai/api/v1"
+_ZAI_BASE_URL = "https://api.z.ai/api/coding/paas/v4"
+_ZAI_HOST_SUFFIXES = ("z.ai", "bigmodel.cn")
+# GLM-5.x always thinks; reasoning tokens count against max_tokens.
+_ZAI_THINKING_TOKEN_ALLOWANCE = 4000
+_ZAI_RETRY_DELAYS_SECONDS = (3.0, 6.0)
+_ZAI_BALANCE_ERROR_CODE = "1113"
+
+
+def _llm_base_url() -> str:
+    """Resolve the OpenAI-compatible base URL; Z.ai is primary when its key exists."""
+    configured = os.environ.get("LLM_BASE_URL", "").strip().rstrip("/")
+    if configured:
+        return configured
+    if os.environ.get("ZAI_API_KEY", "").strip():
+        return _ZAI_BASE_URL
+    return _OPENROUTER_BASE_URL
+
+
+def _llm_provider(base_url: str | None = None) -> Literal["openrouter", "zai"]:
+    host = (urlsplit(base_url or _llm_base_url()).hostname or "").lower().rstrip(".")
+    if any(host == suffix or host.endswith(f".{suffix}") for suffix in _ZAI_HOST_SUFFIXES):
+        return "zai"
+    return "openrouter"
+
+
+def _llm_api_key_value() -> str:
+    return (
+        os.environ.get("ZAI_API_KEY", "").strip()
+        or os.environ.get("OPENROUTER_API_KEY", "").strip()
+    )
+
+
+def _zai_is_text_reasoning_model(model: str) -> bool:
+    """GLM-5 text models accept reasoning_effort; vision models (glm-5v, glm-4.6v) do not."""
+    name = model.strip().lower().lstrip("~").rsplit("/", 1)[-1]
+    return name.startswith("glm-5") and "v" not in name
+
+
+def _strip_json_fences(text: str) -> str:
+    """Remove Markdown code fences that JSON-object mode models sometimes add."""
+    stripped = text.strip()
+    match = re.fullmatch(r"```[A-Za-z0-9_-]*\s*(.*?)\s*```", stripped, flags=re.DOTALL)
+    if match:
+        return match.group(1).strip()
+    if not stripped.startswith("{"):
+        embedded = re.search(r"```(?:json|JSON)?\s*(\{.*?\})\s*```", stripped, flags=re.DOTALL)
+        if embedded:
+            return embedded.group(1).strip()
+    return stripped
 
 
 def _openrouter_models(environment_name: str) -> list[str]:
@@ -612,9 +663,11 @@ def _openrouter_models(environment_name: str) -> list[str]:
 
 
 def _openrouter_api_key() -> str:
-    api_key = os.environ.get("OPENROUTER_API_KEY", "").strip()
+    api_key = _llm_api_key_value()
     if not api_key:
-        raise RuntimeError("Görsel ve yorum modelleri için Coolify'a OPENROUTER_API_KEY ekleyin.")
+        raise RuntimeError(
+            "Görsel ve yorum modelleri için Coolify'a ZAI_API_KEY (veya OPENROUTER_API_KEY) ekleyin."
+        )
     return api_key
 
 
@@ -658,19 +711,34 @@ def _openrouter_payload(
     response_schema: dict[str, Any],
     schema_name: str,
     max_tokens: int,
+    provider: str = "openrouter",
 ) -> dict[str, Any]:
-    """Build the audited OpenRouter request shared by vision and legal analysis."""
+    """Build the audited chat request shared by vision and legal analysis."""
+    # User fields and retrieved source text leave our trust boundary here.
+    # Strip credentials and personal contact data before any provider sees it.
+    safe_messages = redact_data(messages, contact_data=True)
+    strict_schema = _strict_json_schema(response_schema)
+    if provider == "zai":
+        # Z.ai supports JSON-object mode, not strict json_schema; the schema is
+        # stated in the system message and the reply is validated with Pydantic.
+        return {
+            "models": models,
+            "messages": _with_schema_instruction(
+                safe_messages, _schema_instruction(schema_name, strict_schema)
+            ),
+            "response_format": {"type": "json_object"},
+            "max_tokens": max_tokens + _ZAI_THINKING_TOKEN_ALLOWANCE,
+            "stream": False,
+        }
     return {
         "models": models,
-        # User fields and retrieved source text leave our trust boundary here.
-        # Strip credentials and personal contact data before any provider sees it.
-        "messages": redact_data(messages, contact_data=True),
+        "messages": safe_messages,
         "response_format": {
             "type": "json_schema",
             "json_schema": {
                 "name": schema_name,
                 "strict": True,
-                "schema": _strict_json_schema(response_schema),
+                "schema": strict_schema,
             },
         },
         "provider": {
@@ -683,18 +751,50 @@ def _openrouter_payload(
     }
 
 
-def _openrouter_headers(api_key: str) -> dict[str, str]:
-    """Return HTTP/1.1-safe OpenRouter headers.
+def _schema_instruction(schema_name: str, schema: dict[str, Any]) -> str:
+    return (
+        "YANIT BİÇİMİ: Yalnızca aşağıdaki JSON şemasına birebir uyan tek bir JSON nesnesi döndür. "
+        "Markdown, kod çiti, açıklama veya şema dışı alan ekleme; şemadaki bütün zorunlu alanları doldur.\n"
+        f"Şema adı: {schema_name}\n"
+        + json.dumps(schema, ensure_ascii=False, separators=(",", ":"))
+    )
+
+
+def _with_schema_instruction(messages: list[dict[str, Any]], instruction: str) -> list[dict[str, Any]]:
+    """Append the (trusted, server-side) schema instruction to the system message."""
+    updated = [dict(message) for message in messages]
+    for message in updated:
+        if message.get("role") == "system" and isinstance(message.get("content"), str):
+            message["content"] = f"{message['content']}\n\n{instruction}"
+            return updated
+    return [{"role": "system", "content": instruction}, *updated]
+
+
+def _model_payload(base_payload: dict[str, Any], model: str, provider: str) -> dict[str, Any]:
+    """Specialise the shared request for one model of the fallback chain."""
+    payload = dict(base_payload)
+    payload.pop("models", None)
+    payload["model"] = model
+    if provider == "zai" and _zai_is_text_reasoning_model(model):
+        # GLM-5.x thinking cannot be disabled; keep it short.
+        payload["reasoning_effort"] = os.environ.get("ZAI_REASONING_EFFORT", "low").strip() or "low"
+    return payload
+
+
+def _openrouter_headers(api_key: str, provider: str = "openrouter") -> dict[str, str]:
+    """Return HTTP/1.1-safe provider headers.
 
     httpx encodes header values as ASCII. Keep the application title ASCII-only;
     Turkish display names belong in the JSON payload or UI, not HTTP headers.
+    OpenRouter attribution headers are never sent to other providers.
     """
     headers = {
         "Authorization": f"Bearer {api_key}",
         "Content-Type": "application/json",
-        "HTTP-Referer": "https://gumruksor.com/",
-        "X-OpenRouter-Title": "Gumrukce",
     }
+    if provider == "openrouter":
+        headers["HTTP-Referer"] = "https://gumruksor.com/"
+        headers["X-OpenRouter-Title"] = "Gumrukce"
     for name, value in headers.items():
         try:
             value.encode("ascii")
@@ -772,6 +872,60 @@ def _notify_llm_usage(
             logger.exception("LLM usage hook failed")
 
 
+_LLM_SEMAPHORE: asyncio.Semaphore | None = None
+_LLM_SEMAPHORE_LOOP: asyncio.AbstractEventLoop | None = None
+
+
+def _llm_max_concurrency() -> int:
+    try:
+        value = int(os.environ.get("ZAI_MAX_CONCURRENCY", "2"))
+    except ValueError:
+        value = 2
+    return max(1, min(value, 16))
+
+
+def _llm_semaphore() -> asyncio.Semaphore:
+    """Process-wide cap on concurrent Z.ai POSTs (one semaphore per running event loop)."""
+    global _LLM_SEMAPHORE, _LLM_SEMAPHORE_LOOP
+    loop = asyncio.get_running_loop()
+    if _LLM_SEMAPHORE is None or _LLM_SEMAPHORE_LOOP is not loop:
+        _LLM_SEMAPHORE = asyncio.Semaphore(_llm_max_concurrency())
+        _LLM_SEMAPHORE_LOOP = loop
+    return _LLM_SEMAPHORE
+
+
+async def _retry_sleep(seconds: float) -> None:
+    await asyncio.sleep(seconds)
+
+
+async def _post_chat_completion(
+    client: httpx.AsyncClient,
+    *,
+    url: str,
+    headers: dict[str, str],
+    payload: dict[str, Any],
+    provider: str,
+) -> httpx.Response:
+    """POST one chat request; Z.ai calls are concurrency-capped and retried on rate limits."""
+    if provider != "zai":
+        return await client.post(url, headers=headers, json=payload)
+    retries = 0
+    while True:
+        async with _llm_semaphore():
+            response = await client.post(url, headers=headers, json=payload)
+        # 429/1302 is a transient concurrency limit; 1113 (balance/plan) is not
+        # retryable and falls through to the next model. Wait outside the semaphore.
+        if (
+            response.status_code == 429
+            and _ZAI_BALANCE_ERROR_CODE not in response.text
+            and retries < len(_ZAI_RETRY_DELAYS_SECONDS)
+        ):
+            await _retry_sleep(_ZAI_RETRY_DELAYS_SECONDS[retries])
+            retries += 1
+            continue
+        return response
+
+
 async def _openrouter_chat(
     *,
     api_key: str,
@@ -781,29 +935,32 @@ async def _openrouter_chat(
     schema_name: str,
     max_tokens: int,
 ) -> tuple[str, str]:
-    """Call OpenRouter with ordered model fallbacks and privacy-safe routing."""
-    validate_outbound_url(
-        "https://openrouter.ai/api/v1/chat/completions",
-        allowed_hosts={"openrouter.ai"},
-    )
+    """Call the configured OpenAI-compatible provider (Z.ai or OpenRouter) with ordered fallbacks."""
+    base_url = _llm_base_url()
+    provider = _llm_provider(base_url)
+    url = f"{base_url}/chat/completions"
+    validate_outbound_url(url, allowed_hosts={(urlsplit(url).hostname or "").lower()})
     base_payload = _openrouter_payload(
         models=models,
         messages=messages,
         response_schema=response_schema,
         schema_name=schema_name,
         max_tokens=max_tokens,
+        provider=provider,
     )
+    headers = _openrouter_headers(api_key, provider)
+    label = "Z.ai" if provider == "zai" else "OpenRouter"
     failures: list[str] = []
     async with httpx.AsyncClient(timeout=120) as client:
         for model in models:
-            payload = dict(base_payload)
-            payload.pop("models", None)
-            payload["model"] = model
+            payload = _model_payload(base_payload, model, provider)
             try:
-                response = await client.post(
-                    "https://openrouter.ai/api/v1/chat/completions",
-                    headers=_openrouter_headers(api_key),
-                    json=payload,
+                response = await _post_chat_completion(
+                    client,
+                    url=url,
+                    headers=headers,
+                    payload=payload,
+                    provider=provider,
                 )
             except httpx.RequestError as exc:
                 failures.append(f"{model}: bağlantı hatası ({type(exc).__name__})")
@@ -819,6 +976,11 @@ async def _openrouter_chat(
             except (KeyError, IndexError, TypeError, ValueError) as exc:
                 failures.append(f"{model}: geçersiz yanıt ({type(exc).__name__})")
                 continue
+            if provider == "zai":
+                content = _strip_json_fences(content)
+                if not content:
+                    failures.append(f"{model}: boş yanıt")
+                    continue
             usage_data = body.get("usage") or {}
             resolved_m = str(body.get("model") or model)
             prompt_tok = int(usage_data.get("prompt_tokens") or 0)
@@ -839,7 +1001,7 @@ async def _openrouter_chat(
             )
             return content, resolved_m
     summary = " | ".join(failures)
-    raise RuntimeError(f"OpenRouter model zinciri yanıt vermedi. {summary}"[:1200])
+    raise RuntimeError(f"{label} model zinciri yanıt vermedi. {summary}"[:1200])
 
 
 _VISION_PROMPT = """
@@ -1403,7 +1565,7 @@ class CustomsAdvisor:
         raw.pop("user_confirmation_required", None)
         raw.pop("warning", None)
         return ProductAttributeAnalysis.model_validate(
-            {**raw, "provider": "openrouter", "model": resolved_model}
+            {**raw, "provider": _llm_provider(), "model": resolved_model}
         )
 
     async def classify_product(
@@ -1676,7 +1838,7 @@ class CustomsAdvisor:
         expert_review_packet = _expert_review_packet(pack)
         usable_sources = [source for source in pack.sources if source.excerpt]
         models = _openrouter_models("OPENROUTER_CUSTOMS_MODELS")
-        api_key = os.environ.get("OPENROUTER_API_KEY", "").strip()
+        api_key = _llm_api_key_value()
         safety_notes = [
             "Fotoğraf kesin GTİP değildir; bağlayıcı sınıflandırma için BTB ve teknik belge gerekir.",
             "Atıfsız mali oranlar sonuçtan otomatik olarak çıkarılır.",
