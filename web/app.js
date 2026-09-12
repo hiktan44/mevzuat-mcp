@@ -2708,8 +2708,13 @@ $("#ingestSource")?.addEventListener("click", async () => {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(body),
     });
+    const structured = data.structured || {};
+    const structuredNote = data.extraction === "structured"
+      ? `<p class="missing-list">Sayfadan ürün verisi okundu: <b>${escapeHtml([structured.brand, structured.name].filter(Boolean).join(" · ") || data.title || "")}</b>${structured.attributes?.length ? ` · ${structured.attributes.length} özellik` : ""}</p>`
+      : (data.source_type === "url" ? '<p class="missing-list">Sayfada yapılandırılmış ürün verisi bulunamadı; görünen metin alındı. Gereksiz kısımları silip yalnızca ürünle ilgili bölümü bırakın.</p>' : "");
     output.innerHTML = `
       <p class="missing-list">${escapeHtml(data.warning || "")}</p>
+      ${structuredNote}
       <textarea class="ingest-textarea" id="ingestText">${escapeHtml(data.text)}</textarea>
       <div class="result-actions"><button type="button" id="ingestAppend">Ürün tanımına ekle</button></div>
       ${data.truncated ? '<p class="missing-list">Belge uzun olduğu için metin kısaltıldı.</p>' : ""}`;
@@ -2723,6 +2728,139 @@ $("#ingestSource")?.addEventListener("click", async () => {
     });
   } catch (error) {
     output.innerHTML = `<div class="answer-error"><p>${escapeHtml(error.message)}</p></div>`;
+  }
+});
+
+const shippingReviewFields = [
+  ["document_number", "Belge numarası"],
+  ["document_date", "Belge tarihi"],
+  ["shipper", "Gönderici (shipper)"],
+  ["consignee", "Alıcı (consignee)"],
+  ["notify_party", "İhbar adresi (notify)"],
+  ["carrier", "Taşıyıcı"],
+  ["vessel_or_flight", "Gemi / uçuş"],
+  ["port_of_loading", "Yükleme limanı"],
+  ["port_of_discharge", "Boşaltma limanı"],
+  ["place_of_delivery", "Teslim yeri"],
+  ["country_of_origin", "Menşe ülke (belgede yazılıysa)"],
+  ["country_of_dispatch", "Sevk ülkesi"],
+  ["packages_count", "Kap adedi"],
+  ["package_type", "Kap türü"],
+  ["gross_weight_kg", "Brüt ağırlık (kg)"],
+  ["net_weight_kg", "Net ağırlık (kg)"],
+  ["volume_cbm", "Hacim (m³)"],
+  ["incoterm", "Teslim şekli (Incoterm)"],
+  ["freight_terms", "Navlun ödeme (prepaid/collect)"],
+  ["invoice_total", "Fatura tutarı"],
+  ["currency", "Para birimi"],
+  ["freight_amount", "Navlun tutarı"],
+  ["insurance_amount", "Sigorta tutarı"],
+  ["quantity", "Miktar"],
+  ["quantity_unit", "Miktar birimi"],
+];
+
+function shippingFieldValue(key) {
+  return ($(`[data-shipping-field="${key}"]`)?.value || "").trim();
+}
+
+function fillIfEmpty(selector, value) {
+  const input = $(selector);
+  if (!input || !value || input.value.trim()) return false;
+  input.value = value;
+  input.classList.add("vision-filled");
+  input.dispatchEvent(new Event("input", { bubbles: true }));
+  return true;
+}
+
+function fillNumberIfEmpty(selector, value) {
+  const number = parseLocalizedNumber(String(value ?? ""));
+  if (number == null) return false;
+  return fillIfEmpty(selector, localizedNumberFormat.format(number));
+}
+
+function applyShippingDocument() {
+  const filled = [];
+  const goods = shippingFieldValue("goods_description");
+  const description = $("#productDescription");
+  if (goods && description) {
+    const prefix = description.value.trim() ? `${description.value.trimEnd()}\nBelgedeki eşya tanımı: ` : "";
+    description.value = `${prefix}${goods}`.slice(0, 2000);
+    description.classList.add("vision-filled");
+    description.dispatchEvent(new Event("input", { bubbles: true }));
+    filled.push("ürün tanımı");
+  }
+  if (fillIfEmpty("#originCountry", shippingFieldValue("country_of_origin"))) filled.push("menşe ülke");
+  if (fillIfEmpty("#dispatchCountry", shippingFieldValue("country_of_dispatch"))) filled.push("sevk ülkesi");
+  if (fillIfEmpty("#incoterm", shippingFieldValue("incoterm").toUpperCase())) filled.push("teslim şekli");
+  if (fillNumberIfEmpty("#invoiceValue", shippingFieldValue("invoice_total"))) filled.push("fatura bedeli");
+  if (fillNumberIfEmpty("#freight", shippingFieldValue("freight_amount"))) filled.push("navlun");
+  if (fillNumberIfEmpty("#insurance", shippingFieldValue("insurance_amount"))) filled.push("sigorta");
+  if (fillNumberIfEmpty("#quantity", shippingFieldValue("quantity"))) filled.push("miktar");
+  const currency = shippingFieldValue("currency").toUpperCase();
+  const currencySelect = $("#currency");
+  if (currency && currencySelect && Array.from(currencySelect.options).some((option) => option.value === currency)) {
+    currencySelect.value = currency;
+    currencySelect.dispatchEvent(new Event("change", { bubbles: true }));
+    filled.push("para birimi");
+  }
+  // Navlun ödeme şekli (prepaid/collect) ödeme yöntemi değildir; #paymentMethod'a yazılmaz.
+  if (!$("#customsQuestion").value.trim()) {
+    $("#customsQuestion").value = "Bu sevkiyattaki eşyanın aday GTİP'i, ithalat vergileri, TAREKS/TSE kontrolleri, gerekli belgeleri ve toplam maliyeti nelerdir?";
+  }
+  updateReadiness();
+  showToast(filled.length ? `Forma aktarıldı: ${filled.join(", ")}. Boş olmayan alanlar korundu; gözden geçirip onaylayın.` : "Aktarılacak yeni alan bulunamadı; form alanları zaten dolu.");
+}
+
+function renderShippingReview(data) {
+  const output = $("#shippingOutput");
+  const rows = shippingReviewFields.map(([key, label]) => {
+    const value = data[key];
+    const shown = value == null ? "" : String(value);
+    return `<label class="field"><span>${escapeHtml(label)}</span><input data-shipping-field="${key}" maxlength="300" value="${escapeHtml(shown)}"></label>`;
+  }).join("");
+  const hsCodes = Array.isArray(data.hs_codes) ? data.hs_codes : [];
+  const containers = Array.isArray(data.containers) ? data.containers : [];
+  const unreadable = Array.isArray(data.unreadable_fields) ? data.unreadable_fields : [];
+  output.innerHTML = `
+    <p class="missing-list"><b>${escapeHtml(data.document_type_label || "Sevkiyat belgesi")}</b> · güven: ${escapeHtml(data.confidence || "low")} · ${escapeHtml(data.model || "")}</p>
+    <p class="missing-list">${escapeHtml(data.warning || "")}</p>
+    <label class="field"><span>Eşya tanımı (belgedeki haliyle)</span><textarea data-shipping-field="goods_description" maxlength="2000" class="ingest-textarea">${escapeHtml(data.goods_description || "")}</textarea></label>
+    <div class="shipping-review-grid">${rows}</div>
+    ${containers.length ? `<p class="missing-list">Konteynerler: ${escapeHtml(containers.join(", "))}</p>` : ""}
+    ${data.marks_and_numbers ? `<p class="missing-list">Marka / numara: ${escapeHtml(data.marks_and_numbers)}</p>` : ""}
+    ${hsCodes.length ? `<p class="rate-warning">Belgede yazan HS kodları (yalnızca öneri, forma yazılmadı): ${escapeHtml(hsCodes.join(", "))}. Doğruysa "Seçilen HS / CN / Türk GTİP" alanına elle girin.</p>` : ""}
+    ${unreadable.length ? `<p class="missing-list">Belgede okunamayan / bulunmayan alanlar: ${escapeHtml(unreadable.join(", "))}</p>` : ""}
+    <div class="result-actions"><button type="button" id="shippingApply">Ürün dosyasına aktar</button></div>`;
+  $("#shippingApply")?.addEventListener("click", applyShippingDocument);
+}
+
+$("#shippingRead")?.addEventListener("click", async () => {
+  const output = $("#shippingOutput");
+  const button = $("#shippingRead");
+  const file = $("#shippingFile")?.files?.[0];
+  if (!file) { output.innerHTML = '<p class="missing-list">Konşimento, fatura veya çeki listesi dosyası seçin.</p>'; return; }
+  if (file.size > 10 * 1024 * 1024) { output.innerHTML = '<p class="missing-list">Belge en fazla 10 MB olabilir.</p>'; return; }
+  const allowed = ["application/pdf", "image/jpeg", "image/png", "image/webp"];
+  if (file.type && !allowed.includes(file.type)) { output.innerHTML = '<p class="missing-list">Yalnızca PDF, JPEG, PNG veya WebP yüklenebilir.</p>'; return; }
+  output.innerHTML = '<div class="analysis-loading"><i></i><div><b>Belge okunuyor</b><span>Gönderici, alıcı, eşya, kap/ağırlık ve fatura alanları çıkarılıyor…</span></div></div>';
+  button.disabled = true;
+  try {
+    const documentDataUrl = await new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => resolve(String(reader.result));
+      reader.onerror = () => reject(new Error("Belge dosyası okunamadı."));
+      reader.readAsDataURL(file);
+    });
+    const data = await fetchJson("/api/customs/ingest-shipping-document", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ document_data_url: documentDataUrl }),
+    });
+    renderShippingReview(data);
+  } catch (error) {
+    output.innerHTML = `<div class="answer-error"><p>${escapeHtml(error.message)}</p></div>`;
+  } finally {
+    button.disabled = false;
   }
 });
 
