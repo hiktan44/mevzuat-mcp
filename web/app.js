@@ -2683,23 +2683,43 @@ document.addEventListener("click", async (event) => {
   }
 });
 
+const DOCX_MIME = "application/vnd.openxmlformats-officedocument.wordprocessingml.document";
+const documentMimeByExtension = { pdf: "application/pdf", docx: DOCX_MIME, jpg: "image/jpeg", jpeg: "image/jpeg", png: "image/png", webp: "image/webp" };
+
+function documentMimeType(file) {
+  const extension = (file.name || "").split(".").pop().toLowerCase();
+  const byExtension = documentMimeByExtension[extension];
+  // Tarayıcılar .docx için bazen boş ya da octet-stream tür bildirir; uzantıya göre düzelt.
+  if (!file.type || file.type === "application/octet-stream") return byExtension || "";
+  return file.type;
+}
+
+function readFileAsDataUrl(file, mimeType) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => {
+      const result = String(reader.result);
+      resolve(mimeType ? result.replace(/^data:[^;]*;base64,/, `data:${mimeType};base64,`) : result);
+    };
+    reader.onerror = () => reject(new Error("Dosya okunamadı."));
+    reader.readAsDataURL(file);
+  });
+}
+
 $("#ingestSource")?.addEventListener("click", async () => {
   const output = $("#ingestOutput");
   const url = $("#ingestUrl").value.trim();
   const file = $("#ingestPdf")?.files?.[0];
-  if (!url && !file) { output.innerHTML = '<p class="missing-list">Belge adresi girin veya PDF dosyası seçin.</p>'; return; }
-  if (url && file) { output.innerHTML = '<p class="missing-list">Yalnızca bir kaynak belirtin: adres veya PDF.</p>'; return; }
+  if (!url && !file) { output.innerHTML = '<p class="missing-list">Belge adresi girin veya PDF / Word (.docx) dosyası seçin.</p>'; return; }
+  if (url && file) { output.innerHTML = '<p class="missing-list">Yalnızca bir kaynak belirtin: adres veya dosya.</p>'; return; }
   output.innerHTML = '<div class="analysis-loading"><i></i><div><b>Belge okunuyor</b><span>Ürün metni çıkarılıyor, onayınıza sunulacak…</span></div></div>';
   try {
     let body;
     if (file) {
-      if (file.size > 10 * 1024 * 1024) throw new Error("PDF en fazla 10 MB olabilir.");
-      body = { pdf_data_url: await new Promise((resolve, reject) => {
-        const reader = new FileReader();
-        reader.onload = () => resolve(String(reader.result));
-        reader.onerror = () => reject(new Error("PDF dosyası okunamadı."));
-        reader.readAsDataURL(file);
-      }) };
+      if (file.size > 10 * 1024 * 1024) throw new Error("Belge en fazla 10 MB olabilir.");
+      const mimeType = documentMimeType(file);
+      if (!["application/pdf", DOCX_MIME].includes(mimeType)) throw new Error("Yalnızca PDF veya Word (.docx) dosyası yüklenebilir; eski .doc dosyasını Word'de .docx olarak kaydedin.");
+      body = { pdf_data_url: await readFileAsDataUrl(file, mimeType) };
     } else {
       body = { url };
     }
@@ -2840,17 +2860,13 @@ $("#shippingRead")?.addEventListener("click", async () => {
   const file = $("#shippingFile")?.files?.[0];
   if (!file) { output.innerHTML = '<p class="missing-list">Konşimento, fatura veya çeki listesi dosyası seçin.</p>'; return; }
   if (file.size > 10 * 1024 * 1024) { output.innerHTML = '<p class="missing-list">Belge en fazla 10 MB olabilir.</p>'; return; }
-  const allowed = ["application/pdf", "image/jpeg", "image/png", "image/webp"];
-  if (file.type && !allowed.includes(file.type)) { output.innerHTML = '<p class="missing-list">Yalnızca PDF, JPEG, PNG veya WebP yüklenebilir.</p>'; return; }
+  const allowed = ["application/pdf", DOCX_MIME, "image/jpeg", "image/png", "image/webp"];
+  const mimeType = documentMimeType(file);
+  if (!allowed.includes(mimeType)) { output.innerHTML = '<p class="missing-list">Yalnızca PDF, Word (.docx), JPEG, PNG veya WebP yüklenebilir; eski .doc dosyasını Word\'de .docx olarak kaydedin.</p>'; return; }
   output.innerHTML = '<div class="analysis-loading"><i></i><div><b>Belge okunuyor</b><span>Gönderici, alıcı, eşya, kap/ağırlık ve fatura alanları çıkarılıyor…</span></div></div>';
   button.disabled = true;
   try {
-    const documentDataUrl = await new Promise((resolve, reject) => {
-      const reader = new FileReader();
-      reader.onload = () => resolve(String(reader.result));
-      reader.onerror = () => reject(new Error("Belge dosyası okunamadı."));
-      reader.readAsDataURL(file);
-    });
+    const documentDataUrl = await readFileAsDataUrl(file, mimeType);
     const data = await fetchJson("/api/customs/ingest-shipping-document", {
       method: "POST",
       headers: { "Content-Type": "application/json" },

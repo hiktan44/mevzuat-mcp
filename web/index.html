@@ -233,14 +233,14 @@
                 <details class="advanced-fields" id="documentIngest">
                   <summary><span>Ürün belgesi ekle (PDF veya ürün sayfası)</span><small>Teknik föy, fiyat listesi, Trendyol / Hepsiburada / marka sayfası</small></summary>
                   <label class="field"><span>Ürün sayfası adresi (URL)</span><input id="ingestUrl" maxlength="2000" inputmode="url" placeholder="https://www.trendyol.com/..."></label>
-                  <label class="field"><span>veya PDF dosyası</span><input id="ingestPdf" type="file" accept="application/pdf"></label>
+                  <label class="field"><span>veya PDF / Word dosyası</span><input id="ingestPdf" type="file" accept="application/pdf,.pdf,.docx,application/vnd.openxmlformats-officedocument.wordprocessingml.document"></label>
                   <button class="analyse-button" type="button" id="ingestSource"><span>Belge metnini çıkar</span></button>
                   <div id="ingestOutput" aria-live="polite"></div>
                 </details>
                 <details class="advanced-fields" id="shippingIngest">
                   <summary><span>Sevkiyat belgesi ekle (konşimento, fatura, çeki listesi)</span><small>PDF veya fotoğraf · alanlar forma aktarılır</small></summary>
-                  <label class="field"><span>Belge dosyası</span><input id="shippingFile" type="file" accept="application/pdf,image/jpeg,image/png,image/webp"></label>
-                  <p class="missing-list">Konşimento (B/L), hava konşimentosu (AWB), CMR, ticari/proforma fatura, çeki listesi veya menşe şahadetnamesi. PDF, JPEG, PNG veya WebP · en fazla 10 MB. Alanlar yapay zekâ ile okunur, siz düzeltip forma aktarırsınız; belgedeki HS kodu yalnızca öneri olarak gösterilir.</p>
+                  <label class="field"><span>Belge dosyası</span><input id="shippingFile" type="file" accept="application/pdf,.pdf,.docx,application/vnd.openxmlformats-officedocument.wordprocessingml.document,image/jpeg,image/png,image/webp"></label>
+                  <p class="missing-list">Konşimento (B/L), hava konşimentosu (AWB), CMR, ticari/proforma fatura, çeki listesi veya menşe şahadetnamesi. PDF, Word (.docx), JPEG, PNG veya WebP · en fazla 10 MB. Alanlar yapay zekâ ile okunur, siz düzeltip forma aktarırsınız; belgedeki HS kodu yalnızca öneri olarak gösterilir.</p>
                   <button class="analyse-button" type="button" id="shippingRead"><span>Belgeyi oku</span></button>
                   <div id="shippingOutput" aria-live="polite"></div>
                 </details>

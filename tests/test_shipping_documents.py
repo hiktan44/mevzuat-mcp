@@ -12,6 +12,7 @@ from starlette.testclient import TestClient
 
 import app as web_app
 import shipping_documents as sd
+from _docx_fixture import build_docx
 from shipping_documents import (
     ShippingDocumentExtraction,
     decode_document_data_url,
@@ -121,6 +122,8 @@ class NormalisationTests(unittest.TestCase):
     def test_data_url_validation(self) -> None:
         payload, media_type = decode_document_data_url(_data_url(b"%PDF-1.4 test", "application/pdf"))
         self.assertEqual(media_type, "application/pdf")
+        _, docx_type = decode_document_data_url(_data_url(b"PK\x03\x04", sd.DOCX_MIME))
+        self.assertEqual(docx_type, sd.DOCX_MIME)
         self.assertTrue(payload.startswith(b"%PDF"))
         with self.assertRaises(ValueError):
             decode_document_data_url("data:text/html;base64,PGI+")
@@ -170,6 +173,26 @@ class ExtractionFlowTests(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(result.provider, "zai")
         self.assertNotIn("onaylıdır", result.warning)
         self.assertTrue(result.user_confirmation_required)
+
+    async def test_word_document_goes_to_the_text_model(self) -> None:
+        chat = AsyncMock(return_value=(json.dumps(RAW_REPLY), "glm-5.3"))
+        docx = build_docx([
+            "COMMERCIAL INVOICE No. INV-2026-771",
+            "Seller: Shenzhen Example Textile Co., Ltd.  Buyer: Örnek Tekstil A.Ş.",
+            "Goods: men's 100% cotton knitted t-shirts, 3600 pcs, FOB Yantian, USD 24,500.00",
+        ])
+        with patch.object(sd, "_openrouter_chat", chat):
+            result = await extract_shipping_document(docx, sd.DOCX_MIME)
+        self.assertEqual(result.source_kind, "docx_text")
+        user_content = chat.call_args.kwargs["messages"][1]["content"]
+        self.assertIn("COMMERCIAL INVOICE No. INV-2026-771", user_content)
+        self.assertIn("knitted t-shirts", user_content)
+
+    async def test_empty_or_broken_word_document_is_rejected(self) -> None:
+        with self.assertRaises(ValueError):
+            await extract_shipping_document(build_docx(["kısa"]), sd.DOCX_MIME)
+        with self.assertRaises(ValueError):
+            await extract_shipping_document(b"not a zip file", sd.DOCX_MIME)
 
     async def test_scanned_pdf_is_rasterised_for_the_vision_model(self) -> None:
         chat = AsyncMock(return_value=(json.dumps(RAW_REPLY), "glm-4.6v"))

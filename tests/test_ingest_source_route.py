@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import base64
 import json
 import os
 import unittest
@@ -9,6 +10,7 @@ import httpx
 from starlette.testclient import TestClient
 
 import app as web_app
+from _docx_fixture import build_docx
 
 PUBLIC_ORIGIN = "https://gumruksor.com"
 
@@ -96,6 +98,29 @@ class IngestSourceRouteTests(unittest.TestCase):
         response = self._ingest(handler, "https://shop.example/p/1")
         self.assertEqual(response.status_code, 422)
         self.assertIn("HTTP 500", response.json()["error"])
+
+    def test_word_document_upload_is_extracted(self) -> None:
+        docx = build_docx(["Teknik föy: Paslanmaz çelik tencere 24 cm", "Malzeme: 18/10 paslanmaz çelik, indüksiyon uyumlu."])
+        data_url = f"data:{web_app._DOCX_MIME};base64,{base64.b64encode(docx).decode('ascii')}"
+        response = self.client.post(
+            "/api/customs/ingest-source",
+            json={"pdf_data_url": data_url},
+            headers={"Origin": PUBLIC_ORIGIN},
+        )
+        self.assertEqual(response.status_code, 200, response.text)
+        data = response.json()
+        self.assertEqual(data["source_type"], "docx")
+        self.assertEqual(data["title"], "Yüklenen Word belgesi")
+        self.assertIn("indüksiyon uyumlu", data["text"])
+
+    def test_unsupported_upload_type_is_rejected_with_guidance(self) -> None:
+        response = self.client.post(
+            "/api/customs/ingest-source",
+            json={"pdf_data_url": "data:application/msword;base64,AAAA"},
+            headers={"Origin": PUBLIC_ORIGIN},
+        )
+        self.assertEqual(response.status_code, 422)
+        self.assertIn(".docx", response.json()["error"])
 
     def test_http_url_is_rejected_before_any_fetch(self) -> None:
         calls = []

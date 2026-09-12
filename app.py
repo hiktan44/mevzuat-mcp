@@ -1501,6 +1501,9 @@ async def _fetch_user_document_text(url: str) -> dict[str, Any]:
             if response.is_success and "pdf" in content_type.lower():
                 payload = response.content[:_USER_DOCUMENT_MAX_BYTES]
                 return {"text": _extract_pdf_text(payload), "title": current, "structured": {}, "extraction": "pdf"}
+            if response.is_success and "wordprocessingml" in content_type.lower():
+                payload = response.content[:_USER_DOCUMENT_MAX_BYTES]
+                return {"text": _extract_office_text(payload, ".docx"), "title": current, "structured": {}, "extraction": "docx"}
             html_text = response.text if response.is_success else ""
             blocked = detect_bot_wall(response.status_code, response.text)
             if not blocked and not response.is_success:
@@ -1520,12 +1523,22 @@ async def _fetch_user_document_text(url: str) -> dict[str, Any]:
     raise ValueError("Belge çok fazla yönlendirme içeriyor.")
 
 
-def _extract_pdf_text(payload: bytes) -> str:
-    """Extract bounded text from a PDF; markitdown is imported lazily."""
+_DOCX_MIME = "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+_USER_DOCUMENT_DATA_URL_RE = re.compile(
+    r"data:(application/pdf|" + re.escape(_DOCX_MIME) + r");base64,([A-Za-z0-9+/=\r\n]+)"
+)
+
+
+def _extract_office_text(payload: bytes, extension: str) -> str:
+    """Extract bounded text from a PDF or Word (.docx) file; markitdown is imported lazily."""
     from markitdown import MarkItDown
 
-    result = MarkItDown().convert_stream(io.BytesIO(payload), file_extension=".pdf")
+    result = MarkItDown().convert_stream(io.BytesIO(payload), file_extension=extension)
     return " ".join(str(result.text_content or "").split())[:_USER_DOCUMENT_MAX_CHARS]
+
+
+def _extract_pdf_text(payload: bytes) -> str:
+    return _extract_office_text(payload, ".pdf")
 
 
 @mcp.custom_route("/api/customs/ingest-source", methods=["POST"])
@@ -1544,9 +1557,9 @@ async def web_customs_ingest_source(request: Request):
         if not isinstance(body, dict):
             raise ValueError("İstek bir nesne olmalıdır.")
         url = str(body.get("url", "")).strip()
-        pdf_data_url = body.get("pdf_data_url")
+        pdf_data_url = body.get("pdf_data_url") or body.get("document_data_url")
         if bool(url) == bool(pdf_data_url):
-            raise ValueError("Tek bir kaynak belirtin: belge adresi veya PDF.")
+            raise ValueError("Tek bir kaynak belirtin: belge adresi veya PDF/Word dosyası.")
         structured: dict[str, Any] = {}
         extraction = "text"
         if url:
@@ -1555,14 +1568,18 @@ async def web_customs_ingest_source(request: Request):
             structured, extraction = fetched.get("structured") or {}, fetched.get("extraction") or "text"
             source_type, source_label = "url", url
         else:
-            match = re.fullmatch(r"data:application/pdf;base64,([A-Za-z0-9+/=\r\n]+)", str(pdf_data_url or ""))
+            match = _USER_DOCUMENT_DATA_URL_RE.fullmatch(str(pdf_data_url or ""))
             if not match:
-                raise ValueError("Yalnızca PDF dosyası yüklenebilir.")
-            payload = base64.b64decode(match.group(1), validate=True)
+                raise ValueError("Yalnızca PDF veya Word (.docx) dosyası yüklenebilir; eski .doc biçimini Word'de .docx olarak kaydedin.")
+            payload = base64.b64decode(match.group(2), validate=True)
             if not payload or len(payload) > _USER_DOCUMENT_MAX_BYTES:
-                raise ValueError("PDF 10 MB sınırını aşıyor.")
-            text, title = _extract_pdf_text(payload), "Yüklenen PDF"
-            source_type, source_label = "pdf", "PDF belgesi"
+                raise ValueError("Belge 10 MB sınırını aşıyor.")
+            if match.group(1) == _DOCX_MIME:
+                text, title = _extract_office_text(payload, ".docx"), "Yüklenen Word belgesi"
+                source_type, source_label = "docx", "Word belgesi"
+            else:
+                text, title = _extract_pdf_text(payload), "Yüklenen PDF"
+                source_type, source_label = "pdf", "PDF belgesi"
         if not text.strip():
             raise ValueError("Belgede kopyalanabilir metin bulunamadı; taranmış sayfa ise metin çıkarılamaz.")
         truncated = len(text) > _USER_DOCUMENT_MAX_CHARS
