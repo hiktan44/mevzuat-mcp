@@ -1491,7 +1491,20 @@ async def _fetch_user_document_text(url: str) -> dict[str, Any]:
         for _ in range(4):
             _validate_user_document_url(current)
             _validate_user_document_host_resolution(current)
-            response = await client.get(current)
+            try:
+                response = await client.get(current)
+            except httpx.HTTPError as exc:
+                # Baglanti hatasi / zaman asimi (bazi siteler sunucu IP'lerini TLS
+                # duzeyinde keser): once bassiz tarayiciyla dene, olmazsa acik mesaj ver.
+                logger.warning("Product page fetch failed for %s: %s", urlsplit(current).hostname, type(exc).__name__)
+                if _browser_fallback_enabled():
+                    rendered = await _render_user_document_with_browser(current)
+                    if rendered and not detect_bot_wall(200, rendered):
+                        return extract_product_page(rendered, current, max_chars=_USER_DOCUMENT_MAX_CHARS)
+                raise ValueError(
+                    f"Siteye bağlanılamadı ({type(exc).__name__}). Sayfadaki başlığı ve açıklamayı kopyalayıp "
+                    "ürün tanımına yapıştırın ya da sayfayı PDF olarak kaydedip yükleyin."
+                ) from exc
             if response.is_redirect:
                 current = urljoin(current, str(response.headers.get("location", "")))
                 continue
@@ -2519,6 +2532,9 @@ async def health_check(request):
         "status": "healthy",
         "service": "Mevzuat MCP Server",
         "version": "1.8.0",
+        # Coolify her derlemede SOURCE_COMMIT'i gecirir; hangi surumun canlida
+        # oldugunu dogrulamak icin.
+        "commit": os.environ.get("SOURCE_COMMIT", "")[:12] or None,
         "tariff_ready": tariff_status.ready,
         "tariff_measures": tariff_status.measure_count,
         "controls_ready": control_status.ready,
