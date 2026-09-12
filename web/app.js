@@ -851,6 +851,20 @@ form.addEventListener("submit", (event) => {
   event.preventDefault();
   runSearch(state.scope === "ticaret" ? { offset: 0 } : { page: 1 });
 });
+// Filtre değiştiğinde aramayı hemen yenile; "Ara" düğmesine basmak gerekmesin.
+["#sourceFilter", "#documentType", "#yearFilter", "#includeRepealed"].forEach((selector) => {
+  $(selector)?.addEventListener("change", () => {
+    if (state.scope === "ticaret") runTicaretSearch({ offset: 0 });
+  });
+});
+["#generalType", "#startDate", "#endDate"].forEach((selector) => {
+  $(selector)?.addEventListener("change", () => {
+    if (state.scope === "general") runGeneralSearch({ page: 1 });
+  });
+});
+$$('input[name="generalMode"]').forEach((radio) => radio.addEventListener("change", () => {
+  if (state.scope === "general" && queryInput.value.trim()) runGeneralSearch({ page: 1 });
+}));
 $$('[data-scope]').forEach((button) => button.addEventListener("click", () => switchScope(button.dataset.scope)));
 $$('.source-link').forEach((button) => button.addEventListener("click", () => {
   selectSourceKind(button.dataset.kind);
