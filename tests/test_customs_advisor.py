@@ -669,6 +669,34 @@ class ZaiProviderConfigTests(unittest.TestCase):
         with patch.dict(os.environ, {"OPENROUTER_CUSTOMS_MODELS": "glm-5.3,glm-5.3-flash"}):
             self.assertEqual(_openrouter_models("OPENROUTER_CUSTOMS_MODELS"), ["glm-5.3", "glm-5.3-flash"])
 
+    def test_zai_falls_back_to_glm_defaults_when_chain_is_openrouter_only(self) -> None:
+        # ZAI_API_KEY var ama OPENROUTER_*_MODELS hic ayarlanmamis (Coolify'daki
+        # en yaygin durum): OpenRouter varsayilanlari Z.ai'de calismaz.
+        with patch.dict(os.environ, _llm_env(ZAI_API_KEY="zai-key"), clear=True):
+            self.assertEqual(_openrouter_models("OPENROUTER_VISION_MODELS"), ["glm-5v-turbo", "glm-4.6v"])
+            self.assertEqual(_openrouter_models("OPENROUTER_CUSTOMS_MODELS"), ["glm-5.3", "glm-5.3-flash"])
+        # Eski OpenRouter listesi ayarli: yalniz Z.ai'de gecerli olanlar kalir.
+        env = _llm_env(
+            ZAI_API_KEY="zai-key",
+            OPENROUTER_VISION_MODELS="~google/gemini-flash-latest,z-ai/glm-5.3-flash,openai/gpt-chat-latest",
+            OPENROUTER_CUSTOMS_MODELS="~google/gemini-flash-latest,~anthropic/claude-opus-latest",
+        )
+        with patch.dict(os.environ, env, clear=True):
+            # glm-5.3-flash gorsel modeli degildir; gorsel zinciri varsayilana doner.
+            self.assertEqual(_openrouter_models("OPENROUTER_VISION_MODELS"), ["glm-5v-turbo", "glm-4.6v"])
+            self.assertEqual(_openrouter_models("OPENROUTER_CUSTOMS_MODELS"), ["glm-5.3", "glm-5.3-flash"])
+        env = _llm_env(
+            ZAI_API_KEY="zai-key",
+            OPENROUTER_VISION_MODELS="z-ai/glm-4.6v,~google/gemini-flash-latest",
+            OPENROUTER_CUSTOMS_MODELS="z-ai/glm-5.3-flash,openai/gpt-chat-latest",
+        )
+        with patch.dict(os.environ, env, clear=True):
+            self.assertEqual(_openrouter_models("OPENROUTER_VISION_MODELS"), ["glm-4.6v"])
+            self.assertEqual(_openrouter_models("OPENROUTER_CUSTOMS_MODELS"), ["glm-5.3-flash"])
+        # OpenRouter saglayicisinda liste oldugu gibi kalir.
+        with patch.dict(os.environ, _llm_env(OPENROUTER_API_KEY="or-key"), clear=True):
+            self.assertEqual(_openrouter_models("OPENROUTER_VISION_MODELS")[0], "~google/gemini-flash-latest")
+
     def test_zai_payload_uses_json_object_without_openrouter_provider(self) -> None:
         payload = _openrouter_payload(
             models=["glm-5.3"],

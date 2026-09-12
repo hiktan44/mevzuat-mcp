@@ -644,8 +644,28 @@ def _strip_json_fences(text: str) -> str:
     return stripped
 
 
+# Z.ai (Coding Plan) yalnizca kendi GLM model adlarini tanir; OpenRouter'in
+# "vendor/model" veya "~alias" kimlikleri orada 4xx doner. ZAI_API_KEY varken
+# liste bos birakilirsa ya da OpenRouter kimlikleri iceriyorsa bu varsayilanlara
+# duselir; boylece Coolify'da OPENROUTER_*_MODELS guncellenmese bile gorsel ve
+# metin analizi calisir.
+_ZAI_DEFAULT_MODELS: dict[str, list[str]] = {
+    "OPENROUTER_VISION_MODELS": ["glm-5v-turbo", "glm-4.6v"],
+    "OPENROUTER_CUSTOMS_MODELS": ["glm-5.3", "glm-5.3-flash"],
+}
+
+
+def _zai_model_name(model: str) -> str | None:
+    """Map a configured id to a Z.ai model name; None when it is OpenRouter-only."""
+    name = model.strip().lstrip("~")
+    if "/" in name:
+        vendor, _, bare = name.partition("/")
+        return bare if vendor.lower() in {"z-ai", "zai", "zhipu", "zhipuai"} and bare else None
+    return name or None
+
+
 def _openrouter_models(environment_name: str) -> list[str]:
-    """Read an ordered, bounded OpenRouter model fallback chain."""
+    """Read an ordered, bounded model fallback chain for the active provider."""
     configured = os.environ.get(environment_name, "").strip()
     values = configured.split(",") if configured else _OPENROUTER_DEFAULT_MODELS
     models: list[str] = []
@@ -659,6 +679,19 @@ def _openrouter_models(environment_name: str) -> list[str]:
             models.append(model)
     if not models or len(models) > 8:
         raise ValueError("OpenRouter model zinciri 1 ile 8 model içermelidir.")
+    if _llm_provider() == "zai":
+        defaults = list(_ZAI_DEFAULT_MODELS.get(environment_name, _ZAI_DEFAULT_MODELS["OPENROUTER_CUSTOMS_MODELS"]))
+        if not configured:
+            return defaults
+        zai_models: list[str] = []
+        for model in models:
+            name = _zai_model_name(model)
+            if name and name not in zai_models:
+                zai_models.append(name)
+        if environment_name == "OPENROUTER_VISION_MODELS":
+            # Gorsel zinciri yalniz GLM gorsel modellerini tasiyabilir (glm-5v-*, glm-4.6v...).
+            zai_models = [name for name in zai_models if re.search(r"\d(?:\.\d+)?v", name.lower())]
+        return (zai_models or defaults)[:8]
     return models
 
 

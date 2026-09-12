@@ -126,6 +126,16 @@ class IngestSourceRouteTests(unittest.TestCase):
         self.assertEqual(response.status_code, 422)
         self.assertIn(".docx", response.json()["error"])
 
+    def test_connection_error_gives_an_actionable_message(self) -> None:
+        def handler(request: httpx.Request) -> httpx.Response:
+            raise httpx.ConnectTimeout("timed out", request=request)
+
+        response = self._ingest(handler, "https://www.trendyol.com/ornek/urun-p-2")
+        self.assertEqual(response.status_code, 422)
+        message = response.json()["error"]
+        self.assertIn("Siteye bağlanılamadı", message)
+        self.assertIn("ConnectTimeout", message)
+
     def test_http_url_is_rejected_before_any_fetch(self) -> None:
         calls = []
 
