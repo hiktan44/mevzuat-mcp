@@ -21,7 +21,6 @@ from typing import Any
 from urllib.parse import urljoin, urlsplit
 
 import httpx
-from bs4 import BeautifulSoup
 from pydantic import ValidationError
 from starlette.requests import Request
 from starlette.responses import FileResponse, HTMLResponse, JSONResponse, PlainTextResponse, RedirectResponse, Response
@@ -53,6 +52,8 @@ from mevzuat_mcp_server import (
 from bulk_costing import MAX_FILE_BYTES as BULK_MAX_FILE_BYTES, calculate_rows as bulk_calculate_rows, rows_from_upload as bulk_rows_from_upload, template_csv as bulk_template_csv
 from countries import COUNTRIES, PENDING_AGREEMENTS
 from origin_documents import origin_document_requirements
+from product_page import BROWSER_HEADERS as PRODUCT_PAGE_BROWSER_HEADERS, detect_bot_wall, extract_product_page
+from shipping_documents import decode_document_data_url, extract_shipping_document
 from mevzuat_mcp_server import (
     BACKGROUND_LOOPS,
     app as mcp,
@@ -1416,20 +1417,75 @@ def _validate_user_document_host_resolution(url: str) -> None:
             raise SecurityViolation("Özel, yerel veya ayrılmış ağ adresine erişim engellendi.", code="ssrf_blocked")
 
 
-def _html_to_text(html_text: str) -> tuple[str, str]:
-    soup = BeautifulSoup(html_text[:2_000_000], "lxml")
-    for element in soup(["script", "style", "noscript"]):
-        element.decompose()
-    title = str(soup.title.string).strip() if soup.title and soup.title.string else ""
-    return " ".join(soup.get_text(" ", strip=True).split()), title
+def _browser_fallback_enabled() -> bool:
+    return os.environ.get("PRODUCT_PAGE_BROWSER_FALLBACK", "1").strip().lower() not in {"0", "false", "no", ""}
 
 
-async def _fetch_user_document_text(url: str) -> tuple[str, str]:
-    """Fetch a user-supplied page with per-hop URL revalidation; no cross-host redirect trust."""
+async def _render_user_document_with_browser(url: str) -> str | None:
+    """Render a JS-heavy or bot-walled product page in headless Chromium.
+
+    Only the already-validated HTTPS URL and its own (sub)domain may be loaded;
+    every other request (trackers, third-party APIs, images, fonts) is aborted.
+    Returns ``None`` when Playwright is unavailable or rendering fails, so the
+    caller can fall back to a clear user-facing message.
+    """
+    try:
+        from playwright.async_api import async_playwright
+    except Exception:  # pragma: no cover - optional runtime dependency
+        return None
+    target_host = (urlsplit(url).hostname or "").lower().rstrip(".")
+    site_root = ".".join(target_host.split(".")[-2:]) if target_host.count(".") >= 1 else target_host
+
+    async def gate(route, request):
+        parsed = urlsplit(request.url)
+        host = (parsed.hostname or "").lower().rstrip(".")
+        same_site = host == target_host or host.endswith(f".{site_root}")
+        if parsed.scheme != "https" or not same_site or request.resource_type in {"image", "media", "font", "stylesheet", "websocket"}:
+            await route.abort()
+            return
+        try:
+            _validate_user_document_url(request.url)
+        except SecurityViolation:
+            await route.abort()
+            return
+        await route.continue_()
+
+    try:
+        async with async_playwright() as playwright:
+            browser = await playwright.chromium.launch(headless=True, args=["--disable-dev-shm-usage"])
+            try:
+                context = await browser.new_context(
+                    user_agent=PRODUCT_PAGE_BROWSER_HEADERS["User-Agent"],
+                    locale="tr-TR",
+                    java_script_enabled=True,
+                    viewport={"width": 1280, "height": 900},
+                )
+                page = await context.new_page()
+                await page.route("**/*", gate)
+                await page.goto(url, wait_until="domcontentloaded", timeout=25_000)
+                try:
+                    await page.wait_for_selector("h1", timeout=6_000)
+                except Exception:
+                    pass
+                return await page.content()
+            finally:
+                await browser.close()
+    except Exception as exc:  # pragma: no cover - depends on the live site
+        logger.warning("Headless product page render failed for %s: %s", urlsplit(url).hostname, type(exc).__name__)
+        return None
+
+
+async def _fetch_user_document_text(url: str) -> dict[str, Any]:
+    """Fetch a user-supplied page with per-hop URL revalidation; no cross-host redirect trust.
+
+    Returns ``{"text", "title", "structured", "extraction"}``. E-commerce pages are
+    read through :func:`product_page.extract_product_page` (JSON-LD / Trendyol state /
+    meta) so that the product, not the site navigation, fills the text budget.
+    """
     async with httpx.AsyncClient(
         follow_redirects=False,
         timeout=httpx.Timeout(20),
-        headers={"User-Agent": "Gumrukce/1.4 (+product-document-ingest)", "Accept-Language": "tr-TR,tr;q=0.9"},
+        headers=PRODUCT_PAGE_BROWSER_HEADERS,
     ) as client:
         current = url
         for _ in range(4):
@@ -1439,15 +1495,28 @@ async def _fetch_user_document_text(url: str) -> tuple[str, str]:
             if response.is_redirect:
                 current = urljoin(current, str(response.headers.get("location", "")))
                 continue
-            response.raise_for_status()
             content_type = response.headers.get("content-type", "")
             if response.headers.get("content-length", "") and int(response.headers.get("content-length", "0")) > _USER_DOCUMENT_MAX_BYTES:
                 raise ValueError("Belge 10 MB sınırını aşıyor.")
-            if "pdf" in content_type.lower():
+            if response.is_success and "pdf" in content_type.lower():
                 payload = response.content[:_USER_DOCUMENT_MAX_BYTES]
-                return _extract_pdf_text(payload), current
-            text, title = _html_to_text(response.text)
-            return text[:_USER_DOCUMENT_MAX_CHARS], title or current
+                return {"text": _extract_pdf_text(payload), "title": current, "structured": {}, "extraction": "pdf"}
+            html_text = response.text if response.is_success else ""
+            blocked = detect_bot_wall(response.status_code, response.text)
+            if not blocked and not response.is_success:
+                raise ValueError(f"Ürün sayfası okunamadı (HTTP {response.status_code}). Adresi tarayıcıda açıp doğrulayın.")
+            extracted = extract_product_page(html_text, current, max_chars=_USER_DOCUMENT_MAX_CHARS) if html_text else None
+            needs_browser = blocked or not extracted or (extracted["extraction"] == "text" and len(extracted["text"]) < 200)
+            if needs_browser and _browser_fallback_enabled():
+                rendered = await _render_user_document_with_browser(current)
+                if rendered and not detect_bot_wall(200, rendered):
+                    extracted = extract_product_page(rendered, current, max_chars=_USER_DOCUMENT_MAX_CHARS)
+                    blocked = None
+            if blocked and (not extracted or extracted["extraction"] != "structured"):
+                raise ValueError(blocked)
+            if not extracted:
+                raise ValueError("Ürün sayfasından metin çıkarılamadı.")
+            return extracted
     raise ValueError("Belge çok fazla yönlendirme içeriyor.")
 
 
@@ -1478,8 +1547,12 @@ async def web_customs_ingest_source(request: Request):
         pdf_data_url = body.get("pdf_data_url")
         if bool(url) == bool(pdf_data_url):
             raise ValueError("Tek bir kaynak belirtin: belge adresi veya PDF.")
+        structured: dict[str, Any] = {}
+        extraction = "text"
         if url:
-            text, title = await _fetch_user_document_text(url)
+            fetched = await _fetch_user_document_text(url)
+            text, title = fetched["text"], fetched["title"]
+            structured, extraction = fetched.get("structured") or {}, fetched.get("extraction") or "text"
             source_type, source_label = "url", url
         else:
             match = re.fullmatch(r"data:application/pdf;base64,([A-Za-z0-9+/=\r\n]+)", str(pdf_data_url or ""))
@@ -1499,6 +1572,8 @@ async def web_customs_ingest_source(request: Request):
                 "title": title[:200] or source_label,
                 "text": text[:_USER_DOCUMENT_MAX_CHARS],
                 "truncated": truncated,
+                "structured": structured,
+                "extraction": extraction,
                 "warning": (
                     "Belge metni yalnızca ürün evsaflarını hazırlamak için çıkarıldı. İçeriği gözden geçirip "
                     "onaylamadan sınıflandırma araştırması başlamaz."
@@ -1512,6 +1587,77 @@ async def web_customs_ingest_source(request: Request):
     except Exception:
         logger.exception("User document ingestion failed")
         return JSONResponse({"error": "Belge metni şu anda çıkarılamadı."}, status_code=502)
+
+
+async def _read_json_body_limited(request: Request, max_bytes: int) -> dict[str, Any]:
+    """Stream a JSON body with a hard byte cap; raises ValueError on size/shape problems."""
+    try:
+        content_length = int(request.headers.get("content-length", "0") or 0)
+    except ValueError:
+        content_length = 0
+    limit_mb = max_bytes // (1024 * 1024)
+    if content_length > max_bytes:
+        raise ValueError(f"İstek boyutu {limit_mb} MB sınırını aşıyor.")
+    chunks: list[bytes] = []
+    bytes_read = 0
+    async for chunk in request.stream():
+        bytes_read += len(chunk)
+        if bytes_read > max_bytes:
+            raise ValueError(f"İstek boyutu {limit_mb} MB sınırını aşıyor.")
+        chunks.append(chunk)
+    raw_body = b"".join(chunks)
+    if not raw_body:
+        raise ValueError("İstek gövdesi boş.")
+    body = json.loads(raw_body.decode("utf-8"))
+    if not isinstance(body, dict):
+        raise ValueError("İstek bir nesne olmalıdır.")
+    return body
+
+
+@mcp.custom_route("/api/customs/ingest-shipping-document", methods=["POST"])
+async def web_customs_ingest_shipping_document(request: Request):
+    """Read a bill of lading / invoice / packing list into editable fields; never a customs decision."""
+    limited = _rate_limit_response(request, "customs-shipping", limit=10, window_seconds=3600)
+    if limited:
+        return limited
+    upload_limited = _rate_limit_response(request, "customs-upload", limit=30, window_seconds=3600)
+    if upload_limited:
+        return upload_limited
+    try:
+        _trusted_request_origin(request)
+        _agent_or_browser_identity(request)
+        quota_user = _enforce_quota(request, "vision")
+    except SecurityViolation as exc:
+        return _security_response(exc)
+    except AuthError as exc:
+        return _auth_error(exc)
+    except QuotaExceeded as exc:
+        return JSONResponse({"error": str(exc), "code": "quota_exceeded"}, status_code=429)
+    try:
+        body = await _read_json_body_limited(request, 14 * 1024 * 1024)
+        if not body.get("document_data_url"):
+            raise ValueError("Konşimento, fatura veya çeki listesi dosyasını yükleyin.")
+        payload, media_type = decode_document_data_url(body["document_data_url"])
+        result = await extract_shipping_document(payload, media_type)
+        _record_usage(quota_user, "vision")
+    except RuntimeError as exc:
+        return JSONResponse({"error": str(exc)}, status_code=503)
+    except (ValidationError, ValueError, json.JSONDecodeError) as exc:
+        message = (
+            exc.errors(include_url=False)[0].get("msg", "Belge alanları doğrulanamadı.")
+            if isinstance(exc, ValidationError)
+            else str(exc)
+        )
+        return JSONResponse({"error": message}, status_code=422)
+    except Exception:
+        logger.exception("Shipping document extraction failed")
+        return JSONResponse(
+            {"error": "Belge okuma modeli şu anda yanıt vermedi. Alanları elle doldurabilirsiniz."},
+            status_code=502,
+        )
+    data = result.model_dump(mode="json")
+    data["document_type_label"] = result.document_type_label
+    return JSONResponse(redact_data(data, contact_data=True))
 
 
 @mcp.custom_route("/api/customs/classify-product", methods=["POST"])

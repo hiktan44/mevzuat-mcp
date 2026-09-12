@@ -844,7 +844,7 @@ class ZaiChatTransportTests(unittest.IsolatedAsyncioTestCase):
             state["active"] -= 1
             return httpx.Response(200, json=_chat_response('{"a": 1}'))
 
-        env = _llm_env(ZAI_API_KEY="zai-key", ZAI_MAX_CONCURRENCY="2")
+        env = _llm_env(ZAI_API_KEY="zai-key", ZAI_MAX_CONCURRENCY="2")  # gitleaks:allow
         with patch.dict(os.environ, env, clear=True), patch(
             "customs_advisor.httpx.AsyncClient", new=_mock_client_factory(handler)
         ):
