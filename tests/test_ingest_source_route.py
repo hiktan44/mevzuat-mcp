@@ -3,14 +3,18 @@ from __future__ import annotations
 import base64
 import json
 import os
+import sys
 import unittest
+from pathlib import Path
 from unittest.mock import patch
 
 import httpx
 from starlette.testclient import TestClient
 
 import app as web_app
-from _docx_fixture import build_docx
+
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+from _docx_fixture import build_docx  # noqa: E402
 
 PUBLIC_ORIGIN = "https://gumruksor.com"
 

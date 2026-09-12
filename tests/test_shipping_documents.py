@@ -4,7 +4,9 @@ import base64
 import io
 import json
 import os
+import sys
 import unittest
+from pathlib import Path
 from unittest.mock import AsyncMock, patch
 
 from PIL import Image
@@ -12,7 +14,6 @@ from starlette.testclient import TestClient
 
 import app as web_app
 import shipping_documents as sd
-from _docx_fixture import build_docx
 from shipping_documents import (
     ShippingDocumentExtraction,
     decode_document_data_url,
@@ -20,6 +21,9 @@ from shipping_documents import (
     normalise_extraction,
     _to_number,
 )
+
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+from _docx_fixture import build_docx  # noqa: E402
 
 PUBLIC_ORIGIN = "https://gumruksor.com"
 
