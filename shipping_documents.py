@@ -41,7 +41,10 @@ MAX_TEXT_CHARS = 12_000
 _MIN_TEXT_CHARS = 80
 _RASTER_DPI = 170
 
-_DATA_URL_RE = re.compile(r"^data:(application/pdf|image/(?:jpeg|png|webp));base64,([A-Za-z0-9+/=\r\n]+)$")
+DOCX_MIME = "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+_DATA_URL_RE = re.compile(
+    r"^data:(application/pdf|" + re.escape(DOCX_MIME) + r"|image/(?:jpeg|png|webp));base64,([A-Za-z0-9+/=\r\n]+)$"
+)
 _HS_RE = re.compile(r"\d{4}(?:[.\s]?\d{2}){0,4}")
 _INCOTERMS = {"EXW", "FCA", "FAS", "FOB", "CFR", "CIF", "CPT", "CIP", "DAP", "DPU", "DDP", "DAF", "DES", "DEQ", "DDU"}
 
@@ -69,12 +72,12 @@ DOCUMENT_TYPE_LABELS = {
 
 
 def decode_document_data_url(value: Any) -> tuple[bytes, str]:
-    """Decode ``data:application/pdf|image/...;base64,`` payloads within the size limit."""
+    """Decode ``data:application/pdf|docx|image/...;base64,`` payloads within the size limit."""
     if not isinstance(value, str) or len(value) > 14_500_000:
         raise ValueError("Belge verisi çok büyük veya geçersiz.")
     match = _DATA_URL_RE.fullmatch(value)
     if not match:
-        raise ValueError("Belge PDF, JPEG, PNG veya WebP olmalıdır.")
+        raise ValueError("Belge PDF, Word (.docx), JPEG, PNG veya WebP olmalıdır; eski .doc biçimini Word'de .docx olarak kaydedin.")
     try:
         payload = base64.b64decode(match.group(2), validate=True)
     except (ValueError, TypeError) as exc:
@@ -175,7 +178,7 @@ class ShippingDocumentExtraction(BaseModel):
     marks_and_numbers: str = Field("", max_length=500)
     unreadable_fields: list[str] = Field(default_factory=list, max_length=20)
     confidence: Literal["low", "medium", "high"] = "low"
-    source_kind: Literal["pdf_text", "pdf_scan", "image"] = "image"
+    source_kind: Literal["pdf_text", "pdf_scan", "docx_text", "image"] = "image"
     user_confirmation_required: bool = True
     warning: str = (
         "Alanlar yalnızca belgede yazılı olandan kopyalanmıştır; menşe, kıymet ve tarife bilgisi belgeyle "
@@ -344,11 +347,22 @@ def normalise_extraction(raw: dict[str, Any]) -> dict[str, Any]:
     return data
 
 
-def _pdf_text(payload: bytes) -> str:
+def _office_text(payload: bytes, extension: str) -> str:
     from markitdown import MarkItDown
 
-    result = MarkItDown().convert_stream(io.BytesIO(payload), file_extension=".pdf")
+    result = MarkItDown().convert_stream(io.BytesIO(payload), file_extension=extension)
     return " ".join(str(result.text_content or "").split())
+
+
+def _pdf_text(payload: bytes) -> str:
+    return _office_text(payload, ".pdf")
+
+
+def _docx_text(payload: bytes) -> str:
+    try:
+        return _office_text(payload, ".docx")
+    except Exception as exc:
+        raise ValueError("Word belgesi açılamadı; dosyanın bozuk olmadığını ve .docx biçiminde olduğunu kontrol edin.") from exc
 
 
 def _rasterize_pdf(payload: bytes) -> bytes:
@@ -422,8 +436,14 @@ async def _extract_from_image(image_bytes: bytes, media_type: str) -> tuple[dict
 
 
 async def extract_shipping_document(payload: bytes, media_type: str) -> ShippingDocumentExtraction:
-    """Read a PDF (text or scanned) or image shipping document into editable fields."""
-    if media_type == "application/pdf":
+    """Read a PDF (text or scanned), Word (.docx) or image shipping document into editable fields."""
+    if media_type == DOCX_MIME:
+        text = _docx_text(payload)
+        if len(text) < _MIN_TEXT_CHARS:
+            raise ValueError("Word belgesinde okunabilir metin bulunamadı; belge yalnızca görsel içeriyorsa PDF veya fotoğraf olarak yükleyin.")
+        raw, resolved_model = await _extract_from_text(text)
+        source_kind = "docx_text"
+    elif media_type == "application/pdf":
         text = _pdf_text(payload)
         if len(text) >= _MIN_TEXT_CHARS:
             raw, resolved_model = await _extract_from_text(text)
