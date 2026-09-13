@@ -144,7 +144,7 @@ def _text_or_empty(value: Any, limit: int) -> str:
 class ShippingDocumentExtraction(BaseModel):
     """Editable fields read from a shipping document; never a customs decision."""
 
-    provider: Literal["openrouter", "zai"]
+    provider: Literal["openrouter", "zai", "gemini"]
     model: str
     document_type: DocumentType = "other"
     document_number: str = Field("", max_length=80)

@@ -622,6 +622,7 @@ _LLM_ENV_KEYS = (
     "ZAI_API_KEY", "OPENROUTER_API_KEY", "LLM_BASE_URL", "ZAI_REASONING_EFFORT", "ZAI_MAX_CONCURRENCY",
     "ZAI_VISION_THINKING", "LLM_FALLBACK_TO_OPENROUTER", "OPENROUTER_FALLBACK_MODELS",
     "LLM_REQUEST_TIMEOUT_SECONDS", "LLM_TOTAL_DEADLINE_SECONDS", "LLM_PRIMARY_BUDGET_SECONDS",
+    "GEMINI_API_KEY", "GEMINI_MODELS", "GEMINI_REASONING_EFFORT", "LLM_PRIMARY_PROVIDER", "LLM_FALLBACK_TO_GEMINI",
 )
 
 
@@ -1079,6 +1080,111 @@ class LlmResilienceTests(unittest.IsolatedAsyncioTestCase):
         with patch.dict(os.environ, _llm_env(LLM_REQUEST_TIMEOUT_SECONDS="abc"), clear=True):
             self.assertEqual(customs_advisor._llm_request_timeout().read, 75.0)
             self.assertEqual(customs_advisor._llm_request_timeout().connect, 15.0)
+
+
+class GeminiProviderTests(unittest.IsolatedAsyncioTestCase):
+    """Direct Google Gemini (OpenAI-compatible endpoint) as primary or fallback."""
+
+    async def _chat(self, handler, models, env):
+        with patch.dict(os.environ, env, clear=True), patch(
+            "customs_advisor.httpx.AsyncClient", new=_mock_client_factory(handler)
+        ), patch("customs_advisor._retry_sleep", new=AsyncMock()):
+            return await _openrouter_chat(
+                api_key=customs_advisor._llm_api_key_value(),
+                models=models,
+                messages=[{"role": "system", "content": "Sistem"}, {"role": "user", "content": "Ürün"}],
+                response_schema={"type": "object", "properties": {"a": {"type": "integer"}}},
+                schema_name="test_schema",
+                max_tokens=100,
+            )
+
+    def test_gemini_key_alone_selects_gemini_and_zai_still_wins_when_both_exist(self) -> None:
+        with patch.dict(os.environ, _llm_env(GEMINI_API_KEY="gem-key"), clear=True):
+            self.assertEqual(_llm_provider(), "gemini")
+            self.assertEqual(_llm_base_url(), "https://generativelanguage.googleapis.com/v1beta/openai")
+            self.assertEqual(_llm_api_key_value(), "gem-key")
+            self.assertEqual(_openrouter_models("OPENROUTER_VISION_MODELS"), ["gemini-3.8-flash", "gemini-flash-latest"])
+            self.assertEqual(_openrouter_models("OPENROUTER_CUSTOMS_MODELS"), ["gemini-3.8-flash", "gemini-flash-latest"])
+        with patch.dict(os.environ, _llm_env(ZAI_API_KEY="zai-key", GEMINI_API_KEY="gem-key"), clear=True):
+            self.assertEqual(_llm_provider(), "zai")
+            self.assertEqual(_llm_api_key_value(), "zai-key")
+        with patch.dict(os.environ, _llm_env(ZAI_API_KEY="zai-key", GEMINI_API_KEY="gem-key", LLM_PRIMARY_PROVIDER="gemini"), clear=True):
+            self.assertEqual(_llm_provider(), "gemini")
+            self.assertEqual(_llm_api_key_value(), "gem-key")
+        with patch.dict(os.environ, _llm_env(ZAI_API_KEY="zai-key", LLM_PRIMARY_PROVIDER="gemini"), clear=True):
+            self.assertEqual(_llm_provider(), "zai", "override without a Gemini key is ignored")
+
+    def test_gemini_model_list_accepts_openrouter_style_google_ids(self) -> None:
+        with patch.dict(os.environ, _llm_env(GEMINI_MODELS="~google/gemini-3.8-flash, z-ai/glm-5.3, gemini-flash-latest"), clear=True):
+            self.assertEqual(customs_advisor._gemini_models(), ["gemini-3.8-flash", "gemini-flash-latest"])
+        with patch.dict(os.environ, _llm_env(GEMINI_MODELS="z-ai/glm-5.3"), clear=True):
+            self.assertEqual(customs_advisor._gemini_models(), ["gemini-3.8-flash", "gemini-flash-latest"])
+
+    async def test_gemini_primary_request_shape(self) -> None:
+        seen: list[httpx.Request] = []
+
+        def handler(request: httpx.Request) -> httpx.Response:
+            seen.append(request)
+            return httpx.Response(200, json=_chat_response('```json\n{"a": 5}\n```', "gemini-3.8-flash"))
+
+        text, model = await self._chat(handler, ["gemini-3.8-flash"], _llm_env(GEMINI_API_KEY="gem-key"))
+        self.assertEqual((text, model), ('{"a": 5}', "gemini-3.8-flash"))
+        request = seen[0]
+        self.assertEqual(str(request.url), "https://generativelanguage.googleapis.com/v1beta/openai/chat/completions")
+        self.assertEqual(request.headers["authorization"], "Bearer gem-key")
+        self.assertNotIn("x-openrouter-title", request.headers)
+        body = json.loads(request.content)
+        self.assertEqual(body["model"], "gemini-3.8-flash")
+        self.assertEqual(body["response_format"], {"type": "json_object"})
+        self.assertEqual(body["reasoning_effort"], "low")
+        self.assertNotIn("provider", body)
+        self.assertNotIn("thinking", body)
+        self.assertIn("test_schema", body["messages"][0]["content"])
+
+    async def test_zai_failure_prefers_gemini_over_openrouter(self) -> None:
+        seen: list[str] = []
+
+        def handler(request: httpx.Request) -> httpx.Response:
+            seen.append(request.url.host)
+            if request.url.host == "api.z.ai":
+                return httpx.Response(500, json={"error": {"message": "upstream"}})
+            return httpx.Response(200, json=_chat_response('{"a": 7}', "gemini-3.8-flash"))
+
+        text, model = await self._chat(
+            handler, ["glm-5v-turbo"], _llm_env(ZAI_API_KEY="zai-key", GEMINI_API_KEY="gem-key", OPENROUTER_API_KEY="or-key")
+        )
+        self.assertEqual((text, model), ('{"a": 7}', "gemini-3.8-flash"))
+        self.assertEqual(seen, ["api.z.ai", "generativelanguage.googleapis.com"])
+
+    async def test_gemini_failure_continues_to_openrouter(self) -> None:
+        seen: list[str] = []
+
+        def handler(request: httpx.Request) -> httpx.Response:
+            seen.append(request.url.host)
+            if request.url.host == "openrouter.ai":
+                return httpx.Response(200, json=_chat_response('{"a": 8}', "google/gemini-flash-latest"))
+            return httpx.Response(503, json={"error": {"message": "down"}})
+
+        text, model = await self._chat(
+            handler, ["glm-5v-turbo"], _llm_env(ZAI_API_KEY="zai-key", GEMINI_API_KEY="gem-key", OPENROUTER_API_KEY="or-key")
+        )
+        self.assertEqual((text, model), ('{"a": 8}', "google/gemini-flash-latest"))
+        self.assertEqual(seen[0], "api.z.ai")
+        self.assertEqual(seen[1:3], ["generativelanguage.googleapis.com", "generativelanguage.googleapis.com"])
+        self.assertEqual(seen[3], "openrouter.ai")
+
+    async def test_gemini_fallback_can_be_switched_off(self) -> None:
+        seen: list[str] = []
+
+        def handler(request: httpx.Request) -> httpx.Response:
+            seen.append(request.url.host)
+            return httpx.Response(500, json={"error": {"message": "upstream"}})
+
+        with self.assertRaises(RuntimeError):
+            await self._chat(
+                handler, ["glm-5v-turbo"], _llm_env(ZAI_API_KEY="zai-key", GEMINI_API_KEY="gem-key", LLM_FALLBACK_TO_GEMINI="0")
+            )
+        self.assertEqual(seen, ["api.z.ai"])
 
 
 class ZaiDescribeImageProviderTests(unittest.IsolatedAsyncioTestCase):
