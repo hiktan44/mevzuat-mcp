@@ -1056,14 +1056,14 @@ class LlmResilienceTests(unittest.IsolatedAsyncioTestCase):
             called.append(request.url.host)
             return httpx.Response(200, json=_chat_response('{"a": 1}'))
 
-        with patch.dict(os.environ, _llm_env(ZAI_API_KEY="zai-key", ZAI_MAX_CONCURRENCY="1"), clear=True):
+        with patch.dict(os.environ, _llm_env(ZAI_API_KEY="zai-key", ZAI_MAX_CONCURRENCY="1"), clear=True):  # gitleaks:allow
             customs_advisor._LLM_SEMAPHORE = None
             semaphore = customs_advisor._llm_semaphore()
             await semaphore.acquire()
             try:
                 started = time.monotonic()
                 with self.assertRaises(RuntimeError):
-                    await self._chat(handler, ["glm-5.3"], _llm_env(ZAI_API_KEY="zai-key", ZAI_MAX_CONCURRENCY="1"), _LLM_QUEUE_WAIT_SECONDS=0.1)
+                    await self._chat(handler, ["glm-5.3"], _llm_env(ZAI_API_KEY="zai-key", ZAI_MAX_CONCURRENCY="1"), _LLM_QUEUE_WAIT_SECONDS=0.1)  # gitleaks:allow
                 self.assertLess(time.monotonic() - started, 5.0)
                 self.assertEqual(called, [])
             finally:
