@@ -748,19 +748,34 @@ def _openrouter_models(environment_name: str) -> list[str]:
     if not models or len(models) > 8:
         raise ValueError("OpenRouter model zinciri 1 ile 8 model içermelidir.")
     if _llm_provider() == "zai":
-        defaults = list(_ZAI_DEFAULT_MODELS.get(environment_name, _ZAI_DEFAULT_MODELS["OPENROUTER_CUSTOMS_MODELS"]))
-        if not configured:
-            return defaults
-        zai_models: list[str] = []
-        for model in models:
-            name = _zai_model_name(model)
-            if name and name not in zai_models:
-                zai_models.append(name)
-        if environment_name == "OPENROUTER_VISION_MODELS":
-            # Gorsel zinciri yalniz GLM gorsel modellerini tasiyabilir (glm-5v-*, glm-4.6v...).
-            zai_models = [name for name in zai_models if re.search(r"\d(?:\.\d+)?v", name.lower())]
-        return (zai_models or defaults)[:8]
+        return _zai_models(environment_name, models if configured else None)
     return models
+
+
+def _zai_models(environment_name: str, configured_models: list[str] | None = None) -> list[str]:
+    """Z.ai (GLM) chain for a task; configured OpenRouter-style ids are mapped or replaced by defaults."""
+    defaults = list(_ZAI_DEFAULT_MODELS.get(environment_name, _ZAI_DEFAULT_MODELS["OPENROUTER_CUSTOMS_MODELS"]))
+    if not configured_models:
+        return defaults
+    zai_models: list[str] = []
+    for model in configured_models:
+        name = _zai_model_name(model)
+        if name and name not in zai_models:
+            zai_models.append(name)
+    if environment_name == "OPENROUTER_VISION_MODELS":
+        # Gorsel zinciri yalniz GLM gorsel modellerini tasiyabilir (glm-5v-*, glm-4.6v...).
+        zai_models = [name for name in zai_models if re.search(r"\d(?:\.\d+)?v", name.lower())]
+    return (zai_models or defaults)[:8]
+
+
+def _is_vision_request(messages: list[dict[str, Any]]) -> bool:
+    for message in messages:
+        content = message.get("content")
+        if isinstance(content, list) and any(
+            isinstance(part, dict) and part.get("type") == "image_url" for part in content
+        ):
+            return True
+    return False
 
 
 def _openrouter_api_key() -> str:
@@ -820,15 +835,19 @@ def _openrouter_payload(
     safe_messages = redact_data(messages, contact_data=True)
     strict_schema = _strict_json_schema(response_schema)
     if provider in {"zai", "gemini"}:
-        # Z.ai and Gemini's OpenAI-compatible endpoint take JSON-object mode; the
-        # schema is stated in the system message and the reply is validated with
-        # Pydantic. Thinking tokens count against max_tokens on both.
+        # Z.ai takes JSON-object mode; Gemini's OpenAI-compatible endpoint documents
+        # json_schema (a 400 on the schema is retried without response_format). The
+        # schema is also stated in the system message and the reply is validated
+        # with Pydantic. Thinking tokens count against max_tokens on both.
+        response_format: dict[str, Any] = {"type": "json_object"}
+        if provider == "gemini":
+            response_format = {"type": "json_schema", "json_schema": {"name": schema_name, "schema": strict_schema}}
         return {
             "models": models,
             "messages": _with_schema_instruction(
                 safe_messages, _schema_instruction(schema_name, strict_schema)
             ),
-            "response_format": {"type": "json_object"},
+            "response_format": response_format,
             "max_tokens": max_tokens + _ZAI_THINKING_TOKEN_ALLOWANCE,
             "stream": False,
         }
@@ -923,7 +942,11 @@ def _llm_primary_budget(total: float) -> float:
 
 
 def _fallback_enabled(provider: str) -> bool:
-    name = {"gemini": "LLM_FALLBACK_TO_GEMINI", "openrouter": "LLM_FALLBACK_TO_OPENROUTER"}.get(provider, "")
+    name = {
+        "gemini": "LLM_FALLBACK_TO_GEMINI",
+        "zai": "LLM_FALLBACK_TO_ZAI",
+        "openrouter": "LLM_FALLBACK_TO_OPENROUTER",
+    }.get(provider, "")
     return os.environ.get(name, "1").strip().lower() not in {"0", "false", "no", "off"} if name else False
 
 
@@ -931,10 +954,14 @@ def _openrouter_fallback_enabled() -> bool:
     return _fallback_enabled("openrouter")
 
 
-def _fallback_providers(primary: str) -> list[tuple[str, str, str, list[str]]]:
-    """(provider, base_url, api_key, models) chains tried after the primary provider fails."""
+def _fallback_providers(primary: str, *, vision: bool = False) -> list[tuple[str, str, str, list[str]]]:
+    """(provider, base_url, api_key, models) chains tried after the primary provider fails.
+
+    Order: Gemini, Z.ai, OpenRouter (minus the primary). Each needs its key and
+    can be switched off with LLM_FALLBACK_TO_<PROVIDER>=0.
+    """
     chains: list[tuple[str, str, str, list[str]]] = []
-    for provider in ("gemini", "openrouter"):
+    for provider in ("gemini", "zai", "openrouter"):
         if provider == primary or not _fallback_enabled(provider):
             continue
         key = _provider_api_key(provider)
@@ -942,6 +969,9 @@ def _fallback_providers(primary: str) -> list[tuple[str, str, str, list[str]]]:
             continue
         if provider == "gemini":
             chains.append((provider, _GEMINI_BASE_URL, key, _gemini_models()))
+        elif provider == "zai":
+            env_name = "OPENROUTER_VISION_MODELS" if vision else "OPENROUTER_CUSTOMS_MODELS"
+            chains.append((provider, _ZAI_BASE_URL, key, _zai_models(env_name)))
         else:
             models = _openrouter_fallback_models()
             if models:
@@ -1177,6 +1207,27 @@ async def _run_model_chain(
             except httpx.RequestError as exc:
                 failures.append(f"{model}: bağlantı hatası ({type(exc).__name__})")
                 continue
+            if (
+                not response.is_success
+                and provider == "gemini"
+                and response.status_code == 400
+                and "response_format" in payload
+            ):
+                # Some schema features are rejected by Gemini's structured output; the
+                # system message already carries the schema, so retry in free JSON mode.
+                failures.append(f"{model}: HTTP 400 · {_openrouter_error_detail(response)} (şemasız yeniden denendi)")
+                payload = {key: value for key, value in payload.items() if key != "response_format"}
+                try:
+                    response = await asyncio.wait_for(
+                        _post_chat_completion(client, url=url, headers=headers, payload=payload, provider=provider),
+                        timeout=max(deadline - loop.time(), 0.1),
+                    )
+                except asyncio.TimeoutError:
+                    failures.append(f"{model}: zaman aşımı")
+                    break
+                except httpx.RequestError as exc:
+                    failures.append(f"{model}: bağlantı hatası ({type(exc).__name__})")
+                    continue
             if not response.is_success:
                 failures.append(
                     f"{model}: HTTP {response.status_code} · {_openrouter_error_detail(response)}"
@@ -1238,7 +1289,7 @@ async def _openrouter_chat(
     started = loop.time()
     total = _llm_total_deadline()
     final_deadline = started + total
-    fallbacks = _fallback_providers(provider)
+    fallbacks = _fallback_providers(provider, vision=_is_vision_request(messages))
     primary_deadline = started + (_llm_primary_budget(total) if fallbacks else total)
     failures: list[str] = []
     try:

@@ -623,6 +623,7 @@ _LLM_ENV_KEYS = (
     "ZAI_VISION_THINKING", "LLM_FALLBACK_TO_OPENROUTER", "OPENROUTER_FALLBACK_MODELS",
     "LLM_REQUEST_TIMEOUT_SECONDS", "LLM_TOTAL_DEADLINE_SECONDS", "LLM_PRIMARY_BUDGET_SECONDS",
     "GEMINI_API_KEY", "GEMINI_MODELS", "GEMINI_REASONING_EFFORT", "LLM_PRIMARY_PROVIDER", "LLM_FALLBACK_TO_GEMINI",
+    "LLM_FALLBACK_TO_ZAI",
 )
 
 
@@ -1135,7 +1136,8 @@ class GeminiProviderTests(unittest.IsolatedAsyncioTestCase):
         self.assertNotIn("x-openrouter-title", request.headers)
         body = json.loads(request.content)
         self.assertEqual(body["model"], "gemini-3.8-flash")
-        self.assertEqual(body["response_format"], {"type": "json_object"})
+        self.assertEqual(body["response_format"]["type"], "json_schema")
+        self.assertEqual(body["response_format"]["json_schema"]["name"], "test_schema")
         self.assertEqual(body["reasoning_effort"], "low")
         self.assertNotIn("provider", body)
         self.assertNotIn("thinking", body)
@@ -1172,6 +1174,75 @@ class GeminiProviderTests(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(seen[0], "api.z.ai")
         self.assertEqual(seen[1:3], ["generativelanguage.googleapis.com", "generativelanguage.googleapis.com"])
         self.assertEqual(seen[3], "openrouter.ai")
+
+    async def test_gemini_schema_rejection_is_retried_without_response_format(self) -> None:
+        bodies: list[dict] = []
+
+        def handler(request: httpx.Request) -> httpx.Response:
+            body = json.loads(request.content)
+            bodies.append(body)
+            if "response_format" in body:
+                return httpx.Response(400, json={"error": {"message": "Invalid JSON schema in response_format"}})
+            return httpx.Response(200, json=_chat_response('{"a": 9}', "gemini-3.8-flash"))
+
+        text, model = await self._chat(handler, ["gemini-3.8-flash"], _llm_env(GEMINI_API_KEY="gem-key"))
+        self.assertEqual((text, model), ('{"a": 9}', "gemini-3.8-flash"))
+        self.assertEqual(len(bodies), 2)
+        self.assertIn("response_format", bodies[0])
+        self.assertNotIn("response_format", bodies[1])
+        self.assertEqual(bodies[1]["model"], "gemini-3.8-flash")
+
+    async def test_gemini_primary_falls_back_to_zai_vision_chain_for_images(self) -> None:
+        seen: list[tuple[str, str]] = []
+
+        def handler(request: httpx.Request) -> httpx.Response:
+            body = json.loads(request.content)
+            seen.append((request.url.host, body["model"]))
+            if request.url.host == "api.z.ai":
+                self.assertEqual(body["thinking"], {"type": "disabled"})
+                return httpx.Response(200, json=_chat_response('{"a": 4}', "glm-5v-turbo"))
+            return httpx.Response(503, json={"error": {"message": "down"}})
+
+        env = _llm_env(ZAI_API_KEY="zai-key", GEMINI_API_KEY="gem-key", LLM_PRIMARY_PROVIDER="gemini")
+        with patch.dict(os.environ, env, clear=True), patch(
+            "customs_advisor.httpx.AsyncClient", new=_mock_client_factory(handler)
+        ), patch("customs_advisor._retry_sleep", new=AsyncMock()):
+            text, model = await _openrouter_chat(
+                api_key=customs_advisor._llm_api_key_value(),
+                models=_openrouter_models("OPENROUTER_VISION_MODELS"),
+                messages=[
+                    {"role": "system", "content": "Sistem"},
+                    {"role": "user", "content": [{"type": "text", "text": "Evsaf"}, {"type": "image_url", "image_url": {"url": "data:image/png;base64,AAAA"}}]},
+                ],
+                response_schema={"type": "object", "properties": {"a": {"type": "integer"}}},
+                schema_name="test_schema",
+                max_tokens=100,
+            )
+        self.assertEqual((text, model), ('{"a": 4}', "glm-5v-turbo"))
+        self.assertEqual(seen[:2], [("generativelanguage.googleapis.com", "gemini-3.8-flash"), ("generativelanguage.googleapis.com", "gemini-flash-latest")])
+        self.assertEqual(seen[2], ("api.z.ai", "glm-5v-turbo"))
+
+    async def test_gemini_primary_text_fallback_uses_zai_text_models(self) -> None:
+        seen: list[tuple[str, str]] = []
+
+        def handler(request: httpx.Request) -> httpx.Response:
+            body = json.loads(request.content)
+            seen.append((request.url.host, body["model"]))
+            if request.url.host == "api.z.ai":
+                return httpx.Response(200, json=_chat_response('{"a": 6}', "glm-5.3"))
+            return httpx.Response(503, json={"error": {"message": "down"}})
+
+        text, model = await self._chat(
+            handler, ["gemini-3.8-flash"],
+            _llm_env(ZAI_API_KEY="zai-key", GEMINI_API_KEY="gem-key", LLM_PRIMARY_PROVIDER="gemini", LLM_FALLBACK_TO_ZAI="1"),  # gitleaks:allow
+        )
+        self.assertEqual((text, model), ('{"a": 6}', "glm-5.3"))
+        self.assertEqual(seen[-1], ("api.z.ai", "glm-5.3"))
+        with self.assertRaises(RuntimeError):
+            await self._chat(
+                handler, ["gemini-3.8-flash"],
+                _llm_env(ZAI_API_KEY="zai-key", GEMINI_API_KEY="gem-key", LLM_PRIMARY_PROVIDER="gemini", LLM_FALLBACK_TO_ZAI="0"),  # gitleaks:allow
+            )
 
     async def test_gemini_fallback_can_be_switched_off(self) -> None:
         seen: list[str] = []
