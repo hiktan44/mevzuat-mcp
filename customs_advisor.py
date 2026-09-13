@@ -595,34 +595,85 @@ _OPENROUTER_MODEL_RE = re.compile(r"^~?[a-z0-9][a-z0-9._-]*(?:/[a-z0-9][a-z0-9._
 _OPENROUTER_BASE_URL = "https://openrouter.ai/api/v1"
 _ZAI_BASE_URL = "https://api.z.ai/api/coding/paas/v4"
 _ZAI_HOST_SUFFIXES = ("z.ai", "bigmodel.cn")
+# Google Gemini'nin OpenAI uyumlu ucu: chat/completions, image_url ve JSON modu destekler.
+_GEMINI_BASE_URL = "https://generativelanguage.googleapis.com/v1beta/openai"
+_GEMINI_HOST = "generativelanguage.googleapis.com"
+# Gemini Flash cok kipli (gorsel + metin); ayni zincir her gorevde kullanilir.
+# "gemini-flash-latest" takma adi Google tarafinda hep en guncel Flash surumune cozulur.
+_GEMINI_DEFAULT_MODELS = ["gemini-3.8-flash", "gemini-flash-latest"]
+_LLM_PROVIDERS = ("zai", "gemini", "openrouter")
 # GLM-5.x always thinks; reasoning tokens count against max_tokens.
 _ZAI_THINKING_TOKEN_ALLOWANCE = 4000
 _ZAI_RETRY_DELAYS_SECONDS = (3.0, 6.0)
 _ZAI_BALANCE_ERROR_CODE = "1113"
+# Tek bir HTTP istegi icin ust sinir; asilirsa zincirdeki sonraki modele gecilir.
+_LLM_REQUEST_TIMEOUT_SECONDS = 75.0
+_LLM_CONNECT_TIMEOUT_SECONDS = 15.0
+# Birincil zincir + yedek saglayici dahil toplam sure; tarayici bu sureden uzun
+# beklemez, dolayisiyla kullanici "takili kalan" bir analizle bas basa kalmaz.
+_LLM_TOTAL_DEADLINE_SECONDS = 150.0
+# Birincil saglayiciya ayrilan pay; kalan sure yedek saglayiciya birakilir.
+_LLM_PRIMARY_BUDGET_SECONDS = 95.0
+# Es zamanli istek kuyrugunda en fazla bu kadar beklenir.
+_LLM_QUEUE_WAIT_SECONDS = 30.0
+_LLM_MIN_FALLBACK_SECONDS = 20.0
+_LLM_UNAVAILABLE_MESSAGE = (
+    "Yapay zekâ analizi şu anda yanıt vermedi. Lütfen biraz sonra tekrar deneyin; "
+    "görsel analizi için daha küçük veya daha net bir fotoğraf da yardımcı olur."
+)
+_ZAI_VISION_MODEL_RE = re.compile(r"^glm-\d+(?:\.\d+)?v(?:[-_.]|$)")
+
+
+def _provider_api_key(provider: str) -> str:
+    names = {"zai": "ZAI_API_KEY", "gemini": "GEMINI_API_KEY", "openrouter": "OPENROUTER_API_KEY"}
+    return os.environ.get(names.get(provider, ""), "").strip() if provider in names else ""
+
+
+def _primary_provider_override() -> str | None:
+    """LLM_PRIMARY_PROVIDER=zai|gemini|openrouter forces the primary provider (key must exist)."""
+    value = os.environ.get("LLM_PRIMARY_PROVIDER", "").strip().lower()
+    return value if value in _LLM_PROVIDERS and _provider_api_key(value) else None
 
 
 def _llm_base_url() -> str:
-    """Resolve the OpenAI-compatible base URL; Z.ai is primary when its key exists."""
+    """Resolve the OpenAI-compatible base URL.
+
+    Priority: LLM_BASE_URL > LLM_PRIMARY_PROVIDER > first configured key in the
+    order Z.ai, Google Gemini, OpenRouter.
+    """
     configured = os.environ.get("LLM_BASE_URL", "").strip().rstrip("/")
     if configured:
         return configured
-    if os.environ.get("ZAI_API_KEY", "").strip():
-        return _ZAI_BASE_URL
+    urls = {"zai": _ZAI_BASE_URL, "gemini": _GEMINI_BASE_URL, "openrouter": _OPENROUTER_BASE_URL}
+    override = _primary_provider_override()
+    if override:
+        return urls[override]
+    for provider in _LLM_PROVIDERS:
+        if _provider_api_key(provider):
+            return urls[provider]
     return _OPENROUTER_BASE_URL
 
 
-def _llm_provider(base_url: str | None = None) -> Literal["openrouter", "zai"]:
+def _llm_provider(base_url: str | None = None) -> Literal["openrouter", "zai", "gemini"]:
     host = (urlsplit(base_url or _llm_base_url()).hostname or "").lower().rstrip(".")
     if any(host == suffix or host.endswith(f".{suffix}") for suffix in _ZAI_HOST_SUFFIXES):
         return "zai"
+    if host == _GEMINI_HOST:
+        return "gemini"
     return "openrouter"
 
 
 def _llm_api_key_value() -> str:
-    return (
-        os.environ.get("ZAI_API_KEY", "").strip()
-        or os.environ.get("OPENROUTER_API_KEY", "").strip()
-    )
+    """API key matching the active primary provider (falls back to any configured key)."""
+    provider = _llm_provider()
+    key = _provider_api_key(provider)
+    if key:
+        return key
+    for name in _LLM_PROVIDERS:
+        key = _provider_api_key(name)
+        if key:
+            return key
+    return ""
 
 
 def _zai_is_text_reasoning_model(model: str) -> bool:
@@ -664,8 +715,25 @@ def _zai_model_name(model: str) -> str | None:
     return name or None
 
 
+def _gemini_models() -> list[str]:
+    """Ordered Gemini model chain (GEMINI_MODELS), shared by vision and text tasks."""
+    configured = os.environ.get("GEMINI_MODELS", "").strip()
+    values = configured.split(",") if configured else _GEMINI_DEFAULT_MODELS
+    models: list[str] = []
+    for value in values:
+        model = value.strip().lstrip("~")
+        if "/" in model:
+            vendor, _, bare = model.partition("/")
+            model = bare if vendor.lower() == "google" else ""
+        if model and _OPENROUTER_MODEL_RE.fullmatch(model) and model not in models:
+            models.append(model)
+    return (models or list(_GEMINI_DEFAULT_MODELS))[:8]
+
+
 def _openrouter_models(environment_name: str) -> list[str]:
     """Read an ordered, bounded model fallback chain for the active provider."""
+    if _llm_provider() == "gemini":
+        return _gemini_models()
     configured = os.environ.get(environment_name, "").strip()
     values = configured.split(",") if configured else _OPENROUTER_DEFAULT_MODELS
     models: list[str] = []
@@ -699,7 +767,7 @@ def _openrouter_api_key() -> str:
     api_key = _llm_api_key_value()
     if not api_key:
         raise RuntimeError(
-            "Görsel ve yorum modelleri için Coolify'a ZAI_API_KEY (veya OPENROUTER_API_KEY) ekleyin."
+            "Görsel ve yorum modelleri için Coolify'a ZAI_API_KEY, GEMINI_API_KEY veya OPENROUTER_API_KEY ekleyin."
         )
     return api_key
 
@@ -751,9 +819,10 @@ def _openrouter_payload(
     # Strip credentials and personal contact data before any provider sees it.
     safe_messages = redact_data(messages, contact_data=True)
     strict_schema = _strict_json_schema(response_schema)
-    if provider == "zai":
-        # Z.ai supports JSON-object mode, not strict json_schema; the schema is
-        # stated in the system message and the reply is validated with Pydantic.
+    if provider in {"zai", "gemini"}:
+        # Z.ai and Gemini's OpenAI-compatible endpoint take JSON-object mode; the
+        # schema is stated in the system message and the reply is validated with
+        # Pydantic. Thinking tokens count against max_tokens on both.
         return {
             "models": models,
             "messages": _with_schema_instruction(
@@ -811,7 +880,91 @@ def _model_payload(base_payload: dict[str, Any], model: str, provider: str) -> d
     if provider == "zai" and _zai_is_text_reasoning_model(model):
         # GLM-5.x thinking cannot be disabled; keep it short.
         payload["reasoning_effort"] = os.environ.get("ZAI_REASONING_EFFORT", "low").strip() or "low"
+    if provider == "gemini":
+        # Gemini 3.x thinks by default; low effort keeps vision extraction fast.
+        effort = os.environ.get("GEMINI_REASONING_EFFORT", "low").strip().lower() or "low"
+        if effort in {"low", "medium", "high"}:
+            payload["reasoning_effort"] = effort
+    if provider == "zai" and _zai_is_vision_model(model):
+        # Gorsel modellerde "dusunme" adimi yaniti dakikalarca uzatabiliyor; evsaf
+        # cikarimi icin gerekli degil. ZAI_VISION_THINKING=enabled ile acilabilir.
+        thinking = os.environ.get("ZAI_VISION_THINKING", "disabled").strip().lower() or "disabled"
+        if thinking in {"enabled", "disabled"}:
+            payload["thinking"] = {"type": thinking}
     return payload
+
+
+def _zai_is_vision_model(model: str) -> bool:
+    name = model.strip().lower().lstrip("~").rsplit("/", 1)[-1]
+    return bool(_ZAI_VISION_MODEL_RE.match(name))
+
+
+def _env_seconds(name: str, default: float, *, low: float, high: float) -> float:
+    try:
+        value = float(os.environ.get(name, "").strip() or default)
+    except ValueError:
+        value = default
+    return max(low, min(value, high))
+
+
+def _llm_request_timeout() -> httpx.Timeout:
+    total = _env_seconds("LLM_REQUEST_TIMEOUT_SECONDS", _LLM_REQUEST_TIMEOUT_SECONDS, low=10.0, high=300.0)
+    connect = min(_LLM_CONNECT_TIMEOUT_SECONDS, total)
+    return httpx.Timeout(total, connect=connect)
+
+
+def _llm_total_deadline() -> float:
+    return _env_seconds("LLM_TOTAL_DEADLINE_SECONDS", _LLM_TOTAL_DEADLINE_SECONDS, low=15.0, high=600.0)
+
+
+def _llm_primary_budget(total: float) -> float:
+    budget = _env_seconds("LLM_PRIMARY_BUDGET_SECONDS", _LLM_PRIMARY_BUDGET_SECONDS, low=10.0, high=600.0)
+    return min(budget, total)
+
+
+def _fallback_enabled(provider: str) -> bool:
+    name = {"gemini": "LLM_FALLBACK_TO_GEMINI", "openrouter": "LLM_FALLBACK_TO_OPENROUTER"}.get(provider, "")
+    return os.environ.get(name, "1").strip().lower() not in {"0", "false", "no", "off"} if name else False
+
+
+def _openrouter_fallback_enabled() -> bool:
+    return _fallback_enabled("openrouter")
+
+
+def _fallback_providers(primary: str) -> list[tuple[str, str, str, list[str]]]:
+    """(provider, base_url, api_key, models) chains tried after the primary provider fails."""
+    chains: list[tuple[str, str, str, list[str]]] = []
+    for provider in ("gemini", "openrouter"):
+        if provider == primary or not _fallback_enabled(provider):
+            continue
+        key = _provider_api_key(provider)
+        if not key:
+            continue
+        if provider == "gemini":
+            chains.append((provider, _GEMINI_BASE_URL, key, _gemini_models()))
+        else:
+            models = _openrouter_fallback_models()
+            if models:
+                chains.append((provider, _OPENROUTER_BASE_URL, key, models))
+    return chains
+
+
+def _openrouter_fallback_models() -> list[str]:
+    """OpenRouter chain used when the primary (Z.ai) provider fails or times out."""
+    configured = os.environ.get("OPENROUTER_FALLBACK_MODELS", "").strip()
+    values = configured.split(",") if configured else _OPENROUTER_DEFAULT_MODELS
+    models: list[str] = []
+    for value in values:
+        model = value.strip()
+        if not model or not _OPENROUTER_MODEL_RE.fullmatch(model):
+            continue
+        if "/" not in model.lstrip("~"):
+            continue  # bare GLM names are Z.ai-only ids
+        if not configured and model.lstrip("~").lower().startswith("z-ai/"):
+            continue  # do not retry the provider that just failed by default
+        if model not in models:
+            models.append(model)
+    return models[:8]
 
 
 def _openrouter_headers(api_key: str, provider: str = "openrouter") -> dict[str, str]:
@@ -944,8 +1097,15 @@ async def _post_chat_completion(
         return await client.post(url, headers=headers, json=payload)
     retries = 0
     while True:
-        async with _llm_semaphore():
+        semaphore = _llm_semaphore()
+        try:
+            await asyncio.wait_for(semaphore.acquire(), timeout=_LLM_QUEUE_WAIT_SECONDS)
+        except asyncio.TimeoutError as exc:
+            raise httpx.PoolTimeout("Yapay zekâ istek kuyruğu dolu") from exc
+        try:
             response = await client.post(url, headers=headers, json=payload)
+        finally:
+            semaphore.release()
         # 429/1302 is a transient concurrency limit; 1113 (balance/plan) is not
         # retryable and falls through to the next model. Wait outside the semaphore.
         if (
@@ -959,18 +1119,27 @@ async def _post_chat_completion(
         return response
 
 
-async def _openrouter_chat(
+class _ChainExhausted(Exception):
+    """Every model of one provider chain failed; carries the per-model reasons."""
+
+    def __init__(self, failures: list[str]) -> None:
+        super().__init__(" | ".join(failures))
+        self.failures = failures
+
+
+async def _run_model_chain(
     *,
+    base_url: str,
+    provider: str,
     api_key: str,
     models: list[str],
     messages: list[dict[str, Any]],
     response_schema: dict[str, Any],
     schema_name: str,
     max_tokens: int,
+    deadline: float,
 ) -> tuple[str, str]:
-    """Call the configured OpenAI-compatible provider (Z.ai or OpenRouter) with ordered fallbacks."""
-    base_url = _llm_base_url()
-    provider = _llm_provider(base_url)
+    """Try each model in order until one returns usable content or the deadline passes."""
     url = f"{base_url}/chat/completions"
     validate_outbound_url(url, allowed_hosts={(urlsplit(url).hostname or "").lower()})
     base_payload = _openrouter_payload(
@@ -982,19 +1151,29 @@ async def _openrouter_chat(
         provider=provider,
     )
     headers = _openrouter_headers(api_key, provider)
-    label = "Z.ai" if provider == "zai" else "OpenRouter"
     failures: list[str] = []
-    async with httpx.AsyncClient(timeout=120) as client:
+    loop = asyncio.get_running_loop()
+    async with httpx.AsyncClient(timeout=_llm_request_timeout()) as client:
         for model in models:
+            remaining = deadline - loop.time()
+            if remaining <= 0:
+                failures.append(f"{model}: süre doldu")
+                break
             payload = _model_payload(base_payload, model, provider)
             try:
-                response = await _post_chat_completion(
-                    client,
-                    url=url,
-                    headers=headers,
-                    payload=payload,
-                    provider=provider,
+                response = await asyncio.wait_for(
+                    _post_chat_completion(
+                        client,
+                        url=url,
+                        headers=headers,
+                        payload=payload,
+                        provider=provider,
+                    ),
+                    timeout=remaining,
                 )
+            except asyncio.TimeoutError:
+                failures.append(f"{model}: zaman aşımı")
+                break
             except httpx.RequestError as exc:
                 failures.append(f"{model}: bağlantı hatası ({type(exc).__name__})")
                 continue
@@ -1009,7 +1188,7 @@ async def _openrouter_chat(
             except (KeyError, IndexError, TypeError, ValueError) as exc:
                 failures.append(f"{model}: geçersiz yanıt ({type(exc).__name__})")
                 continue
-            if provider == "zai":
+            if provider in {"zai", "gemini"}:
                 content = _strip_json_fences(content)
                 if not content:
                     failures.append(f"{model}: boş yanıt")
@@ -1033,8 +1212,71 @@ async def _openrouter_chat(
                 cost_usd=cost,
             )
             return content, resolved_m
-    summary = " | ".join(failures)
-    raise RuntimeError(f"{label} model zinciri yanıt vermedi. {summary}"[:1200])
+    raise _ChainExhausted(failures)
+
+
+async def _openrouter_chat(
+    *,
+    api_key: str,
+    models: list[str],
+    messages: list[dict[str, Any]],
+    response_schema: dict[str, Any],
+    schema_name: str,
+    max_tokens: int,
+) -> tuple[str, str]:
+    """Call the configured OpenAI-compatible provider (Z.ai or OpenRouter) with ordered fallbacks.
+
+    The whole call is bounded by a total deadline. When Z.ai is primary and an
+    OpenRouter key exists, the remaining time is spent on an OpenRouter chain
+    (Google Gemini first) so one slow or failing provider does not leave the
+    user with a spinner that never ends. Provider details stay in the server
+    log; the user-facing message is generic.
+    """
+    base_url = _llm_base_url()
+    provider = _llm_provider(base_url)
+    loop = asyncio.get_running_loop()
+    started = loop.time()
+    total = _llm_total_deadline()
+    final_deadline = started + total
+    fallbacks = _fallback_providers(provider)
+    primary_deadline = started + (_llm_primary_budget(total) if fallbacks else total)
+    failures: list[str] = []
+    try:
+        return await _run_model_chain(
+            base_url=base_url,
+            provider=provider,
+            api_key=api_key,
+            models=models,
+            messages=messages,
+            response_schema=response_schema,
+            schema_name=schema_name,
+            max_tokens=max_tokens,
+            deadline=primary_deadline,
+        )
+    except _ChainExhausted as exc:
+        failures.extend(f"{provider}:{item}" for item in exc.failures)
+    for name, fallback_url, fallback_key, fallback_models in fallbacks:
+        remaining = final_deadline - loop.time()
+        if remaining < _LLM_MIN_FALLBACK_SECONDS:
+            failures.append(f"{name}: yedek için süre kalmadı")
+            break
+        logger.warning("LLM chain failed (%s); trying %s fallback after: %s", schema_name, name, failures)
+        try:
+            return await _run_model_chain(
+                base_url=fallback_url,
+                provider=name,
+                api_key=fallback_key,
+                models=fallback_models,
+                messages=messages,
+                response_schema=response_schema,
+                schema_name=schema_name,
+                max_tokens=max_tokens,
+                deadline=final_deadline,
+            )
+        except _ChainExhausted as exc:
+            failures.extend(f"{name}:{item}" for item in exc.failures)
+    logger.warning("LLM chain exhausted (%s, %.1fs): %s", schema_name, loop.time() - started, " | ".join(failures)[:1500])
+    raise RuntimeError(_LLM_UNAVAILABLE_MESSAGE)
 
 
 _VISION_PROMPT = """

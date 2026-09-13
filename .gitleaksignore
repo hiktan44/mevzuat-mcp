@@ -1,0 +1,3 @@
+# gitleaks yanlis alarmlari: testlerdeki sahte ortam degerleri (ZAI_MAX_CONCURRENCY="1")
+2cace388c9f1881cc3f14b9b75cb563257e7a134:tests/test_customs_advisor.py:generic-api-key:1059
+2cace388c9f1881cc3f14b9b75cb563257e7a134:tests/test_customs_advisor.py:generic-api-key:1066
