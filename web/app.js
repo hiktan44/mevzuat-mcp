@@ -195,11 +195,34 @@ async function copyText(text, successMessage) {
   }
 }
 
-async function fetchJson(url, options) {
-  const response = await fetch(url, options);
+const AI_ANALYSIS_TIMEOUT_MS = 170000;
+const AI_TIMEOUT_MESSAGE = "Analiz beklenenden uzun sürdü ve durduruldu. Lütfen tekrar deneyin; görsel için daha küçük veya daha net bir fotoğraf da yardımcı olur.";
+
+async function fetchJson(url, options = {}) {
+  const { timeoutMs, ...fetchOptions } = options;
+  let timer = null;
+  if (timeoutMs && typeof AbortController !== "undefined") {
+    const controller = new AbortController();
+    fetchOptions.signal = controller.signal;
+    timer = setTimeout(() => controller.abort(), timeoutMs);
+  }
+  let response;
+  try {
+    response = await fetch(url, fetchOptions);
+  } catch (error) {
+    if (timer && error && error.name === "AbortError") throw new Error(AI_TIMEOUT_MESSAGE);
+    throw new Error("Sunucuya ulaşılamadı. Bağlantınızı kontrol edip tekrar deneyin.");
+  } finally {
+    if (timer) clearTimeout(timer);
+  }
   const data = await response.json().catch(() => ({}));
   if (!response.ok) throw new Error(data.error || "İstek tamamlanamadı.");
   return data;
+}
+
+function confidenceLabel(value) {
+  const map = { high: "yüksek", medium: "orta", low: "düşük" };
+  return map[String(value || "").toLowerCase()] || "belirsiz";
 }
 
 function setLoading() {
@@ -1130,7 +1153,7 @@ function setVisionState(status, message, provider = "") {
   badge.dataset.state = status;
   badge.textContent = labels[status] || status;
   $("#visionMessage").textContent = message;
-  $("#visionProvider").textContent = provider || "Model bilgisi analizden sonra gösterilir.";
+  $("#visionProvider").textContent = provider || "Analiz sonucu ve güven düzeyi burada gösterilir.";
   const confirm = $("#confirmAttributes");
   confirm.disabled = status === "analysing";
   confirm.querySelector("span").textContent = status === "confirmed"
@@ -1292,7 +1315,7 @@ function renderGtipSuggestions(data) {
   const list = $("#gtipSuggestionList");
   panel.hidden = false;
   $("#gtipSuggestionStatus").textContent = data.candidates?.length
-    ? `${data.candidates.length} aday · ${data.model}`
+    ? `${data.candidates.length} aday · resmî tarife cetvelinde doğrulandı`
     : "Aday bulunamadı";
   if (!data.candidates?.length) {
     list.innerHTML = `<div class="answer-error"><p>${escapeHtml(data.summary || "Aday kod üretilemedi.")}</p></div>`;
@@ -1525,20 +1548,22 @@ async function analyseProductImage() {
   if (!state.customsImageData) return;
   setVisionState(
     "analysing",
-    "Görsel yalnızca ürünün görünür evsaflarına çevriliyor. Bu aşamada GTİP, vergi veya TAREKS sorgusu yapılmaz.",
+    "Görsel yalnızca ürünün görünür evsaflarına çevriliyor; genellikle 10-40 saniye sürer. Bu aşamada GTİP, vergi veya TAREKS sorgusu yapılmaz.",
+    "Yapay zekâ görsel analizi sürüyor…",
   );
   try {
     const data = await fetchJson("/api/customs/describe-image", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ image_data_url: state.customsImageData }),
+      timeoutMs: AI_ANALYSIS_TIMEOUT_MS,
     });
     state.customsVisionResult = data;
     applyVisionAttributes(data);
     setVisionState(
       "review",
       `${data.warning} Alanları düzeltin; araştırma ancak onayınızdan sonra başlar.`,
-      `Görsel model: ${data.provider} · ${data.model} · güven: ${data.confidence}`,
+      `Yapay zekâ görsel analizi · güven: ${confidenceLabel(data.confidence)}`,
     );
     $("#productFileStatus").scrollIntoView({ behavior: "smooth", block: "center" });
   } catch (error) {
@@ -1677,7 +1702,7 @@ visionFieldSelectors.forEach((selector) => $(selector)?.addEventListener("input"
     setVisionState(
       "review",
       "Onaydan sonra evsaf değişti. Güncel alanları yeniden onaylamadan resmî araştırma başlatılamaz.",
-      state.customsVisionResult ? `Görsel model: ${state.customsVisionResult.provider} · ${state.customsVisionResult.model}` : "Elle düzenlenen evsaf",
+      state.customsVisionResult ? "Yapay zekâ görsel analizi · elle düzenlendi" : "Elle düzenlenen evsaf",
     );
   }
 }));
@@ -1786,7 +1811,7 @@ $("#confirmAttributes").addEventListener("click", async () => {
     "confirmed",
     "Evsaflar onaylandı. En yakın üç HS/CN adayı resmî tarife cetvelinde doğrulanıyor.",
     state.customsVisionResult
-      ? `Görsel model: ${state.customsVisionResult.provider} · ${state.customsVisionResult.model} · kullanıcı onaylı`
+      ? "Yapay zekâ görsel analizi · kullanıcı onaylı"
       : "Elle girilen evsaf · kullanıcı onaylı",
   );
   const confirm = $("#confirmAttributes");
@@ -1799,13 +1824,13 @@ $("#confirmAttributes").addEventListener("click", async () => {
         "confirmed",
         `${classification.candidates.length} aday kod bulundu. Sistem hiçbirini otomatik seçmedi; bir adayı seçerek Türk GTİP12 alt dallarını açın.`,
         state.customsVisionResult
-          ? `Görsel model: ${state.customsVisionResult.provider} · ${state.customsVisionResult.model} · sınıflandırma: ${classification.model}`
-          : `Sınıflandırma modeli: ${classification.model}`,
+          ? "Yapay zekâ görsel analizi · aday kodlar resmî tarife cetvelinde doğrulandı"
+          : "Elle girilen evsaf · aday kodlar resmî tarife cetvelinde doğrulandı",
       );
       showToast(`${classification.candidates.length} aday tarife kodu bulundu.`);
       $("#gtipSuggestions").scrollIntoView({ behavior: "smooth", block: "center" });
     } else {
-      setVisionState("confirmed", classification.summary, `Sınıflandırma modeli: ${classification.model}`);
+      setVisionState("confirmed", classification.summary, "Yapay zekâ sınıflandırması · aday kod bulunamadı");
       showToast("Aday kod için ürün evsafı yetersiz kaldı.");
     }
   } catch (error) {
@@ -2856,7 +2881,7 @@ function renderShippingReview(data) {
   const containers = Array.isArray(data.containers) ? data.containers : [];
   const unreadable = Array.isArray(data.unreadable_fields) ? data.unreadable_fields : [];
   output.innerHTML = `
-    <p class="missing-list"><b>${escapeHtml(data.document_type_label || "Sevkiyat belgesi")}</b> · güven: ${escapeHtml(data.confidence || "low")} · ${escapeHtml(data.model || "")}</p>
+    <p class="missing-list"><b>${escapeHtml(data.document_type_label || "Sevkiyat belgesi")}</b> · yapay zekâ okuması · güven: ${escapeHtml(confidenceLabel(data.confidence))}</p>
     <p class="missing-list">${escapeHtml(data.warning || "")}</p>
     <label class="field"><span>Eşya tanımı (belgedeki haliyle)</span><textarea data-shipping-field="goods_description" maxlength="2000" class="ingest-textarea">${escapeHtml(data.goods_description || "")}</textarea></label>
     <div class="shipping-review-grid">${rows}</div>
@@ -2885,6 +2910,7 @@ $("#shippingRead")?.addEventListener("click", async () => {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ document_data_url: documentDataUrl }),
+      timeoutMs: AI_ANALYSIS_TIMEOUT_MS,
     });
     renderShippingReview(data);
   } catch (error) {
